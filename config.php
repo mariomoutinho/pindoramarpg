@@ -2,8 +2,8 @@
 
 $host = '127.0.0.1';
 $dbname = 'pindorama_rpg';
-$user = 'root';
-$password = '';
+$user = 'pindorama';
+$password = 'pindorama_dev_2026';
 
 try {
     $pdo = new PDO(
