@@ -11,7 +11,7 @@ $introducaoPoderes = $dadosPoderes['introducao'] ?? [];
     <title>Poderes Gerais - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260503h" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260503i" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260430b" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
@@ -104,6 +104,6 @@ $introducaoPoderes = $dadosPoderes['introducao'] ?? [];
 
     <button type="button" class="back-to-top-btn" id="backToTopBtn" aria-label="Voltar ao topo" title="Voltar ao topo">↑</button>
 
-    <script src="assets/js/classes.js?v=20260503h"></script>
+    <script src="assets/js/classes.js?v=20260503i"></script>
 </body>
 </html>

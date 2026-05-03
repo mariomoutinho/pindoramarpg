@@ -6,7 +6,7 @@
     <title>Classes - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260503h" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260503i" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 
@@ -602,6 +602,6 @@
         <span></span>
     </button>
 
-    <script src="assets/js/classes.js?v=20260503h"></script>
+    <script src="assets/js/classes.js?v=20260503i"></script>
 </body>
 </html>

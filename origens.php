@@ -25,7 +25,7 @@ $nomeAtributo = [
     <title>Origens — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260503h" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260503i" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
@@ -213,6 +213,6 @@ $nomeAtributo = [
         <span></span><span></span><span></span>
     </button>
     <button type="button" class="back-to-top-btn" id="backToTopBtn" aria-label="Voltar ao topo" title="Voltar ao topo">↑</button>
-    <script src="assets/js/classes.js?v=20260503h"></script>
+    <script src="assets/js/classes.js?v=20260503i"></script>
 </body>
 </html>

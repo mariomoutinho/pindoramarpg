@@ -22,7 +22,7 @@ function magiaOptions(array $valores): string
     <title>Magias - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260503h" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260503i" />
     <link rel="stylesheet" href="assets/css/magias.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
