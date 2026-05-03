@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Equipamentos - Pindorama RPG</title>
 <link href="assets/css/ficha.css" rel="stylesheet"/>
-<link href="assets/css/classes.css?v=20260503f" rel="stylesheet"/>
+<link href="assets/css/classes.css?v=20260503g" rel="stylesheet"/>
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
@@ -2656,6 +2656,6 @@
 <button aria-label="Voltar ao topo da página" class="back-to-top-btn" id="backToTopBtn" title="Voltar ao topo" type="button">
         ↑
     </button>
-<script src="assets/js/classes.js?v=20260503d"></script>
+<script src="assets/js/classes.js?v=20260503g"></script>
 </body>
 </html>
