@@ -1,15 +1,24 @@
 /* ====================================================================
    Transições suaves de página (fade-in ao chegar, fade-out ao sair).
    Inclua junto com transitions.js nas páginas alvo.
+
+   Importante:
+   A animação é aplicada em `body > main`, NÃO em `body`. Isso
+   evita que `transform` / `filter` no body criem um "containing
+   block" novo que quebraria a posição de elementos `position: fixed`
+   (ex.: backdrop dos pickers — eles são anexados a body).
    ==================================================================== */
 
-body {
+body > main {
     animation: pageEnter 380ms ease-out both;
 }
 
 body.page-leaving {
-    animation: pageLeave 220ms ease-in forwards;
     pointer-events: none;
+}
+
+body.page-leaving > main {
+    animation: pageLeave 220ms ease-in forwards;
 }
 
 @keyframes pageEnter {
@@ -51,8 +60,8 @@ a.is-leaving {
 
 /* Acessibilidade — quem pediu menos movimento, recebe transição instantânea */
 @media (prefers-reduced-motion: reduce) {
-    body,
-    body.page-leaving,
+    body > main,
+    body.page-leaving > main,
     a.is-leaving {
         animation: none;
     }
