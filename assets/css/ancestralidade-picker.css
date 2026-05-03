@@ -3,17 +3,11 @@
    Usa as variáveis de paleta de ficha.css (--purple, --purple-dark, ...)
    ==================================================================== */
 
-/* Fonte temática "Eldes Cordel" — coloque o arquivo em
-   assets/fonts/ com um destes nomes:
-     EldesCordel.woff2 / .woff / .ttf / .otf
-   Se a fonte não estiver presente, o navegador usa o fallback
-   abaixo (serifa pesada do projeto). */
+/* Fonte temática do projeto — arquivo já presente em
+   assets/fonts/CordelEncarnado-Regular.ttf */
 @font-face {
-    font-family: 'Eldes Cordel';
-    src: url('../fonts/EldesCordel.woff2') format('woff2'),
-         url('../fonts/EldesCordel.woff')  format('woff'),
-         url('../fonts/EldesCordel.ttf')   format('truetype'),
-         url('../fonts/EldesCordel.otf')   format('opentype');
+    font-family: 'Cordel Encarnado';
+    src: url('../fonts/CordelEncarnado-Regular.ttf') format('truetype');
     font-display: swap;
     font-weight: normal;
     font-style: normal;
@@ -305,7 +299,7 @@
 
 .anc-picker-preview-name {
     margin: 0;
-    font-family: 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordel Encarnado', Georgia, "Times New Roman", serif;
     font-size: 2.4rem;
     color: var(--pink-light);
     letter-spacing: 1px;
