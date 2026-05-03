@@ -1,0 +1,59 @@
+/* ====================================================================
+   Transições suaves de página (fade-in ao chegar, fade-out ao sair).
+   Inclua junto com transitions.js nas páginas alvo.
+   ==================================================================== */
+
+body {
+    animation: pageEnter 380ms ease-out both;
+}
+
+body.page-leaving {
+    animation: pageLeave 220ms ease-in forwards;
+    pointer-events: none;
+}
+
+@keyframes pageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+        filter: blur(2px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes pageLeave {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-6px);
+        filter: blur(2px);
+    }
+}
+
+/* Liga o link no momento da transição com um leve glow */
+a.is-leaving {
+    animation: linkFlash 220ms ease-in forwards;
+}
+
+@keyframes linkFlash {
+    from { box-shadow: 0 0 0 0 rgba(105, 67, 111, 0.0); }
+    50%  { box-shadow: 0 0 0 6px rgba(105, 67, 111, 0.18); }
+    to   { box-shadow: 0 0 0 12px rgba(105, 67, 111, 0); }
+}
+
+/* Acessibilidade — quem pediu menos movimento, recebe transição instantânea */
+@media (prefers-reduced-motion: reduce) {
+    body,
+    body.page-leaving,
+    a.is-leaving {
+        animation: none;
+    }
+}

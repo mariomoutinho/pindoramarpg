@@ -252,15 +252,17 @@
     function atualizarLabelGatilho(state) {
         const valor = state.select.value;
         const lbl = state.triggerLabel;
+        const btn = state.triggerBtn;
         if (!valor) {
             lbl.textContent = state.placeholder;
             lbl.classList.add('is-empty');
+            btn.classList.remove('is-selected');
             return;
         }
-        // Encontra o item pelo campo de valor configurado para mostrar o NOME
         const item = state.items.find(i => i[state.valueField] === valor);
         lbl.textContent = item ? item.nome : valor;
         lbl.classList.remove('is-empty');
+        btn.classList.add('is-selected');
     }
 
     /* ---------- modal ---------- */

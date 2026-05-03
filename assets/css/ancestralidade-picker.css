@@ -50,6 +50,31 @@
     outline: none;
 }
 
+/* Estado: opção já selecionada — destaca o botão */
+.anc-picker-trigger.is-selected {
+    background: linear-gradient(135deg, rgba(248, 216, 255, 0.55), rgba(233, 216, 241, 0.7));
+    border-color: var(--purple);
+    color: var(--purple-dark);
+    font-weight: 600;
+    box-shadow:
+        inset 3px 0 0 var(--purple),
+        0 0 0 2px rgba(105, 67, 111, 0.08);
+}
+
+.anc-picker-trigger.is-selected:hover,
+.anc-picker-trigger.is-selected:focus-visible {
+    background: linear-gradient(135deg, rgba(248, 216, 255, 0.75), rgba(233, 216, 241, 0.85));
+    border-color: var(--purple-dark);
+}
+
+.anc-picker-trigger.is-selected .anc-picker-trigger-label::before {
+    content: "✓";
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--purple);
+    font-weight: bold;
+}
+
 .anc-picker-trigger-label {
     flex: 1 1 auto;
     overflow: hidden;

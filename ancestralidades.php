@@ -27,9 +27,11 @@ function imagemAncestralidade(string $id): ?string {
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/classes.css" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260501a" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503a" />
 </head>
 
 <body>
+    <script src="assets/js/transitions.js?v=20260503a"></script>
     <main class="page-wrapper classes-page">
 
         <header class="top-actions classes-topbar">

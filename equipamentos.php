@@ -7,8 +7,10 @@
 <title>Equipamentos - Pindorama RPG</title>
 <link href="assets/css/ficha.css" rel="stylesheet"/>
 <link href="assets/css/classes.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503a" />
 </head>
 <body>
+    <script src="assets/js/transitions.js?v=20260503a"></script>
 <main class="page-wrapper classes-page">
 <header class="top-actions classes-topbar">
 <div>
