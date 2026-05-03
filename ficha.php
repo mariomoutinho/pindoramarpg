@@ -15,7 +15,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260501x" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260503f" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260501b" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
@@ -785,7 +785,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
     </main>
 
-    <script src="assets/js/ficha.js?v=20260501p"></script>
+    <script src="assets/js/ficha.js?v=20260503f"></script>
     <script src="assets/js/atributos.js?v=20260501u"></script>
     <script src="assets/js/poderes.js?v=20260430j"></script>
     <script src="assets/js/ancestralidades-ficha.js?v=20260501s"></script>

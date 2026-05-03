@@ -1488,6 +1488,90 @@ textarea {
     transform: scale(0.98);
 }
 
+/* ---------- Linha de Ofício (perícia múltipla com especialização) ---------- */
+
+.skill-row.is-oficio .oficio-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.skill-row.is-oficio .oficio-label {
+    font-weight: 800;
+    color: var(--purple-dark);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.skill-row.is-oficio .oficio-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    border: 1px solid rgba(118, 84, 124, 0.45);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--purple-dark);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.skill-row.is-oficio .oficio-select:hover,
+.skill-row.is-oficio .oficio-select:focus {
+    border-color: var(--purple);
+    outline: none;
+}
+
+.skill-row.is-oficio .oficio-remove {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid rgba(155, 37, 77, 0.4);
+    color: var(--danger);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.skill-row.is-oficio .oficio-remove:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.adicionar-oficio-row {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    grid-column: 1 / -1;
+}
+
+.adicionar-oficio-btn {
+    background: rgba(105, 67, 111, 0.08);
+    border: 1px dashed rgba(105, 67, 111, 0.5);
+    color: var(--purple-dark);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.adicionar-oficio-btn:hover {
+    background: rgba(105, 67, 111, 0.18);
+    border-color: var(--purple);
+    border-style: solid;
+}
+
 /* Badge da sigla do atributo-chave da perícia (Acrobacia · Des etc.) */
 .skill-attr-badge {
     display: inline-flex;

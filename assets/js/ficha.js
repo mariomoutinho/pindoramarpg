@@ -20,8 +20,7 @@ const periciasBase = [
     ["Luta", "For"],
     ["Misticismo", "Int"],
     ["Nobreza", "Int"],
-    ["Ofício 1", "Int"],
-    ["Ofício 2", "Int"],
+    // Ofício é tratado separadamente — ver OFICIOS_TIPOS / montarLinhaOficio
     ["Percepção", "Sab"],
     ["Pilotagem", "Des"],
     ["Pontaria", "Des"],
@@ -30,6 +29,40 @@ const periciasBase = [
     ["Sobrevivência", "Sab"],
     ["Vontade", "Sab"]
 ];
+
+/* Ofício na verdade são várias perícias diferentes — uma por especialização.
+   Cada uma permite fabricar itens de certas categorias. */
+const OFICIOS_TIPOS = [
+    { nome: 'Armeiro',    descricao: 'Permite fabricar Armas e Armaduras & Escudos.' },
+    { nome: 'Artesão',    descricao: 'Permite fabricar Equipamento de Aventura, Ferramentas, Esotéricos e Veículos.' },
+    { nome: 'Alquimista', descricao: 'Permite fabricar itens Alquímicos.' },
+    { nome: 'Cozinheiro', descricao: 'Permite preparar Alimentação.' },
+    { nome: 'Alfaiate',   descricao: 'Permite fabricar Vestuário.' },
+];
+
+function nomeOficio(especNome) {
+    return `Ofício (${especNome})`;
+}
+
+function ehNomeOficio(nome) {
+    return /^Ofício \(.+\)$/.test(nome || '');
+}
+
+function extrairOficiosSalvos(periciasSalvas) {
+    if (!periciasSalvas || typeof periciasSalvas !== 'object') return [];
+    return Object.keys(periciasSalvas)
+        .filter(k => ehNomeOficio(k))
+        .map(k => k.match(/^Ofício \((.+)\)$/)[1])
+        .filter((v, i, arr) => arr.indexOf(v) === i);  // dedup
+}
+
+function oficiosUsados(exceto = null) {
+    const usados = new Set();
+    document.querySelectorAll('.skill-row.is-oficio select[data-oficio-tipo]').forEach(s => {
+        if (s !== exceto) usados.add(s.value);
+    });
+    return usados;
+}
 
 const mapaAtributos = {
     For: "forca",
@@ -473,6 +506,119 @@ function calcularDefesa() {
     }
 }
 
+function montarLinhaOficio(especNome, salva = {}) {
+    const skillName = nomeOficio(especNome);
+    const treinada =
+        salva.treinada === true ||
+        salva.treinada === "true" ||
+        salva.treinada === "1" ||
+        salva.treinada === 1;
+
+    const row = document.createElement("div");
+    row.className = "skill-row is-oficio";
+    row.dataset.oficioRow = "1";
+
+    row.innerHTML = `
+        <div class="skill-trained-box">
+            <input type="checkbox" data-skill="${skillName}" data-field="treinada" ${treinada ? "checked" : ""}>
+        </div>
+
+        <div class="oficio-cell" title="Ofício (${especNome})">
+            <span class="oficio-label">Ofício</span>
+            <select class="oficio-select" data-oficio-tipo aria-label="Especialização do ofício">
+                ${OFICIOS_TIPOS.map(t => `
+                    <option value="${t.nome}" ${t.nome === especNome ? "selected" : ""}>${t.nome}</option>
+                `).join("")}
+            </select>
+            <button type="button" class="oficio-remove" title="Remover este ofício" aria-label="Remover">×</button>
+        </div>
+
+        <input type="number" data-skill="${skillName}" data-field="total"      value="${salva.total ?? 0}" readonly>
+        <input type="number" data-skill="${skillName}" data-field="meio_nivel" value="${salva.meio_nivel ?? 0}" readonly>
+
+        <div class="skill-attr-cell">
+            <span class="skill-attr-badge" data-attr="Int" title="Int">Int</span>
+            <input type="number" data-skill="${skillName}" data-field="atributo" value="${salva.atributo ?? 0}" readonly>
+        </div>
+
+        <input type="number" data-skill="${skillName}" data-field="treino" value="${salva.treino ?? 0}" readonly>
+        <input type="number" data-skill="${skillName}" data-field="outros" value="${salva.outros ?? 0}">
+    `;
+
+    const select = row.querySelector("select[data-oficio-tipo]");
+    select.addEventListener("change", () => trocarEspecializacaoOficio(row));
+
+    const btnRemover = row.querySelector(".oficio-remove");
+    btnRemover.addEventListener("click", () => removerOficio(row));
+
+    return row;
+}
+
+function trocarEspecializacaoOficio(row) {
+    const select = row.querySelector("select[data-oficio-tipo]");
+    if (!select) return;
+    const novoNome = select.value;
+
+    // Verifica duplicidade
+    const usados = oficiosUsados(select);
+    if (usados.has(novoNome)) {
+        // Reverte para o valor anterior
+        const cb = row.querySelector('[data-field="treinada"]');
+        const m = (cb?.dataset.skill || "").match(/^Ofício \((.+)\)$/);
+        const anterior = m ? m[1] : OFICIOS_TIPOS[0].nome;
+        select.value = anterior;
+        if (typeof window.showToast === "function") {
+            window.showToast(`Você já tem um Ofício de ${novoNome}.`);
+        } else {
+            alert(`Você já tem um Ofício de ${novoNome}.`);
+        }
+        return;
+    }
+
+    // Atualiza data-skill em todos os inputs do row
+    const novoSkill = nomeOficio(novoNome);
+    row.querySelectorAll("[data-skill]").forEach(el => {
+        el.dataset.skill = novoSkill;
+    });
+    const cell = row.querySelector(".oficio-cell");
+    if (cell) cell.title = novoSkill;
+
+    atualizarPericiasPorAtributos();
+    atualizarBotoesPericia();
+}
+
+function removerOficio(row) {
+    row.remove();
+    atualizarBotoesPericia();
+}
+
+function adicionarOficio(especNomeForcado = null) {
+    const usados = oficiosUsados();
+    let espec = especNomeForcado;
+    if (!espec || usados.has(espec)) {
+        const disponivel = OFICIOS_TIPOS.find(t => !usados.has(t.nome));
+        if (!disponivel) {
+            alert("Você já possui ofícios em todas as especializações disponíveis.");
+            return null;
+        }
+        espec = disponivel.nome;
+    }
+
+    const container = document.getElementById("periciasContainer");
+    const adderRow  = container.querySelector(".adicionar-oficio-row");
+    const novaLinha = montarLinhaOficio(espec);
+
+    if (adderRow) {
+        container.insertBefore(novaLinha, adderRow);
+    } else {
+        container.appendChild(novaLinha);
+    }
+
+    atualizarPericiasPorAtributos();
+    atualizarBotoesPericia();
+    return novaLinha;
+}
+
 function montarPericias(periciasSalvas = null) {
     const container = document.getElementById("periciasContainer");
 
@@ -557,8 +703,31 @@ function montarPericias(periciasSalvas = null) {
         container.appendChild(row);
     });
 
+    // Renderiza ofícios salvos (se houver)
+    const oficiosSalvos = extrairOficiosSalvos(periciasSalvas);
+    oficiosSalvos.forEach(especNome => {
+        const skillName = nomeOficio(especNome);
+        const salva = periciasSalvas?.[skillName] || {};
+        container.appendChild(montarLinhaOficio(especNome, salva));
+    });
+
+    // Botão "Adicionar Ofício"
+    const adderRow = document.createElement("div");
+    adderRow.className = "adicionar-oficio-row";
+    adderRow.innerHTML = `<button type="button" class="adicionar-oficio-btn">+ Adicionar Ofício</button>`;
+    adderRow.querySelector("button").addEventListener("click", () => adicionarOficio());
+    container.appendChild(adderRow);
+
     atualizarPericiasPorAtributos();
     atualizarBotoesPericia();
+}
+
+function listarPericiasParaAtualizacao() {
+    const lista = periciasBase.slice();
+    document.querySelectorAll('.skill-row.is-oficio [data-field="treinada"]').forEach(cb => {
+        if (cb.dataset.skill) lista.push([cb.dataset.skill, "Int"]);
+    });
+    return lista;
 }
 
 function atualizarPericiasPorAtributos() {
@@ -566,7 +735,7 @@ function atualizarPericiasPorAtributos() {
     const subs = Array.isArray(window.__substituicoesAtributoPericia)
         ? window.__substituicoesAtributoPericia : [];
 
-    periciasBase.forEach(([nome, atributoSiglaOriginal]) => {
+    listarPericiasParaAtualizacao().forEach(([nome, atributoSiglaOriginal]) => {
         const valorOriginal = getValorAtributo(atributoSiglaOriginal);
 
         // Verifica se há substituição de atributo aplicável (ex: Kai'porah Atletismo Des/For)
@@ -626,12 +795,14 @@ function atualizarTotalDaPericia(nome) {
 
 const PERICIAS_APENAS_TREINADAS = new Set([
     'Adestramento', 'Atuação', 'Conhecimento', 'Guerra', 'Jogatina',
-    'Ladinagem', 'Misticismo', 'Nobreza', 'Ofício', 'Ofício 1', 'Ofício 2',
+    'Ladinagem', 'Misticismo', 'Nobreza',
     'Pilotagem', 'Religião'
 ]);
 
 function periciaPodeSerRolada(nomePericia) {
-    if (!PERICIAS_APENAS_TREINADAS.has(nomePericia)) return true;
+    // Ofícios (com ou sem especialização) são sempre só-treinadas
+    const ehOficio = nomePericia === 'Ofício' || ehNomeOficio(nomePericia);
+    if (!ehOficio && !PERICIAS_APENAS_TREINADAS.has(nomePericia)) return true;
     const cb = document.querySelector(`[data-skill="${nomePericia}"][data-field="treinada"]`);
     return !!(cb && cb.checked);
 }
@@ -3311,7 +3482,7 @@ function aplicarPericiasBaseDaClasse() {
 
     const periciasObrigatoriasPorClasse = {
         "Arcanista": ["Misticismo", "Vontade"],
-        "Artífice": ["Ofício 1", "Vontade"],
+        "Artífice": ["Ofício", "Vontade"],
         "Brincante": ["Atuação", "Reflexos"],
         "Caçador": ["Sobrevivência"],
         "Cangaceiro": ["Reflexos"],
@@ -3329,8 +3500,23 @@ function aplicarPericiasBaseDaClasse() {
     const pericias = periciasObrigatoriasPorClasse[nomeClasse] || [];
 
     pericias.forEach(nomePericia => {
+        if (nomePericia === "Ofício") {
+            // Garante pelo menos um Ofício treinado para a classe que requer
+            const linhas = document.querySelectorAll('.skill-row.is-oficio');
+            const algumTreinado = Array.from(linhas).some(r =>
+                r.querySelector('[data-field="treinada"]')?.checked
+            );
+            if (!algumTreinado) {
+                let alvo = linhas[0];
+                if (!alvo) alvo = adicionarOficio();
+                if (alvo) {
+                    const cb = alvo.querySelector('[data-field="treinada"]');
+                    if (cb) cb.checked = true;
+                }
+            }
+            return;
+        }
         const checkbox = document.querySelector(`[data-skill="${nomePericia}"][data-field="treinada"]`);
-
         if (checkbox) {
             checkbox.checked = true;
         }
