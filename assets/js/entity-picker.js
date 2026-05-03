@@ -553,10 +553,33 @@
         return state.backdrop && state.backdrop.classList.contains('is-open');
     }
 
+    /* Contador de modais abertos para gerenciar scroll-lock global.
+       Mantém suporte a vários pickers abertos simultaneamente sem
+       restaurar o overflow no fechamento prematuro. */
+    let _modaisAbertos = 0;
+    let _bodyOverflowAnterior = '';
+
+    function bloquearScrollBody() {
+        if (_modaisAbertos === 0) {
+            _bodyOverflowAnterior = document.body.style.overflow || '';
+            document.body.style.overflow = 'hidden';
+        }
+        _modaisAbertos++;
+    }
+
+    function liberarScrollBody() {
+        _modaisAbertos = Math.max(0, _modaisAbertos - 1);
+        if (_modaisAbertos === 0) {
+            document.body.style.overflow = _bodyOverflowAnterior;
+        }
+    }
+
     function abrir(state) {
         if (!state.ready) return;
         state.backdrop.classList.add('is-open');
         state.triggerBtn.setAttribute('aria-expanded', 'true');
+
+        bloquearScrollBody();
 
         const atual = state.select.value;
         marcarSelecionado(state, atual);
@@ -569,12 +592,21 @@
             state.confirmBtn.disabled = true;
             state.previewEl.innerHTML = '<div class="anc-picker-preview-empty">Passe o mouse sobre uma opção para ver detalhes.</div>';
         }
+
+        // Foco no primeiro elemento interativo do modal — garante percepção
+        // imediata de "estou no modal" e habilita navegação por teclado.
+        requestAnimationFrame(() => {
+            const focar = state.backdrop.querySelector('.anc-picker-option.is-selected, .anc-picker-option, .anc-picker-close');
+            if (focar) focar.focus({ preventScroll: true });
+        });
     }
 
     function fechar(state) {
         if (!state.backdrop) return;
+        if (!state.backdrop.classList.contains('is-open')) return;  // já fechado
         state.backdrop.classList.remove('is-open');
         state.triggerBtn.setAttribute('aria-expanded', 'false');
+        liberarScrollBody();
         state.triggerBtn.focus();
     }
 

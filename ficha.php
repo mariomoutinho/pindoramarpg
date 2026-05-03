@@ -791,7 +791,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <script src="assets/js/ancestralidades-ficha.js?v=20260501s"></script>
     <script src="assets/js/origens.js?v=20260430x"></script>
     <script src="assets/js/divindades.js?v=20260430j"></script>
-    <script src="assets/js/entity-picker.js?v=20260503d"></script>
+    <script src="assets/js/entity-picker.js?v=20260503e"></script>
 
     <script>
     /* Auto-carrega ficha se ?id=N estiver na URL (vem da página fichas.php) */
