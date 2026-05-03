@@ -13,9 +13,10 @@ body > main {
     animation: pageEnter 380ms ease-out both;
 }
 
-body.page-leaving {
-    pointer-events: none;
-}
+/* Removido `pointer-events: none` em body.page-leaving — causava
+   bloqueio total da página caso a classe persistisse (ex.: ao voltar
+   pelo histórico do navegador). A animação de fade-out já é breve
+   o suficiente para que cliques duplos não causem problema. */
 
 body.page-leaving > main {
     animation: pageLeave 220ms ease-in forwards;

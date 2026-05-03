@@ -18,10 +18,10 @@ $fichas = $stmt->fetchAll();
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/home.css?v=20260502" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503c" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body class="home-body">
-    <script src="assets/js/transitions.js?v=20260503a"></script>
+    <script src="assets/js/transitions.js?v=20260503d"></script>
 
     <main class="home-shell home-shell-list">
 

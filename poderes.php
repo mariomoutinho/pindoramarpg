@@ -12,10 +12,10 @@ $introducaoPoderes = $dadosPoderes['introducao'] ?? [];
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260430b" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503c" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
-    <script src="assets/js/transitions.js?v=20260503a"></script>
+    <script src="assets/js/transitions.js?v=20260503d"></script>
 
     <main class="page-wrapper">
 

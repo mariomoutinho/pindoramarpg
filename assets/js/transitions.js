@@ -16,6 +16,19 @@
 
     const FADE_OUT_MS = 220;
 
+    /* Limpeza paranoica: ao montar o DOM e ao voltar via histórico,
+       remove qualquer page-leaving residual (de bf-cache ou bug). */
+    function limparPageLeaving() {
+        document.body.classList.remove('page-leaving');
+        document.querySelectorAll('a.is-leaving').forEach(a => a.classList.remove('is-leaving'));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', limparPageLeaving);
+    } else {
+        limparPageLeaving();
+    }
+
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a[href]');
         if (!link) return;
@@ -52,15 +65,19 @@
         link.classList.add('is-leaving');
         document.body.classList.add('page-leaving');
 
+        // Failsafe: se a navegação não acontecer (popup blocker, erro,
+        // gesture-required iOS, etc.), limpa a classe após 1.5s pra não
+        // deixar a página presa.
+        const limpeza = setTimeout(limparPageLeaving, 1500);
+
         setTimeout(() => {
+            clearTimeout(limpeza);
             window.location.href = url.href;
         }, FADE_OUT_MS);
     });
 
-    // Voltar/avançar via histórico → restaura visibilidade
-    window.addEventListener('pageshow', (e) => {
-        if (e.persisted) {
-            document.body.classList.remove('page-leaving');
-        }
-    });
+    // Voltar/avançar via histórico → SEMPRE restaura visibilidade
+    // (alguns browsers não setam e.persisted=true mas reusam a página).
+    window.addEventListener('pageshow', limparPageLeaving);
+    window.addEventListener('popstate', limparPageLeaving);
 })();
