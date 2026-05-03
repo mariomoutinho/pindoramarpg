@@ -6,72 +6,29 @@
     <title>Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260502" />
 </head>
-<body>
+<body class="home-body">
 
-    <main class="page-wrapper">
+    <main class="home-shell">
 
-        <header class="top-actions">
-            <div>
-                <h1>Pindorama RPG</h1>
-                <p>Sistema online de consulta, criação e gestão de personagens</p>
+        <a class="home-floating-icon" href="referencia.php" title="Referência rápida" aria-label="Referência rápida">
+            <span aria-hidden="true">&#9836;</span>
+        </a>
+
+        <section class="home-hero">
+            <div class="home-logo-frame">
+                <img src="assets/img/logo-pindorama-rpg.png" alt="Pindorama RPG" />
             </div>
-        </header>
-
-        <section class="sheet system-home">
-
-            <section class="panel">
-                <div class="panel-title">Menu Principal</div>
-
-                <div class="system-menu-grid">
-                    <a href="ficha.php" class="system-menu-card">
-                        <strong>Ficha</strong>
-                        <span>Criar, editar e salvar personagens.</span>
-                    </a>
-
-                    <a href="ancestralidades.php" class="system-menu-card">
-                        <strong>Ancestralidades</strong>
-                        <span>Regras, descrições e habilidades ancestrais.</span>
-                    </a>
-
-                    <a href="origens.php" class="system-menu-card">
-                        <strong>Origens</strong>
-                        <span>Histórias, trajetórias e regras de origem.</span>
-                    </a>
-
-                    <a href="classes.php" class="system-menu-card">
-                        <strong>Classes</strong>
-                        <span>Arquétipos, habilidades e evolução.</span>
-                    </a>
-
-                    <a href="divindades.php" class="system-menu-card">
-                        <strong>Divindades</strong>
-                        <span>Domínios, símbolos, crenças e poderes.</span>
-                    </a>
-
-                    <a href="equipamentos.php" class="system-menu-card">
-                        <strong>Equipamentos</strong>
-                        <span>Itens, espaços, carga e regras de uso.</span>
-                    </a>
-
-                    <a href="poderes.php" class="system-menu-card">
-                        <strong>Poderes</strong>
-                        <span>Poderes gerais, de classe e ancestrais.</span>
-                    </a>
-
-                    <a href="pericias.php" class="system-menu-card">
-                        <strong>Perícias</strong>
-                        <span>Regras, testes, treino e usos narrativos.</span>
-                    </a>
-
-                    <a href="magias.php" class="system-menu-card">
-                        <strong>Magias</strong>
-                        <span>Círculos, efeitos, aprimoramentos e conjuração.</span>
-                    </a>
-                </div>
-            </section>
-
+            <h1 class="home-title">Pindorama</h1>
+            <p class="home-subtitle">API: <span>http://localhost</span></p>
         </section>
+
+        <nav class="home-actions">
+            <a class="home-btn" href="ficha.php">Nova Ficha</a>
+            <a class="home-btn" href="fichas.php">Listar Fichas</a>
+            <a class="home-btn" href="referencia.php">Referência</a>
+        </nav>
 
     </main>
 

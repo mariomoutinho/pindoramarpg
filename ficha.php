@@ -20,6 +20,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
     <link rel="stylesheet" href="assets/css/divindades.css?v=20260430j" />
+    <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260502" />
 </head>
 <body>
 
@@ -788,5 +789,37 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <script src="assets/js/ancestralidades-ficha.js?v=20260501s"></script>
     <script src="assets/js/origens.js?v=20260430x"></script>
     <script src="assets/js/divindades.js?v=20260430j"></script>
+    <script src="assets/js/ancestralidade-picker.js?v=20260502"></script>
+
+    <script>
+    /* Auto-carrega ficha se ?id=N estiver na URL (vem da página fichas.php) */
+    (function () {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (!id) return;
+
+        async function carregar() {
+            try {
+                const res = await fetch('buscar-ficha.php?id=' + encodeURIComponent(id));
+                const result = await res.json();
+                if (!result.success) {
+                    console.warn('[ficha?id]', result.message);
+                    return;
+                }
+                if (typeof window.preencherFicha === 'function') {
+                    window.preencherFicha(result.ficha);
+                }
+            } catch (err) {
+                console.error('[ficha?id] erro ao carregar', err);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => setTimeout(carregar, 250));
+        } else {
+            setTimeout(carregar, 250);
+        }
+    })();
+    </script>
 </body>
 </html>

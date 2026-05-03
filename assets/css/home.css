@@ -1,0 +1,351 @@
+/* ====================================================================
+   Pindorama — Home, Listagem e Referência
+   Aproveita variáveis e fundo definidos em ficha.css
+   ==================================================================== */
+
+.home-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+}
+
+.home-shell {
+    width: min(440px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    position: relative;
+}
+
+.home-shell-list,
+.home-shell-ref {
+    width: min(720px, 100%);
+}
+
+/* ---------- Cabeçalho / hero ---------- */
+
+.home-hero {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.home-hero-compact {
+    gap: 2px;
+    margin-bottom: 4px;
+    position: relative;
+}
+
+.home-logo-frame {
+    width: 150px;
+    height: 150px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow:
+        0 4px 14px rgba(59, 29, 67, 0.14),
+        inset 0 0 0 1px rgba(118, 84, 124, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.home-logo-frame img {
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.home-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 2.6rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--purple-dark);
+    letter-spacing: 0.5px;
+}
+
+.home-subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+}
+
+.home-subtitle span {
+    color: var(--purple);
+}
+
+.home-back {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(118, 84, 124, 0.35);
+    color: var(--purple-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: transform 120ms ease, background 120ms ease;
+}
+
+.home-back:hover {
+    transform: translateX(-2px);
+    background: #fff;
+}
+
+/* ---------- Ícone flutuante ---------- */
+
+.home-floating-icon {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(118, 84, 124, 0.35);
+    color: var(--purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 1.3rem;
+    box-shadow: 0 3px 10px rgba(59, 29, 67, 0.12);
+    transition: transform 120ms ease, background 120ms ease;
+    z-index: 2;
+}
+
+.home-floating-icon:hover {
+    transform: rotate(-12deg) scale(1.05);
+    background: #fff;
+}
+
+/* ---------- Botões grandes (Nova Ficha / Listar / Referência) ---------- */
+
+.home-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.home-btn {
+    display: block;
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1.5px solid var(--purple-dark);
+    border-radius: 999px;
+    color: var(--purple-dark);
+    text-align: center;
+    text-decoration: none;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.15rem;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(59, 29, 67, 0.08);
+    transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.home-btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 29, 67, 0.18);
+}
+
+.home-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(59, 29, 67, 0.18);
+}
+
+.home-btn-ghost {
+    background: transparent;
+    border-color: rgba(118, 84, 124, 0.5);
+    color: var(--purple);
+    font-weight: normal;
+}
+
+/* ---------- Listagem de fichas ---------- */
+
+.home-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.home-card-ficha {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(118, 84, 124, 0.28);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--purple-dark);
+    transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.home-card-ficha:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 29, 67, 0.15);
+}
+
+.home-card-thumb {
+    flex: 0 0 auto;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--purple-light);
+    color: var(--purple-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: bold;
+    border: 1.5px solid rgba(118, 84, 124, 0.35);
+}
+
+.home-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.home-card-info {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.home-card-name {
+    font-size: 1.1rem;
+    color: var(--purple-dark);
+}
+
+.home-card-meta {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.home-card-player {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
+.home-card-arrow {
+    flex: 0 0 auto;
+    font-size: 1.6rem;
+    color: var(--purple);
+    opacity: 0.55;
+}
+
+.home-empty-state {
+    width: 100%;
+    text-align: center;
+    padding: 30px 20px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 14px;
+    border: 1px dashed rgba(118, 84, 124, 0.4);
+}
+
+.home-empty-state p {
+    margin: 0 0 16px;
+    color: var(--purple-dark);
+}
+
+.home-list-footer {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.home-list-footer .home-btn {
+    flex: 1 1 0;
+    padding: 12px 16px;
+    font-size: 1rem;
+}
+
+/* ---------- Referência: grid de cards ---------- */
+
+.home-grid-ref {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.home-card-ref {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(118, 84, 124, 0.28);
+    border-radius: 14px;
+    color: var(--purple-dark);
+    text-decoration: none;
+    transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.home-card-ref:hover {
+    background: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(59, 29, 67, 0.18);
+}
+
+.home-card-ref strong {
+    font-size: 1.05rem;
+    color: var(--purple-dark);
+}
+
+.home-card-ref span {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 600px) {
+    .home-title {
+        font-size: 2.1rem;
+    }
+
+    .home-logo-frame {
+        width: 120px;
+        height: 120px;
+    }
+
+    .home-back {
+        position: static;
+        margin-bottom: 8px;
+    }
+
+    .home-floating-icon {
+        top: -4px;
+        right: -4px;
+    }
+}

@@ -1,0 +1,390 @@
+/* ====================================================================
+   Tech-style picker de ancestralidades
+   Usa as variáveis de paleta de ficha.css (--purple, --purple-dark, ...)
+   ==================================================================== */
+
+/* O <select> nativo continua existindo mas escondido (a JS o sincroniza) */
+.anc-picker-hidden-select {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    pointer-events: none;
+}
+
+/* ---------- Botão que abre o picker ---------- */
+
+.anc-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 9px 14px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1.5px solid rgba(118, 84, 124, 0.4);
+    border-radius: 10px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1rem;
+    color: var(--purple-dark);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.anc-picker-trigger:hover,
+.anc-picker-trigger:focus-visible {
+    background: #fff;
+    border-color: var(--purple);
+    outline: none;
+}
+
+.anc-picker-trigger-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.anc-picker-trigger-label.is-empty {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.anc-picker-trigger-arrow {
+    flex: 0 0 auto;
+    color: var(--purple);
+    font-size: 0.85rem;
+    transition: transform 150ms ease;
+}
+
+.anc-picker-trigger[aria-expanded="true"] .anc-picker-trigger-arrow {
+    transform: rotate(180deg);
+}
+
+/* ---------- Backdrop ---------- */
+
+.anc-picker-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 18, 50, 0.55);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9990;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.anc-picker-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ---------- Painel principal ---------- */
+
+.anc-picker-panel {
+    width: min(880px, 96vw);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(circle at top right, rgba(233, 216, 241, 0.18), transparent 50%),
+        linear-gradient(135deg, var(--purple-dark) 0%, var(--purple-deep) 100%);
+    border: 1px solid rgba(233, 216, 241, 0.35);
+    border-radius: 18px;
+    box-shadow:
+        0 20px 60px rgba(15, 5, 25, 0.6),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    color: var(--purple-light);
+    overflow: hidden;
+    transform: scale(0.96);
+    transition: transform 180ms ease;
+}
+
+.anc-picker-backdrop.is-open .anc-picker-panel {
+    transform: scale(1);
+}
+
+/* Detalhes "tech": cantos com tracinhos */
+.anc-picker-panel::before,
+.anc-picker-panel::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(233, 216, 241, 0.55);
+    pointer-events: none;
+}
+
+.anc-picker-panel::before {
+    top: 14px;
+    left: 14px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.anc-picker-panel::after {
+    bottom: 14px;
+    right: 14px;
+    border-left: none;
+    border-top: none;
+}
+
+/* ---------- Header ---------- */
+
+.anc-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 12px;
+    border-bottom: 1px solid rgba(233, 216, 241, 0.18);
+    position: relative;
+}
+
+.anc-picker-title {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.3rem;
+    color: var(--pink-light);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.anc-picker-title::before {
+    content: "◆";
+    margin-right: 10px;
+    color: rgba(248, 216, 255, 0.55);
+    font-size: 0.7em;
+    vertical-align: middle;
+}
+
+.anc-picker-close {
+    background: transparent;
+    border: 1px solid rgba(233, 216, 241, 0.4);
+    color: var(--purple-light);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.anc-picker-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: var(--pink-light);
+}
+
+/* ---------- Body ---------- */
+
+.anc-picker-body {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* Lista de opções (esquerda) */
+.anc-picker-list {
+    border-right: 1px solid rgba(233, 216, 241, 0.16);
+    overflow-y: auto;
+    padding: 8px 0;
+    background: rgba(15, 5, 25, 0.18);
+}
+
+.anc-picker-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.anc-picker-list::-webkit-scrollbar-thumb {
+    background: rgba(233, 216, 241, 0.2);
+    border-radius: 3px;
+}
+
+.anc-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    cursor: pointer;
+    color: var(--purple-light);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1rem;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    transition: background 120ms ease, color 120ms ease;
+    border-left: 2px solid transparent;
+}
+
+.anc-picker-option:hover,
+.anc-picker-option.is-preview {
+    background: rgba(233, 216, 241, 0.08);
+    color: #fff;
+    border-left-color: var(--pink-light);
+}
+
+.anc-picker-option.is-selected {
+    background: rgba(105, 67, 111, 0.55);
+    color: #fff;
+    border-left-color: var(--pink-light);
+    font-weight: 600;
+}
+
+.anc-picker-radio {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(233, 216, 241, 0.55);
+    position: relative;
+    transition: border-color 120ms ease;
+}
+
+.anc-picker-option.is-selected .anc-picker-radio,
+.anc-picker-option.is-preview .anc-picker-radio {
+    border-color: var(--pink-light);
+}
+
+.anc-picker-option.is-selected .anc-picker-radio::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: var(--pink-light);
+    box-shadow: 0 0 6px rgba(248, 216, 255, 0.7);
+}
+
+/* Painel de preview (direita) */
+.anc-picker-preview {
+    padding: 22px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: var(--purple-light);
+}
+
+.anc-picker-preview-empty {
+    text-align: center;
+    margin: auto;
+    color: rgba(233, 216, 241, 0.5);
+    font-style: italic;
+    padding: 30px 20px;
+}
+
+.anc-picker-preview-image {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(15, 5, 25, 0.4);
+    border: 1px solid rgba(233, 216, 241, 0.22);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.anc-picker-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.anc-picker-preview-image .placeholder {
+    color: rgba(233, 216, 241, 0.4);
+    font-size: 2.5rem;
+}
+
+.anc-picker-preview-name {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.5rem;
+    color: var(--pink-light);
+    letter-spacing: 0.4px;
+}
+
+.anc-picker-preview-id {
+    color: rgba(233, 216, 241, 0.55);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-family: "Courier New", monospace;
+}
+
+.anc-picker-preview-summary {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    line-height: 1.55;
+    font-size: 0.96rem;
+}
+
+/* ---------- Footer ---------- */
+
+.anc-picker-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 22px 18px;
+    border-top: 1px solid rgba(233, 216, 241, 0.18);
+}
+
+.anc-picker-btn {
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: 1px solid rgba(233, 216, 241, 0.4);
+    background: transparent;
+    color: var(--purple-light);
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.anc-picker-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.anc-picker-btn-primary {
+    background: var(--pink-light);
+    color: var(--purple-deep);
+    border-color: var(--pink-light);
+    font-weight: 600;
+}
+
+.anc-picker-btn-primary:hover {
+    background: #fff;
+    color: var(--purple-deep);
+}
+
+.anc-picker-btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 720px) {
+    .anc-picker-body {
+        grid-template-columns: 1fr;
+    }
+
+    .anc-picker-list {
+        border-right: none;
+        border-bottom: 1px solid rgba(233, 216, 241, 0.16);
+        max-height: 38vh;
+    }
+}

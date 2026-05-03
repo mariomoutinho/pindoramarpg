@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Referência — Pindorama RPG</title>
+
+    <link rel="stylesheet" href="assets/css/ficha.css" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260502" />
+</head>
+<body class="home-body">
+
+    <main class="home-shell home-shell-ref">
+
+        <header class="home-hero home-hero-compact">
+            <a href="index.php" class="home-back" aria-label="Voltar ao menu">&larr;</a>
+            <h1 class="home-title">Referência</h1>
+            <p class="home-subtitle">Catálogos e regras do sistema</p>
+        </header>
+
+        <section class="home-grid-ref">
+            <a class="home-card-ref" href="ancestralidades.php">
+                <strong>Ancestralidades</strong>
+                <span>Povos, traços e habilidades.</span>
+            </a>
+            <a class="home-card-ref" href="origens.php">
+                <strong>Origens</strong>
+                <span>Histórias e benefícios iniciais.</span>
+            </a>
+            <a class="home-card-ref" href="classes.php">
+                <strong>Classes</strong>
+                <span>Arquétipos e progressão.</span>
+            </a>
+            <a class="home-card-ref" href="divindades.php">
+                <strong>Divindades</strong>
+                <span>Domínios, símbolos e poderes.</span>
+            </a>
+            <a class="home-card-ref" href="poderes.php">
+                <strong>Poderes</strong>
+                <span>Gerais, de classe e ancestrais.</span>
+            </a>
+            <a class="home-card-ref" href="magias.php">
+                <strong>Magias</strong>
+                <span>Círculos, custos e efeitos.</span>
+            </a>
+            <a class="home-card-ref" href="pericias.php">
+                <strong>Perícias</strong>
+                <span>Testes, treino e usos.</span>
+            </a>
+            <a class="home-card-ref" href="equipamentos.php">
+                <strong>Equipamentos</strong>
+                <span>Itens, espaços e regras.</span>
+            </a>
+        </section>
+
+        <div class="home-list-footer">
+            <a class="home-btn home-btn-ghost" href="index.php">Voltar</a>
+        </div>
+
+    </main>
+
+</body>
+</html>
