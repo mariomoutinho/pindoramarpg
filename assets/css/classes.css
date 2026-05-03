@@ -1342,7 +1342,7 @@ body {
     }
 
     .mobile-menu-toggle {
-        top: 18px;
+        bottom: 18px;
         right: 12px;
         width: 48px;
         height: 48px;
