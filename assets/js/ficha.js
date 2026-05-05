@@ -2678,10 +2678,23 @@ function setupTokenImageUpload() {
     const tokenSrcInput = document.getElementById("tokenImagemAtual");
     const removerInput = document.getElementById("removerPersonagemTokenImagem");
 
-    if (!fileInput) return;
+    console.log("[token-upload] setup", {
+        fileInput: !!fileInput,
+        carregarBtn: !!carregarBtn,
+        removerBtn: !!removerBtn,
+        tokenSrcInput: !!tokenSrcInput,
+        removerInput: !!removerInput
+    });
+
+    if (!fileInput) {
+        console.warn("[token-upload] fileInput não encontrado — abortando setup");
+        return;
+    }
 
     if (carregarBtn) {
         carregarBtn.addEventListener("click", event => {
+            console.log("[token-upload] click Carregar");
+            event.preventDefault();
             event.stopPropagation();
             fileInput.click();
         });
@@ -2689,7 +2702,12 @@ function setupTokenImageUpload() {
 
     if (removerBtn) {
         removerBtn.addEventListener("click", event => {
+            console.log("[token-upload] click Remover");
+            event.preventDefault();
             event.stopPropagation();
+            // Limpa também o file input para que não seja submetido um arquivo antigo
+            fileInput.value = "";
+            fileInput.dataset.hasPending = "0";
             if (tokenSrcInput) tokenSrcInput.value = "";
             if (removerInput) removerInput.value = "1";
             writeTokenImageAdjustment(defaultCharacterImageAdjustment());
@@ -2699,17 +2717,34 @@ function setupTokenImageUpload() {
 
     fileInput.addEventListener("change", event => {
         const file = event.target.files[0];
+        console.log("[token-upload] change", file && { name: file.name, size: file.size, type: file.type });
         if (!file) return;
+        // Marca que há upload pendente — não colocamos o base64 no input hidden
+        // para não inflar o POST. O arquivo real vai via $_FILES.
+        fileInput.dataset.hasPending = "1";
+        if (removerInput) removerInput.value = "0";
+        writeTokenImageAdjustment(defaultCharacterImageAdjustment());
         const reader = new FileReader();
         reader.onload = e => {
-            // marca que existe uma imagem de token customizada (mesmo antes de salvar)
-            if (tokenSrcInput) tokenSrcInput.value = e.target.result;
-            if (removerInput) removerInput.value = "0";
-            writeTokenImageAdjustment(defaultCharacterImageAdjustment());
             setTokenPreview(e.target.result);
+            console.log("[token-upload] preview definido. file size:", file.size);
         };
         reader.readAsDataURL(file);
     });
+}
+
+function hasPendingTokenUpload() {
+    const fileInput = document.getElementById("personagemTokenImagemInput");
+    return fileInput && (fileInput.dataset.hasPending === "1" || fileInput.files.length > 0);
+}
+
+function hasSavedTokenImage() {
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    return tokenSrcInput && tokenSrcInput.value;
+}
+
+function hasAnyCustomToken() {
+    return hasPendingTokenUpload() || hasSavedTokenImage();
 }
 
 function getCharacterPreviewElements() {
@@ -2749,10 +2784,8 @@ function setCharacterPreview(src, ajuste) {
         applyCharacterImageAdjustment();
     }
 
-    // Se não houver imagem de token customizada, usar a foto como fallback
-    const tokenSrcInput = document.getElementById("tokenImagemAtual");
-    const hasCustomTokenSrc = tokenSrcInput && tokenSrcInput.value;
-    if (!hasCustomTokenSrc && tokenImg) {
+    // Se não houver imagem de token customizada (salva nem pendente), usar a foto como fallback
+    if (!hasAnyCustomToken() && tokenImg) {
         if (src) {
             tokenImg.src = src;
         } else {
@@ -2773,8 +2806,9 @@ function setTokenPreview(src, ajuste) {
     } else {
         // fallback para foto principal
         const fotoImg = document.getElementById("characterPreview");
-        if (fotoImg && fotoImg.getAttribute("src")) {
-            tokenImg.src = fotoImg.getAttribute("src");
+        const fotoSrc = fotoImg && fotoImg.getAttribute("src");
+        if (fotoSrc) {
+            tokenImg.src = fotoSrc;
         } else {
             tokenImg.removeAttribute("src");
         }
@@ -2878,11 +2912,9 @@ function applyCharacterImageAdjustment() {
     const { box, tokenImg } = getCharacterPreviewElements();
     applyAdjustmentToElement(box, ajustes.foto, "--char-img");
 
-    // Se há imagem de token customizada, usa o ajuste dedicado dela.
+    // Se há imagem de token customizada (salva ou pendente), usa o ajuste dedicado dela.
     // Caso contrário, usa o ajuste do "token" dentro de personagem_imagem_ajuste (legacy).
-    const tokenSrcInput = document.getElementById("tokenImagemAtual");
-    const hasCustomTokenSrc = tokenSrcInput && tokenSrcInput.value;
-    const tokenAjuste = hasCustomTokenSrc ? readTokenImageAdjustment() : ajustes.token;
+    const tokenAjuste = hasAnyCustomToken() ? readTokenImageAdjustment() : ajustes.token;
     applyAdjustmentToElement(tokenImg?.parentElement, tokenAjuste, "--token-img");
 }
 
@@ -2903,20 +2935,16 @@ function setupCharacterImageAdjustments() {
 }
 
 function getActiveAdjustForTarget(target) {
-    if (target === "token") {
-        const tokenSrcInput = document.getElementById("tokenImagemAtual");
-        if (tokenSrcInput && tokenSrcInput.value) return readTokenImageAdjustment();
+    if (target === "token" && hasAnyCustomToken()) {
+        return readTokenImageAdjustment();
     }
     return readCharacterImageAdjustment()[target];
 }
 
 function setActiveAdjustForTarget(target, ajuste) {
-    if (target === "token") {
-        const tokenSrcInput = document.getElementById("tokenImagemAtual");
-        if (tokenSrcInput && tokenSrcInput.value) {
-            setTokenImageAdjustmentValue(ajuste);
-            return;
-        }
+    if (target === "token" && hasAnyCustomToken()) {
+        setTokenImageAdjustmentValue(ajuste);
+        return;
     }
     setCharacterImageAdjustment(target, ajuste);
 }
@@ -3612,7 +3640,10 @@ async function salvarFicha(event) {
         const tokenSrcInput = document.getElementById("tokenImagemAtual");
         const removerTokenInput = document.getElementById("removerPersonagemTokenImagem");
         const tokenFileInput = document.getElementById("personagemTokenImagemInput");
-        if (tokenFileInput) tokenFileInput.value = "";
+        if (tokenFileInput) {
+            tokenFileInput.value = "";
+            tokenFileInput.dataset.hasPending = "0";
+        }
         if (removerTokenInput) removerTokenInput.value = "0";
         if (result.personagem_token_imagem) {
             if (tokenSrcInput) tokenSrcInput.value = result.personagem_token_imagem;
@@ -3873,7 +3904,10 @@ function preencherFicha(ficha) {
     const tokenSrcInput = document.getElementById("tokenImagemAtual");
     const removerTokenInput = document.getElementById("removerPersonagemTokenImagem");
     const tokenFileInput = document.getElementById("personagemTokenImagemInput");
-    if (tokenFileInput) tokenFileInput.value = "";
+    if (tokenFileInput) {
+        tokenFileInput.value = "";
+        tokenFileInput.dataset.hasPending = "0";
+    }
     if (removerTokenInput) removerTokenInput.value = "0";
     if (tokenSrcInput) tokenSrcInput.value = ficha.personagem_token_imagem ?? "";
     writeTokenImageAdjustment(readTokenImageAdjustmentFromValue(ficha.personagem_token_imagem_ajuste));
@@ -4005,7 +4039,10 @@ function novaFicha() {
     const tokenFileInput = document.getElementById("personagemTokenImagemInput");
     if (tokenSrcInput) tokenSrcInput.value = "";
     if (removerTokenInput) removerTokenInput.value = "0";
-    if (tokenFileInput) tokenFileInput.value = "";
+    if (tokenFileInput) {
+        tokenFileInput.value = "";
+        tokenFileInput.dataset.hasPending = "0";
+    }
     writeTokenImageAdjustment(defaultCharacterImageAdjustment());
     setTokenPreview(null);
     syncResource("pv");
