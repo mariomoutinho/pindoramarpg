@@ -354,6 +354,48 @@
     cursor: pointer;
 }
 
+.criatura-ataque-alcance {
+    font-weight: 700;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 240, 250, 0.96)),
+        rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(105, 67, 111, 0.32);
+    border-radius: 10px;
+    padding: 9px 12px;
+    color: var(--purple-dark);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 2 L7 8 L13 2' fill='none' stroke='%23694b7a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>"),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 240, 250, 0.96));
+    background-repeat: no-repeat, no-repeat;
+    background-position: right 12px center, 0 0;
+    background-size: 12px auto, auto;
+    padding-right: 36px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    cursor: pointer;
+}
+
+.criatura-ataque-alcance:focus {
+    outline: none;
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(105, 67, 111, 0.18);
+}
+
+.criatura-ataque-alcance optgroup {
+    font-weight: 900;
+    color: var(--purple-dark);
+    background: rgba(247, 240, 250, 0.95);
+    padding: 4px 0;
+    font-style: normal;
+}
+
+.criatura-ataque-alcance option {
+    font-weight: 600;
+    color: var(--purple-dark);
+    padding: 6px 10px;
+    background: white;
+}
+
 .criatura-add-ataque {
     justify-self: start;
 }

@@ -20,7 +20,7 @@ function bestiarioOptions(array $valores): string
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/classes.css?v=20260503j" />
-    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505b" />
+    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505d" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
@@ -189,6 +189,6 @@ function bestiarioOptions(array $valores): string
     <script>
         window.BESTIARIO_BASE = <?= json_encode($dadosBestiario, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     </script>
-    <script src="assets/js/bestiario.js?v=20260505c"></script>
+    <script src="assets/js/bestiario.js?v=20260505d"></script>
 </body>
 </html>

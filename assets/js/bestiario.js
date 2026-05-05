@@ -29,9 +29,18 @@
     };
 
     const ALCANCES_ATAQUE = [
-        { value: 'corpo a corpo', label: 'Corpo a corpo - 1 quadrado / 1,5m' },
-        { value: 'curto', label: 'Curto - 9m / 6 quadrados' },
-        { value: 'longo', label: 'Longo - 90m / 60 quadrados' }
+        { value: 'corpo a corpo', label: 'Corpo a corpo — 1,5m (1 quadrado)', grupo: 'Distância' },
+        { value: 'curto', label: 'Curto — 9m (6 quadrados)', grupo: 'Distância' },
+        { value: 'longo', label: 'Longo — 90m (60 quadrados)', grupo: 'Distância' },
+        { value: 'cubo-1.5', label: 'Cubo de 1,5m (1×1)', grupo: 'Cubo' },
+        { value: 'cubo-3', label: 'Cubo de 3m (2×2)', grupo: 'Cubo' },
+        { value: 'cone-4.5', label: 'Cone de 4,5m', grupo: 'Cone' },
+        { value: 'cone-6', label: 'Cone de 6m', grupo: 'Cone' },
+        { value: 'cone-9', label: 'Cone de 9m', grupo: 'Cone' },
+        { value: 'raio-1.5', label: 'Raio de 1,5m', grupo: 'Raio' },
+        { value: 'raio-3', label: 'Raio de 3m', grupo: 'Raio' },
+        { value: 'raio-6', label: 'Raio de 6m', grupo: 'Raio' },
+        { value: 'linha-15', label: 'Linha de 15m', grupo: 'Linha' }
     ];
 
     function carregarCriaturas() {
@@ -153,8 +162,27 @@
 
     function normalizarAlcanceAtaque(valor) {
         const chave = normalizar(valor);
-        if (chave.includes('longo') || chave.includes('90') || chave.includes('60')) return 'longo';
-        if (chave.includes('curto') || chave.includes('9m') || chave.includes('6 quadr')) return 'curto';
+        // Match exato dos valores conhecidos primeiro
+        const direto = ALCANCES_ATAQUE.find((it) => it.value === valor || normalizar(it.value) === chave);
+        if (direto) return direto.value;
+        // Padrões de área
+        if (chave.includes('cubo')) {
+            if (chave.includes('3')) return 'cubo-3';
+            return 'cubo-1.5';
+        }
+        if (chave.includes('cone')) {
+            if (chave.includes('9')) return 'cone-9';
+            if (chave.includes('6')) return 'cone-6';
+            return 'cone-4.5';
+        }
+        if (chave.includes('raio') || chave.includes('esfera')) {
+            if (chave.includes('6')) return 'raio-6';
+            if (chave.includes('3')) return 'raio-3';
+            return 'raio-1.5';
+        }
+        if (chave.includes('linha')) return 'linha-15';
+        if (chave.includes('longo') || chave.includes('90m') || /\b60\b/.test(chave)) return 'longo';
+        if (chave.includes('curto') || chave.includes('9m') || /\b6\s*quadr/.test(chave)) return 'curto';
         return 'corpo a corpo';
     }
 
@@ -179,7 +207,19 @@
 
     function rotuloAlcance(valor) {
         const alcance = normalizarAlcanceAtaque(valor);
-        return ALCANCES_ATAQUE.find((item) => item.value === alcance)?.label || 'Corpo a corpo - 1 quadrado / 1,5m';
+        return ALCANCES_ATAQUE.find((item) => item.value === alcance)?.label || 'Corpo a corpo — 1,5m (1 quadrado)';
+    }
+
+    function renderAlcancesOptions() {
+        const grupos = new Map();
+        for (const item of ALCANCES_ATAQUE) {
+            const chave = item.grupo || 'Outros';
+            if (!grupos.has(chave)) grupos.set(chave, []);
+            grupos.get(chave).push(item);
+        }
+        return Array.from(grupos.entries()).map(([grupo, items]) =>
+            `<optgroup label="${escapeHtml(grupo)}">${items.map((it) => `<option value="${escapeHtml(it.value)}">${escapeHtml(it.label)}</option>`).join('')}</optgroup>`
+        ).join('');
     }
 
     function rotuloSaveTipo(valor) {
@@ -208,8 +248,8 @@
         row.innerHTML = `
             <label>Nome <input data-criatura-ataque="nome" placeholder="Ataque" value="${escapeHtml(ataque.nome || 'Ataque')}" /></label>
             <label>Alcance
-                <select data-criatura-ataque="alcance">
-                    ${ALCANCES_ATAQUE.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join('')}
+                <select data-criatura-ataque="alcance" class="criatura-ataque-alcance">
+                    ${renderAlcancesOptions()}
                 </select>
             </label>
             <label>Dano <input data-criatura-ataque="dano" placeholder="2d6+3" value="${escapeHtml(ataque.dano || '')}" /></label>

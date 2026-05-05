@@ -227,48 +227,85 @@
 }
 
 .cb-cell--alcance {
+    position: relative;
     background:
-        radial-gradient(circle at center, rgba(155, 37, 77, 0.06) 28%, rgba(155, 37, 77, 0.20) 100%),
-        rgba(248, 222, 232, 0.45);
+        radial-gradient(circle at center, rgba(196, 80, 100, 0.18) 0%, rgba(155, 37, 77, 0.30) 60%, rgba(120, 24, 60, 0.42) 100%),
+        rgba(255, 232, 240, 0.35);
     box-shadow:
-        inset 0 0 0 1.5px rgba(155, 37, 77, 0.55),
-        inset 0 0 14px rgba(155, 37, 77, 0.18);
+        inset 0 0 0 1.5px rgba(180, 50, 90, 0.55),
+        inset 0 0 18px rgba(155, 37, 77, 0.22);
+    transition: background 200ms ease, box-shadow 200ms ease;
+}
+
+.cb-cell--alcance::before {
+    content: "";
+    position: absolute;
+    inset: 6%;
+    border-radius: 4px;
+    background:
+        repeating-linear-gradient(
+            45deg,
+            rgba(180, 50, 90, 0.10) 0,
+            rgba(180, 50, 90, 0.10) 4px,
+            transparent 4px,
+            transparent 9px
+        );
+    pointer-events: none;
+    opacity: 0.85;
 }
 
 .cb-cell--alcance::after {
     content: "";
     position: absolute;
-    inset: 28%;
+    inset: 32%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(155, 37, 77, 0.55) 0%, rgba(155, 37, 77, 0) 75%);
+    background:
+        radial-gradient(circle, rgba(220, 100, 130, 0.85) 0%, rgba(180, 50, 90, 0.35) 50%, rgba(155, 37, 77, 0) 78%);
     pointer-events: none;
     animation: cb-reach-pulse 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(220, 80, 110, 0.45));
 }
 
 .cb-cell--target {
     background:
-        radial-gradient(circle at center, rgba(155, 37, 77, 0.32) 25%, rgba(201, 62, 77, 0.55) 100%),
+        radial-gradient(circle at center, rgba(255, 220, 60, 0.32) 0%, rgba(220, 70, 100, 0.55) 55%, rgba(155, 37, 77, 0.78) 100%),
         rgba(245, 220, 230, 0.7);
     box-shadow:
-        inset 0 0 0 2.5px rgba(155, 37, 77, 0.95),
-        inset 0 0 20px rgba(155, 37, 77, 0.32);
+        inset 0 0 0 2.5px rgba(255, 200, 50, 0.85),
+        inset 0 0 22px rgba(220, 60, 90, 0.5),
+        0 0 12px rgba(255, 180, 70, 0.4);
     cursor: crosshair;
+    z-index: 1;
+}
+
+.cb-cell--target::before {
+    background:
+        repeating-linear-gradient(
+            45deg,
+            rgba(255, 200, 50, 0.18) 0,
+            rgba(255, 200, 50, 0.18) 5px,
+            transparent 5px,
+            transparent 10px
+        );
+    opacity: 1;
 }
 
 .cb-cell--target::after {
     inset: 18%;
-    background: radial-gradient(circle, rgba(155, 37, 77, 0.85) 0%, rgba(155, 37, 77, 0) 80%);
+    background:
+        radial-gradient(circle, rgba(255, 240, 120, 0.92) 0%, rgba(220, 70, 100, 0.35) 60%, rgba(155, 37, 77, 0) 82%);
     animation: cb-target-pulse 1s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(255, 200, 60, 0.6));
 }
 
 @keyframes cb-reach-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
+    0%, 100% { transform: scale(1); opacity: 0.65; }
     50% { transform: scale(0.7); opacity: 1; }
 }
 
 @keyframes cb-target-pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.18); opacity: 0.55; }
+    50% { transform: scale(1.22); opacity: 0.6; }
 }
 
 .cb-cell-label {
@@ -924,6 +961,21 @@
     background: var(--purple-dark);
     color: #fff;
     border-color: var(--purple-dark);
+}
+
+.cb-action-card .cb-action-area-btn {
+    background: linear-gradient(135deg, #d04a78, #8a1d4a);
+    border-color: #8a1d4a;
+    color: #fff;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 6px rgba(155, 37, 77, 0.35);
+}
+
+.cb-action-card .cb-action-area-btn:hover {
+    background: linear-gradient(135deg, #e85686, #a02555);
+    border-color: #a02555;
+    transform: translateY(-1px);
 }
 
 .cb-action-empty {

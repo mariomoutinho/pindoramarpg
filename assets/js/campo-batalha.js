@@ -1896,6 +1896,19 @@
             });
             buttons.appendChild(selectAttack);
 
+            // Botão dedicado para ataques em área: aplica dano em todos os tokens dentro da área
+            if (isAreaAttack(item)) {
+                const areaAttack = document.createElement('button');
+                areaAttack.type = 'button';
+                areaAttack.className = 'cb-action-area-btn';
+                areaAttack.textContent = 'Atacar em área';
+                areaAttack.addEventListener('click', () => {
+                    executeAreaAttack(token, item);
+                    closeTokenActionPanel();
+                });
+                buttons.appendChild(areaAttack);
+            }
+
             card.appendChild(buttons);
         }
 
@@ -1960,11 +1973,18 @@
     }
 
     function isAttackWithReach(item) {
+        const alc = normalizeText(item && item.alcance);
         return normalizeText(item && item.tipo).includes('ataque')
-            || ['corpo a corpo', 'curto', 'longo'].some(alvo => normalizeText(item && item.alcance).includes(alvo))
+            || ['corpo a corpo', 'curto', 'longo', 'cubo', 'cone', 'raio', 'esfera', 'linha'].some(alvo => alc.includes(alvo))
+            || isAreaAttack(item)
             || normalizeText(item && item.nome).includes('gavioes espinhosos')
             || normalizeText(item && item.nome).includes('gavinhos espinhosos')
             || normalizeText(item && item.nome).includes('gravetos espinhosos');
+    }
+
+    function isAreaAttack(item) {
+        const shape = parseAreaShape(item && item.alcance);
+        return shape.tipo === 'cone' || shape.tipo === 'linha' || shape.tipo === 'raio' || shape.tipo === 'cubo';
     }
 
     function actionKey(item) {
@@ -2035,6 +2055,76 @@
             }
         }
         return set;
+    }
+
+    function executeAreaAttack(attacker, item) {
+        const targets = getTokensInActionReach(attacker, item);
+        if (!isReachPreviewActive(attacker.id, item)) {
+            toggleReachPreview(attacker, item);
+        }
+        if (!targets.length) {
+            openAttackResultModal({
+                attacker,
+                target: null,
+                actionName: getActionDisplayName(item),
+                totalDamage: 0,
+                message: 'Nenhum alvo dentro da área de efeito.'
+            });
+            return;
+        }
+
+        // Para áreas: rola UMA vez o dano e aplica em todos os alvos.
+        // Cada alvo faz o próprio teste de salvação se aplicável.
+        const damageFormula = item.danoFormula || parseDamageFormula(item.dano || item.detalhe || item.nome || '') || '1d6';
+        const damage = rollDamage(damageFormula);
+        const saveTipo = String(item.saveTipo || '').toLowerCase();
+        const saveCD = Number(item.saveCD || 0) || null;
+
+        const results = [];
+        let totalDamage = 0;
+        let index = 1;
+        for (const target of targets) {
+            let saveResult = null;
+            if (saveTipo && saveCD) {
+                saveResult = rollTargetSave(target, saveTipo, saveCD);
+            }
+            const finalDamage = saveResult && saveResult.success
+                ? Math.floor(damage.total / 2)
+                : damage.total;
+            applyDamageToToken(target, finalDamage);
+            results.push({
+                index: index++,
+                targetName: target.name || 'Alvo',
+                d20: null,
+                total: null,
+                attackBonus: 0,
+                defense: parseDefense(target),
+                hit: true,
+                acertoAutomatico: true,
+                damage,
+                damageTotal: finalDamage,
+                damageFull: damage.total,
+                save: saveResult,
+                pvAtual: clampResource(target.pvAtual, target.pvMax),
+                pvMax: target.pvMax || 0
+            });
+            totalDamage += finalDamage;
+        }
+
+        clearReachPreview(false);
+        renderTokens();
+        renderBoard();
+        selectToken(attacker.id);
+        saveState();
+
+        openAttackResultModal({
+            attacker,
+            target: null,
+            actionName: getActionDisplayName(item),
+            results,
+            totalDamage,
+            message: `${results.length} alvo(s) na área de efeito`
+        });
     }
 
     function executeMeleeAttack(attacker, item) {
@@ -2203,15 +2293,130 @@
     }
 
     function buildActionReachCells(token, action) {
+        const shape = parseAreaShape(action?.alcance);
         const { col, row } = getReachAttackerPosition(token);
-        return buildReachCellsAt(col, row, token.sizeCells, getActionReachSquares(action));
+        const size = Math.max(1, Number(token.sizeCells || 1));
+        const cells = new Set();
+
+        if (shape.tipo === 'cone') {
+            // Cone em cada uma das 4 direções cardeais a partir das bordas do token
+            for (const dir of ['n', 's', 'l', 'o']) {
+                addConeCells(cells, col, row, size, shape.tamanho, dir);
+            }
+        } else if (shape.tipo === 'linha') {
+            // Linha de 1 célula de largura nas 4 direções
+            for (const dir of ['n', 's', 'l', 'o']) {
+                addLineCells(cells, col, row, size, shape.tamanho, dir);
+            }
+        } else if (shape.tipo === 'raio') {
+            // Esfera (raio) centrada no token; afeta tudo em raio R
+            addRadiusCells(cells, col, row, size, shape.tamanho);
+        } else if (shape.tipo === 'cubo') {
+            // Cubo de lado N centrado no token
+            addCubeCells(cells, col, row, size, shape.tamanho);
+        } else {
+            // Alcance simples (corpo a corpo, curto, longo)
+            return buildReachCellsAt(col, row, token.sizeCells, shape.tamanho);
+        }
+        return cells;
+    }
+
+    function parseAreaShape(alcance) {
+        const raw = String(alcance || '');
+        const norm = normalizeText(raw);
+        // Match nos novos valores chaveados (cubo-3, cone-9, raio-6, linha-15)
+        const m = raw.match(/^(cubo|cone|raio|linha)-([\d.]+)$/i);
+        if (m) {
+            const tipo = m[1].toLowerCase();
+            const valor = Number(m[2]);
+            return { tipo, tamanho: areaSquaresFromMeters(tipo, valor) };
+        }
+        if (norm.includes('cubo')) {
+            return { tipo: 'cubo', tamanho: norm.includes('3') ? 2 : 1 };
+        }
+        if (norm.includes('cone')) {
+            const m9 = norm.includes('9');
+            const m6 = norm.includes('6');
+            return { tipo: 'cone', tamanho: m9 ? 6 : (m6 ? 4 : 3) };
+        }
+        if (norm.includes('raio') || norm.includes('esfera')) {
+            const m6 = norm.includes('6');
+            const m3 = norm.includes('3');
+            return { tipo: 'raio', tamanho: m6 ? 4 : (m3 ? 2 : 1) };
+        }
+        if (norm.includes('linha')) {
+            return { tipo: 'linha', tamanho: 10 };
+        }
+        if (norm.includes('longo') || norm.includes('90') || /\b60\b/.test(norm)) return { tipo: 'simples', tamanho: 60 };
+        if (norm.includes('curto') || norm.includes('9m') || /\b6\s*quadr/.test(norm)) return { tipo: 'simples', tamanho: 6 };
+        return { tipo: 'simples', tamanho: 1 };
+    }
+
+    function areaSquaresFromMeters(tipo, metros) {
+        // 1 quadrado = 1,5m. Converter metros em quadrados.
+        const quadrados = Math.max(1, Math.round(Number(metros) / 1.5));
+        return quadrados;
     }
 
     function getActionReachSquares(action) {
-        const alcance = normalizeText(action?.alcance || '');
-        if (alcance.includes('longo') || alcance.includes('90') || alcance.includes('60')) return 60;
-        if (alcance.includes('curto') || alcance.includes('9m') || alcance.includes('6 quadr')) return 6;
-        return 1;
+        const shape = parseAreaShape(action?.alcance);
+        return shape.tamanho;
+    }
+
+    function addConeCells(cells, baseCol, baseRow, size, len, dir) {
+        // Cone que emana da borda do token na direção dir, com largura crescente.
+        // largura = 1, 3, 5, 7... (ímpar, cresce 2 por passo)
+        const right = baseCol + size - 1;
+        const bottom = baseRow + size - 1;
+        for (let step = 1; step <= len; step++) {
+            const half = step;
+            for (let s = -half + 1; s < half; s++) {
+                let col, row;
+                if (dir === 'n') { col = baseCol + Math.floor(size / 2) + s; row = baseRow - step; }
+                else if (dir === 's') { col = baseCol + Math.floor(size / 2) + s; row = bottom + step; }
+                else if (dir === 'l') { col = right + step; row = baseRow + Math.floor(size / 2) + s; }
+                else { col = baseCol - step; row = baseRow + Math.floor(size / 2) + s; }
+                if (col < 0 || col >= state.cols || row < 0 || row >= state.rows) continue;
+                cells.add(occupiedKey(col, row));
+            }
+        }
+    }
+
+    function addLineCells(cells, baseCol, baseRow, size, len, dir) {
+        const right = baseCol + size - 1;
+        const bottom = baseRow + size - 1;
+        for (let step = 1; step <= len; step++) {
+            let col, row;
+            if (dir === 'n') { col = baseCol + Math.floor(size / 2); row = baseRow - step; }
+            else if (dir === 's') { col = baseCol + Math.floor(size / 2); row = bottom + step; }
+            else if (dir === 'l') { col = right + step; row = baseRow + Math.floor(size / 2); }
+            else { col = baseCol - step; row = baseRow + Math.floor(size / 2); }
+            if (col < 0 || col >= state.cols || row < 0 || row >= state.rows) continue;
+            cells.add(occupiedKey(col, row));
+        }
+    }
+
+    function addRadiusCells(cells, baseCol, baseRow, size, radius) {
+        // Raio circular (Chebyshev distance) ao redor do token; exclui o próprio token
+        const right = baseCol + size - 1;
+        const bottom = baseRow + size - 1;
+        for (let row = baseRow - radius; row <= bottom + radius; row++) {
+            for (let col = baseCol - radius; col <= right + radius; col++) {
+                if (col < 0 || col >= state.cols || row < 0 || row >= state.rows) continue;
+                const insideToken = col >= baseCol && col <= right && row >= baseRow && row <= bottom;
+                if (insideToken) continue;
+                const dx = col < baseCol ? baseCol - col : (col > right ? col - right : 0);
+                const dy = row < baseRow ? baseRow - row : (row > bottom ? row - bottom : 0);
+                if (Math.max(dx, dy) <= radius) {
+                    cells.add(occupiedKey(col, row));
+                }
+            }
+        }
+    }
+
+    function addCubeCells(cells, baseCol, baseRow, size, lado) {
+        // Cubo de lado N centrado adjacente ao token (na frente em todas as direções)
+        addRadiusCells(cells, baseCol, baseRow, size, lado);
     }
 
     function buildReachCellsAt(baseCol, baseRow, sizeCells, radius) {
