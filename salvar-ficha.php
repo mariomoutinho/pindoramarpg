@@ -6,6 +6,7 @@ header('Content-Type: application/json');
 
 $id = $_POST['id'] ?? null;
 garantirColunaAjusteImagem($pdo);
+garantirColunasTokenImagem($pdo);
 
 $campos = [
     'participante',
@@ -17,6 +18,8 @@ $campos = [
     'divindade',
     'personagem_imagem',
     'personagem_imagem_ajuste',
+    'personagem_token_imagem',
+    'personagem_token_imagem_ajuste',
 
     'forca',
     'destreza',
@@ -61,9 +64,14 @@ $removerImagem = ($_POST['remover_personagem_imagem'] ?? '0') === '1';
 $imagemSalva = $imagemAtual;
 $imagemAntigaBanco = null;
 
+$tokenImagemAtual = $_POST['token_imagem_atual'] ?? null;
+$removerTokenImagem = ($_POST['remover_personagem_token_imagem'] ?? '0') === '1';
+$tokenImagemSalva = $tokenImagemAtual;
+$tokenImagemAntigaBanco = null;
+
 try {
     if ($id) {
-        $stmt = $pdo->prepare("SELECT personagem_imagem FROM fichas WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT personagem_imagem, personagem_token_imagem FROM fichas WHERE id = :id");
         $stmt->execute(['id' => $id]);
         $fichaAtual = $stmt->fetch();
 
@@ -71,6 +79,10 @@ try {
             $imagemAntigaBanco = $fichaAtual['personagem_imagem'] ?? null;
             if (!$imagemSalva) {
                 $imagemSalva = $imagemAntigaBanco;
+            }
+            $tokenImagemAntigaBanco = $fichaAtual['personagem_token_imagem'] ?? null;
+            if (!$tokenImagemSalva) {
+                $tokenImagemSalva = $tokenImagemAntigaBanco;
             }
         }
     }
@@ -80,6 +92,13 @@ try {
             unlink(__DIR__ . '/' . $imagemAntigaBanco);
         }
         $imagemSalva = null;
+    }
+
+    if ($removerTokenImagem) {
+        if ($tokenImagemAntigaBanco && file_exists(__DIR__ . '/' . $tokenImagemAntigaBanco)) {
+            unlink(__DIR__ . '/' . $tokenImagemAntigaBanco);
+        }
+        $tokenImagemSalva = null;
     }
 
     if (
@@ -124,7 +143,49 @@ try {
         $imagemSalva = 'uploads/personagens/' . $novoNome;
     }
 
+    if (
+        isset($_FILES['personagem_token_imagem_file']) &&
+        $_FILES['personagem_token_imagem_file']['error'] === UPLOAD_ERR_OK
+    ) {
+        $uploadDir = __DIR__ . '/uploads/tokens/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $nomeOriginal = $_FILES['personagem_token_imagem_file']['name'];
+        $tmpName = $_FILES['personagem_token_imagem_file']['tmp_name'];
+        $ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+
+        $extPermitidas = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+        if (!in_array($ext, $extPermitidas)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Formato de imagem do token inválido. Use JPG, PNG, WEBP ou GIF.'
+            ]);
+            exit;
+        }
+
+        $novoNome = uniqid('token_', true) . '.' . $ext;
+        $destino = $uploadDir . $novoNome;
+
+        if (!move_uploaded_file($tmpName, $destino)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Não foi possível salvar a imagem do token.'
+            ]);
+            exit;
+        }
+
+        if ($tokenImagemAntigaBanco && file_exists(__DIR__ . '/' . $tokenImagemAntigaBanco)) {
+            unlink(__DIR__ . '/' . $tokenImagemAntigaBanco);
+        }
+
+        $tokenImagemSalva = 'uploads/tokens/' . $novoNome;
+    }
+
     $dados['personagem_imagem'] = $imagemSalva;
+    $dados['personagem_token_imagem'] = $tokenImagemSalva;
 
     $classesEntrada = json_decode($_POST['classes_personagem'] ?? '', true);
     if (!is_array($classesEntrada) || empty($classesEntrada)) {
@@ -209,6 +270,8 @@ echo json_encode([
         'id'                => $fichaId,
         'personagem_imagem' => $imagemSalva,
         'personagem_imagem_ajuste' => $dados['personagem_imagem_ajuste'] ?? null,
+        'personagem_token_imagem' => $tokenImagemSalva,
+        'personagem_token_imagem_ajuste' => $dados['personagem_token_imagem_ajuste'] ?? null,
         'message'           => $id ? 'Ficha atualizada com sucesso.' : 'Ficha criada com sucesso.',
     ]);
 } catch (PDOException $e) {
@@ -236,5 +299,25 @@ function garantirColunaAjusteImagem(PDO $pdo): void
     } catch (PDOException $e) {
         // Se a conta do banco não puder alterar schema, a exceção principal do save
         // mostrará o problema real ao tentar gravar a coluna.
+    }
+}
+
+function garantirColunasTokenImagem(PDO $pdo): void
+{
+    static $verificada = false;
+    if ($verificada) return;
+    $verificada = true;
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'personagem_token_imagem'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE fichas ADD COLUMN personagem_token_imagem VARCHAR(500) NULL AFTER personagem_imagem_ajuste");
+        }
+        $stmt = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'personagem_token_imagem_ajuste'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE fichas ADD COLUMN personagem_token_imagem_ajuste TEXT NULL AFTER personagem_token_imagem");
+        }
+    } catch (PDOException $e) {
+        // idem
     }
 }

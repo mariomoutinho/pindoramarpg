@@ -14,6 +14,8 @@ $stmt = $pdo->query("
         nivel,
         personagem_imagem,
         personagem_imagem_ajuste,
+        personagem_token_imagem,
+        personagem_token_imagem_ajuste,
         updated_at
     FROM fichas
     ORDER BY updated_at DESC

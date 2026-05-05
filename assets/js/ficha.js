@@ -2666,7 +2666,50 @@ function setupCharacterImage() {
         reader.readAsDataURL(file);
     });
 
+    setupTokenImageUpload();
+
     setCharacterPreview("");
+}
+
+function setupTokenImageUpload() {
+    const fileInput = document.getElementById("personagemTokenImagemInput");
+    const carregarBtn = document.getElementById("btnCarregarTokenImagem");
+    const removerBtn = document.getElementById("btnRemoverTokenImagem");
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    const removerInput = document.getElementById("removerPersonagemTokenImagem");
+
+    if (!fileInput) return;
+
+    if (carregarBtn) {
+        carregarBtn.addEventListener("click", event => {
+            event.stopPropagation();
+            fileInput.click();
+        });
+    }
+
+    if (removerBtn) {
+        removerBtn.addEventListener("click", event => {
+            event.stopPropagation();
+            if (tokenSrcInput) tokenSrcInput.value = "";
+            if (removerInput) removerInput.value = "1";
+            writeTokenImageAdjustment(defaultCharacterImageAdjustment());
+            setTokenPreview(null);
+        });
+    }
+
+    fileInput.addEventListener("change", event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            // marca que existe uma imagem de token customizada (mesmo antes de salvar)
+            if (tokenSrcInput) tokenSrcInput.value = e.target.result;
+            if (removerInput) removerInput.value = "0";
+            writeTokenImageAdjustment(defaultCharacterImageAdjustment());
+            setTokenPreview(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function getCharacterPreviewElements() {
@@ -2691,12 +2734,10 @@ function setCharacterPreview(src, ajuste) {
 
     if (src) {
         img.src = src;
-        if (tokenImg) tokenImg.src = src;
         box.classList.add("has-image");
         if (card) card.classList.add("has-image");
     } else {
         img.removeAttribute("src");
-        if (tokenImg) tokenImg.removeAttribute("src");
         box.classList.remove("has-image");
         if (card) card.classList.remove("has-image");
     }
@@ -2707,6 +2748,71 @@ function setCharacterPreview(src, ajuste) {
     } else {
         applyCharacterImageAdjustment();
     }
+
+    // Se não houver imagem de token customizada, usar a foto como fallback
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    const hasCustomTokenSrc = tokenSrcInput && tokenSrcInput.value;
+    if (!hasCustomTokenSrc && tokenImg) {
+        if (src) {
+            tokenImg.src = src;
+        } else {
+            tokenImg.removeAttribute("src");
+        }
+    }
+}
+
+function setTokenPreview(src, ajuste) {
+    const { tokenImg, card } = getCharacterPreviewElements();
+    const tokenFrame = tokenImg?.parentElement;
+    if (!tokenImg) return;
+
+    if (src) {
+        tokenImg.src = src;
+        if (tokenFrame) tokenFrame.classList.add("has-token-image");
+        if (card) card.classList.add("has-token-image");
+    } else {
+        // fallback para foto principal
+        const fotoImg = document.getElementById("characterPreview");
+        if (fotoImg && fotoImg.getAttribute("src")) {
+            tokenImg.src = fotoImg.getAttribute("src");
+        } else {
+            tokenImg.removeAttribute("src");
+        }
+        if (tokenFrame) tokenFrame.classList.remove("has-token-image");
+        if (card) card.classList.remove("has-token-image");
+    }
+
+    if (ajuste !== undefined) {
+        writeTokenImageAdjustment(readTokenImageAdjustmentFromValue(ajuste));
+    }
+    applyCharacterImageAdjustment();
+}
+
+function readTokenImageAdjustment() {
+    const input = document.getElementById("personagemTokenImagemAjuste");
+    if (!input || !input.value) return defaultCharacterImageAdjustment();
+    return readTokenImageAdjustmentFromValue(input.value);
+}
+
+function readTokenImageAdjustmentFromValue(value) {
+    if (!value) return defaultCharacterImageAdjustment();
+    try {
+        const parsed = typeof value === "string" ? JSON.parse(value) : value;
+        return normalizeCharacterImageAdjustment(parsed);
+    } catch {
+        return defaultCharacterImageAdjustment();
+    }
+}
+
+function writeTokenImageAdjustment(ajuste) {
+    const input = document.getElementById("personagemTokenImagemAjuste");
+    if (!input) return;
+    input.value = JSON.stringify(normalizeCharacterImageAdjustment(ajuste));
+}
+
+function setTokenImageAdjustmentValue(ajuste) {
+    writeTokenImageAdjustment(ajuste);
+    applyCharacterImageAdjustment();
 }
 
 function defaultCharacterImageAdjustment() {
@@ -2771,7 +2877,13 @@ function applyCharacterImageAdjustment() {
     const ajustes = readCharacterImageAdjustment();
     const { box, tokenImg } = getCharacterPreviewElements();
     applyAdjustmentToElement(box, ajustes.foto, "--char-img");
-    applyAdjustmentToElement(tokenImg?.parentElement, ajustes.token, "--token-img");
+
+    // Se há imagem de token customizada, usa o ajuste dedicado dela.
+    // Caso contrário, usa o ajuste do "token" dentro de personagem_imagem_ajuste (legacy).
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    const hasCustomTokenSrc = tokenSrcInput && tokenSrcInput.value;
+    const tokenAjuste = hasCustomTokenSrc ? readTokenImageAdjustment() : ajustes.token;
+    applyAdjustmentToElement(tokenImg?.parentElement, tokenAjuste, "--token-img");
 }
 
 function applyAdjustmentToElement(el, ajuste, prefix) {
@@ -2790,6 +2902,25 @@ function setupCharacterImageAdjustments() {
     applyCharacterImageAdjustment();
 }
 
+function getActiveAdjustForTarget(target) {
+    if (target === "token") {
+        const tokenSrcInput = document.getElementById("tokenImagemAtual");
+        if (tokenSrcInput && tokenSrcInput.value) return readTokenImageAdjustment();
+    }
+    return readCharacterImageAdjustment()[target];
+}
+
+function setActiveAdjustForTarget(target, ajuste) {
+    if (target === "token") {
+        const tokenSrcInput = document.getElementById("tokenImagemAtual");
+        if (tokenSrcInput && tokenSrcInput.value) {
+            setTokenImageAdjustmentValue(ajuste);
+            return;
+        }
+    }
+    setCharacterImageAdjustment(target, ajuste);
+}
+
 function bindImageAdjustSurface(surface, target) {
     if (!surface) return;
     const pointers = new Map();
@@ -2802,7 +2933,7 @@ function bindImageAdjustSurface(surface, target) {
         surface.setPointerCapture?.(event.pointerId);
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
         start = {
-            ajuste: readCharacterImageAdjustment()[target],
+            ajuste: getActiveAdjustForTarget(target),
             center: pointerCenter(pointers),
             distance: pointerDistance(pointers)
         };
@@ -2819,7 +2950,7 @@ function bindImageAdjustSurface(surface, target) {
         const dy = ((currentCenter.y - start.center.y) / Math.max(1, rect.height)) * 100;
         const currentDistance = pointerDistance(pointers);
         const pinchScale = start.distance && currentDistance ? currentDistance / start.distance : 1;
-        setCharacterImageAdjustment(target, {
+        setActiveAdjustForTarget(target, {
             scale: start.ajuste.scale * pinchScale,
             x: start.ajuste.x + dx,
             y: start.ajuste.y + dy
@@ -2833,7 +2964,7 @@ function bindImageAdjustSurface(surface, target) {
             surface.classList.remove("is-adjusting");
         } else {
             start = {
-                ajuste: readCharacterImageAdjustment()[target],
+                ajuste: getActiveAdjustForTarget(target),
                 center: pointerCenter(pointers),
                 distance: pointerDistance(pointers)
             };
@@ -2845,9 +2976,9 @@ function bindImageAdjustSurface(surface, target) {
     surface.addEventListener("wheel", event => {
         if (!surface.closest(".character-card")?.classList.contains("has-image")) return;
         event.preventDefault();
-        const ajuste = readCharacterImageAdjustment()[target];
+        const ajuste = getActiveAdjustForTarget(target);
         const factor = event.deltaY < 0 ? 1.08 : 1 / 1.08;
-        setCharacterImageAdjustment(target, { ...ajuste, scale: ajuste.scale * factor });
+        setActiveAdjustForTarget(target, { ...ajuste, scale: ajuste.scale * factor });
     }, { passive: false });
 }
 
@@ -3475,6 +3606,22 @@ async function salvarFicha(event) {
             setCharacterPreview("");
         }
 
+        // Sincroniza estado do token customizado após o save
+        const tokenSrcInput = document.getElementById("tokenImagemAtual");
+        const removerTokenInput = document.getElementById("removerPersonagemTokenImagem");
+        const tokenFileInput = document.getElementById("personagemTokenImagemInput");
+        if (tokenFileInput) tokenFileInput.value = "";
+        if (removerTokenInput) removerTokenInput.value = "0";
+        if (result.personagem_token_imagem) {
+            if (tokenSrcInput) tokenSrcInput.value = result.personagem_token_imagem;
+            writeTokenImageAdjustment(readTokenImageAdjustmentFromValue(result.personagem_token_imagem_ajuste));
+            setTokenPreview(result.personagem_token_imagem);
+        } else {
+            if (tokenSrcInput) tokenSrcInput.value = "";
+            writeTokenImageAdjustment(defaultCharacterImageAdjustment());
+            setTokenPreview(null);
+        }
+
         await listarFichas();
         novaFicha();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3720,10 +3867,25 @@ function preencherFicha(ficha) {
     writeCharacterImageAdjustment(readCharacterImageAdjustmentFromValue(ficha.personagem_imagem_ajuste));
     applyCharacterImageAdjustment();
 
+    // estado do token customizado
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    const removerTokenInput = document.getElementById("removerPersonagemTokenImagem");
+    const tokenFileInput = document.getElementById("personagemTokenImagemInput");
+    if (tokenFileInput) tokenFileInput.value = "";
+    if (removerTokenInput) removerTokenInput.value = "0";
+    if (tokenSrcInput) tokenSrcInput.value = ficha.personagem_token_imagem ?? "";
+    writeTokenImageAdjustment(readTokenImageAdjustmentFromValue(ficha.personagem_token_imagem_ajuste));
+
     if (ficha.personagem_imagem) {
         setCharacterPreview(ficha.personagem_imagem);
     } else {
         setCharacterPreview("");
+    }
+
+    if (ficha.personagem_token_imagem) {
+        setTokenPreview(ficha.personagem_token_imagem);
+    } else {
+        setTokenPreview(null);
     }
 
     syncResource("pv");
@@ -3835,6 +3997,15 @@ function novaFicha() {
     writeCharacterImageAdjustment(defaultCharacterImageAdjustments());
     applyCharacterImageAdjustment();
     setCharacterPreview("");
+
+    const tokenSrcInput = document.getElementById("tokenImagemAtual");
+    const removerTokenInput = document.getElementById("removerPersonagemTokenImagem");
+    const tokenFileInput = document.getElementById("personagemTokenImagemInput");
+    if (tokenSrcInput) tokenSrcInput.value = "";
+    if (removerTokenInput) removerTokenInput.value = "0";
+    if (tokenFileInput) tokenFileInput.value = "";
+    writeTokenImageAdjustment(defaultCharacterImageAdjustment());
+    setTokenPreview(null);
     syncResource("pv");
     syncResource("pm");
     atualizarMagiasFicha();

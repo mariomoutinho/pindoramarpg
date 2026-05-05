@@ -810,13 +810,18 @@
 
     function addTokenFromFicha(ficha) {
         const fotoSrc = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
+        const tokenSrcRaw = ficha.personagem_token_imagem || null;
+        const tokenSrc = tokenSrcRaw ? resolveImage(tokenSrcRaw) : null;
+        const tokenAjuste = tokenSrcRaw
+            ? parseTokenAdjustment(ficha.personagem_token_imagem_ajuste)
+            : parseImageAdjustment(ficha.personagem_imagem_ajuste);
         const t = {
             id: genId(),
             fichaId: ficha.id,
             source: ficha.source || 'ficha',
             name: ficha.personagem || 'Sem nome',
-            tokenImage: fotoSrc,
-            tokenImageAdjust: parseImageAdjustment(ficha.personagem_imagem_ajuste),
+            tokenImage: tokenSrc || fotoSrc,
+            tokenImageAdjust: tokenAjuste,
             fotoImage: fotoSrc,
             tamanho: ficha.tamanho || null,
             deslocamento: ficha.deslocamento || null,
@@ -869,10 +874,14 @@
                 const ficha = data && data.success ? data.ficha : null;
                 if (!ficha) continue;
 
-                const nextImage = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
-                token.tokenImage = nextImage;
-                token.fotoImage = nextImage;
-                token.tokenImageAdjust = parseImageAdjustment(ficha.personagem_imagem_ajuste);
+                const nextFoto = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
+                const nextTokenRaw = ficha.personagem_token_imagem || null;
+                const nextToken = nextTokenRaw ? resolveImage(nextTokenRaw) : null;
+                token.fotoImage = nextFoto;
+                token.tokenImage = nextToken || nextFoto;
+                token.tokenImageAdjust = nextTokenRaw
+                    ? parseTokenAdjustment(ficha.personagem_token_imagem_ajuste)
+                    : parseImageAdjustment(ficha.personagem_imagem_ajuste);
                 token.name = ficha.personagem || token.name;
                 synced++;
             } catch (_) {
@@ -1191,6 +1200,18 @@
         }
     }
 
+    // Para a imagem de token DEDICADA (campo personagem_token_imagem_ajuste),
+    // o valor é um objeto plano {scale, x, y} sem nesting foto/token.
+    function parseTokenAdjustment(value) {
+        if (!value) return { scale: 1, x: 0, y: 0 };
+        if (typeof value === 'object') return normalizeImageAdjustment(value);
+        try {
+            return normalizeImageAdjustment(JSON.parse(value));
+        } catch (_) {
+            return { scale: 1, x: 0, y: 0 };
+        }
+    }
+
     function normalizeImageAdjustment(value) {
         return {
             scale: Math.min(6, Math.max(0.2, Number(value.scale) || 1)),
@@ -1373,16 +1394,21 @@
 
             const thumb = document.createElement('div');
             thumb.className = 'cb-ficha-thumb';
-            if (f.personagem_imagem) {
+            const thumbSrcRaw = f.personagem_token_imagem || f.personagem_imagem;
+            if (thumbSrcRaw) {
                 const img = document.createElement('img');
-                img.src = resolveImage(f.personagem_imagem);
+                img.src = resolveImage(thumbSrcRaw);
                 img.alt = f.personagem || 'Personagem';
                 img.loading = 'lazy';
                 img.onerror = () => {
                     img.remove();
                     thumb.textContent = getTokenInitials(f.personagem);
                 };
-                applyFichaSalvaTokenAdjustment(img, f.personagem_imagem_ajuste);
+                if (f.personagem_token_imagem) {
+                    applyFichaSalvaTokenAdjustment(img, parseTokenAdjustment(f.personagem_token_imagem_ajuste));
+                } else {
+                    applyFichaSalvaTokenAdjustment(img, f.personagem_imagem_ajuste);
+                }
                 thumb.appendChild(img);
             } else {
                 thumb.textContent = getTokenInitials(f.personagem);
@@ -1485,6 +1511,8 @@
                     personagem: ficha.personagem || fichaListItem.personagem,
                     personagem_imagem: ficha.personagem_imagem || fichaListItem.personagem_imagem || null,
                     personagem_imagem_ajuste: ficha.personagem_imagem_ajuste || fichaListItem.personagem_imagem_ajuste || null,
+                    personagem_token_imagem: ficha.personagem_token_imagem || fichaListItem.personagem_token_imagem || null,
+                    personagem_token_imagem_ajuste: ficha.personagem_token_imagem_ajuste || fichaListItem.personagem_token_imagem_ajuste || null,
                     tamanho: ficha.tamanho || ficha.categoria_tamanho || tamanhoInferido || 'Médio',
                     pv_total: ficha.pv_total,
                     pv_atuais: ficha.pv_atuais,
@@ -1516,17 +1544,23 @@
     async function atualizarThumbFichaCompleta(fichaResumo, thumb) {
         try {
             const ficha = await buscarFichaCompleta(fichaResumo.id);
-            if (!ficha || !ficha.personagem_imagem || !thumb.isConnected) return;
+            if (!ficha || !thumb.isConnected) return;
+            const srcRaw = ficha.personagem_token_imagem || ficha.personagem_imagem;
+            if (!srcRaw) return;
             thumb.innerHTML = '';
             const img = document.createElement('img');
-            img.src = resolveImage(ficha.personagem_imagem);
+            img.src = resolveImage(srcRaw);
             img.alt = ficha.personagem || fichaResumo.personagem || 'Personagem';
             img.loading = 'lazy';
             img.onerror = () => {
                 img.remove();
                 thumb.textContent = getTokenInitials(ficha.personagem || fichaResumo.personagem);
             };
-            applyFichaSalvaTokenAdjustment(img, ficha.personagem_imagem_ajuste);
+            if (ficha.personagem_token_imagem) {
+                applyFichaSalvaTokenAdjustment(img, parseTokenAdjustment(ficha.personagem_token_imagem_ajuste));
+            } else {
+                applyFichaSalvaTokenAdjustment(img, ficha.personagem_imagem_ajuste);
+            }
             thumb.appendChild(img);
         } catch (_) {
             // Mantém a miniatura do resumo se a ficha completa falhar.

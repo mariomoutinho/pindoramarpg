@@ -564,6 +564,41 @@ textarea {
     cursor: grabbing;
 }
 
+.character-token-empty {
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 4px;
+}
+
+.character-token-frame.has-token-image .character-token-empty,
+.character-card.has-token-image .character-token-empty {
+    display: none;
+}
+
+.character-token-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.character-token-actions button {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.character-token-hint {
+    color: var(--muted);
+    font-size: 0.68rem;
+    text-align: center;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
 /* GRID PRINCIPAL */
 
 .main-grid {

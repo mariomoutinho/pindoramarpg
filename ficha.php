@@ -15,7 +15,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260504f" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260504tk" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260501b" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
@@ -78,6 +78,9 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
             <input type="hidden" name="imagem_atual" id="imagemAtual" />
             <input type="hidden" name="personagem_imagem_ajuste" id="personagemImagemAjuste" value='{"scale":1,"x":0,"y":0}' />
             <input type="hidden" name="remover_personagem_imagem" id="removerPersonagemImagem" value="0" />
+            <input type="hidden" name="token_imagem_atual" id="tokenImagemAtual" />
+            <input type="hidden" name="personagem_token_imagem_ajuste" id="personagemTokenImagemAjuste" value='{"scale":1,"x":0,"y":0}' />
+            <input type="hidden" name="remover_personagem_token_imagem" id="removerPersonagemTokenImagem" value="0" />
             <input type="hidden" name="classes_personagem" id="classesPersonagemJson" />
             <input type="hidden" name="poderes" id="poderesJson" />
             <input type="hidden" name="origem_beneficios" id="origemBeneficiosJson" />
@@ -101,7 +104,13 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                             <span>Token no campo</span>
                             <div class="character-token-frame">
                                 <img id="characterTokenPreview" src="" alt="">
+                                <span class="character-token-empty">Sem token</span>
                             </div>
+                            <div class="character-token-actions">
+                                <button type="button" id="btnCarregarTokenImagem">Carregar token</button>
+                                <button type="button" id="btnRemoverTokenImagem">Remover token</button>
+                            </div>
+                            <small class="character-token-hint">Se vazio, usa a foto principal recortada.</small>
                         </div>
                     </div>
 
@@ -109,6 +118,13 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                         type="file"
                         id="personagemImagemInput"
                         name="personagem_imagem_file"
+                        accept="image/*"
+                        hidden
+                    >
+                    <input
+                        type="file"
+                        id="personagemTokenImagemInput"
+                        name="personagem_token_imagem_file"
                         accept="image/*"
                         hidden
                     >
@@ -826,7 +842,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
     </main>
 
-    <script src="assets/js/ficha.js?v=20260504e"></script>
+    <script src="assets/js/ficha.js?v=20260504tk"></script>
     <script src="assets/js/atributos.js?v=20260501u"></script>
     <script src="assets/js/poderes.js?v=20260430j"></script>
     <script src="assets/js/ancestralidades-ficha.js?v=20260504a"></script>
