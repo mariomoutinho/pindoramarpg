@@ -243,12 +243,6 @@
         }
         els.tokensLayer.appendChild(frag);
         updateActionButtons();
-        console.log('[cb] renderTokens', state.tokens.map(t => ({
-            name: t.name,
-            tokenImage: t.tokenImage,
-            tokenImageAdjust: t.tokenImageAdjust,
-            imageAdjust_legacy: t.imageAdjust
-        })));
     }
 
     function buildTokenElement(token) {
@@ -2505,16 +2499,13 @@
     function init() {
         loadState();
         window.__cbState = state;
-        console.log('[cb] init: tokens em localStorage', JSON.parse(JSON.stringify(state.tokens)));
         els.cols.value = state.cols;
         els.rows.value = state.rows;
         els.toggleNumbers.checked = state.showNumbers;
         renderBoard();
         renderTokens();
         consumePendingBestiaryToken();
-        syncFichaTokensFromServer().then(() => {
-            console.log('[cb] sync concluída. tokens agora:', JSON.parse(JSON.stringify(state.tokens)));
-        });
+        syncFichaTokensFromServer();
         if (state.viewport.scale === 1 && state.viewport.x === 0 && state.viewport.y === 0) {
             centerBoard();
         } else {
