@@ -150,7 +150,11 @@
             if (typeof snap.showNumbers === 'boolean') state.showNumbers = snap.showNumbers;
             if (snap.viewport) state.viewport = snap.viewport;
             if (Array.isArray(snap.tokens)) {
+                const before = JSON.stringify(snap.tokens);
                 state.tokens = snap.tokens.map(migrateLegacyTokenFields);
+                if (before !== JSON.stringify(state.tokens)) {
+                    saveState();
+                }
             }
         } catch (e) {
             // estado corrompido — recomeçar
@@ -853,7 +857,7 @@
         const fichaTokens = state.tokens.filter(token => token.fichaId && token.source !== 'bestiario');
         if (!fichaTokens.length) return;
 
-        let changed = false;
+        let synced = 0;
         for (const token of fichaTokens) {
             try {
                 const resp = await fetch('buscar-ficha.php?id=' + encodeURIComponent(token.fichaId), {
@@ -866,31 +870,17 @@
                 if (!ficha) continue;
 
                 const nextImage = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
-                const nextAdjust = parseImageAdjustment(ficha.personagem_imagem_ajuste);
-                const nextName = ficha.personagem || token.name;
-
-                if (token.tokenImage !== nextImage) {
-                    token.tokenImage = nextImage;
-                    changed = true;
-                }
-                if (token.fotoImage !== nextImage) {
-                    token.fotoImage = nextImage;
-                    changed = true;
-                }
-                if (JSON.stringify(parseImageAdjustment(token.tokenImageAdjust)) !== JSON.stringify(nextAdjust)) {
-                    token.tokenImageAdjust = nextAdjust;
-                    changed = true;
-                }
-                if (token.name !== nextName) {
-                    token.name = nextName;
-                    changed = true;
-                }
+                token.tokenImage = nextImage;
+                token.fotoImage = nextImage;
+                token.tokenImageAdjust = parseImageAdjustment(ficha.personagem_imagem_ajuste);
+                token.name = ficha.personagem || token.name;
+                synced++;
             } catch (_) {
                 // Mantém o token como está se a ficha não puder ser sincronizada.
             }
         }
 
-        if (changed) {
+        if (synced > 0) {
             renderTokens();
             saveState();
         }
