@@ -166,6 +166,6 @@
 
     </main>
 
-    <script src="assets/js/campo-batalha.js?v=20260505j"></script>
+    <script src="assets/js/campo-batalha.js?v=20260505k"></script>
 </body>
 </html>

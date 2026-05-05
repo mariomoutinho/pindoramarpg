@@ -2540,29 +2540,24 @@
 
     /**
      * Calcula a direção (8 cardeais) do token (col,row,size) até o ponto (tx,ty).
-     * Retorna uma das 8 strings: 'n','ne','l','se','s','so','o','no'.
-     * Pindorama: cada quadrado = 1,5m em qualquer direção (incl. diagonal).
+     * Cardinal (n/s/l/o) somente quando o ponto está alinhado com uma linha
+     * ou coluna do bounding-box do token. Caso contrário, diagonal (ne/no/se/so).
+     * Isso dá ao usuário mira "snap" intuitiva sobre os 8 quadrados adjacentes.
      */
     function directionFromTo(col, row, size, tx, ty) {
-        const cx = col + (size - 1) / 2;
-        const cy = row + (size - 1) / 2;
-        const dx = tx - cx;
-        const dy = ty - cy;
-        if (dx === 0 && dy === 0) return 'n';
-        const angle = Math.atan2(dy, dx); // -PI..PI; 0 = leste, PI/2 = sul (eixo y para baixo)
-        // Divide em 8 setores
-        const oct = Math.round(angle / (Math.PI / 4));
-        switch (oct) {
-            case 0: return 'l';
-            case 1: return 'se';
-            case 2: return 's';
-            case 3: return 'so';
-            case 4: case -4: return 'o';
-            case -1: return 'ne';
-            case -2: return 'n';
-            case -3: return 'no';
-            default: return 'n';
-        }
+        const left = col;
+        const right = col + size - 1;
+        const top = row;
+        const bottom = row + size - 1;
+
+        const xSide = tx < left ? -1 : (tx > right ? 1 : 0);
+        const ySide = ty < top ? -1 : (ty > bottom ? 1 : 0);
+
+        if (xSide === 0 && ySide === 0) return 'n';
+        if (xSide === 0) return ySide > 0 ? 's' : 'n';
+        if (ySide === 0) return xSide > 0 ? 'l' : 'o';
+        if (xSide > 0) return ySide > 0 ? 'se' : 'ne';
+        return ySide > 0 ? 'so' : 'no';
     }
 
     function addRadiusCellsCentered(cells, cx, cy, radius) {
