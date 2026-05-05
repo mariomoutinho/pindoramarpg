@@ -1207,6 +1207,13 @@
         img.style.setProperty('--saved-token-scale', String(ajuste.scale));
         img.style.setProperty('--saved-token-x', `${ajuste.x}%`);
         img.style.setProperty('--saved-token-y', `${ajuste.y}%`);
+        // Aplica o transform inline também, para não depender das variáveis CSS
+        // (alguns estados antigos no localStorage não tinham essas variáveis populadas).
+        img.style.transform = `translate(${ajuste.x}%, ${ajuste.y}%) scale(${ajuste.scale})`;
+        img.style.transformOrigin = 'center';
+        if (window.__cbDebugTokenImg) {
+            console.log('[cb] applyTokenImageAdjustment', { src: img.getAttribute('src'), input: adjustment, applied: ajuste });
+        }
     }
 
     function applyFichaSalvaTokenAdjustment(img, adjustment) {
@@ -1214,6 +1221,8 @@
         img.style.setProperty('--saved-token-scale', String(ajuste.scale));
         img.style.setProperty('--saved-token-x', `${ajuste.x}%`);
         img.style.setProperty('--saved-token-y', `${ajuste.y}%`);
+        img.style.transform = `translate(${ajuste.x}%, ${ajuste.y}%) scale(${ajuste.scale})`;
+        img.style.transformOrigin = 'center';
     }
 
     function parseResource(value) {
