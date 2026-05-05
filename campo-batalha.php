@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260505q" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260505r" />
 </head>
 <body class="cb-body">
     <script src="assets/js/transitions.js?v=20260503d"></script>
@@ -82,8 +82,9 @@
 
         <section class="cb-stage" id="cbStage">
             <div class="cb-viewport" id="cbViewport">
-                <div class="cb-board" id="cbBoard"></div>
                 <div class="cb-scenery-layer" id="cbSceneryLayer"></div>
+                <div class="cb-board" id="cbBoard"></div>
+                <div class="cb-guides-layer" id="cbGuidesLayer"></div>
                 <div class="cb-tokens-layer" id="cbTokensLayer"></div>
             </div>
             <div class="cb-help" id="cbHelp">
@@ -242,6 +243,6 @@
 
     </main>
 
-    <script src="assets/js/campo-batalha.js?v=20260505u"></script>
+    <script src="assets/js/campo-batalha.js?v=20260505v"></script>
 </body>
 </html>

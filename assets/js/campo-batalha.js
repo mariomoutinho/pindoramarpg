@@ -79,6 +79,7 @@
         adjustReset: document.getElementById('cbAdjustReset'),
         adjustUseBestiario: document.getElementById('cbAdjustUseBestiario'),
         sceneryLayer: document.getElementById('cbSceneryLayer'),
+        guidesLayer: document.getElementById('cbGuidesLayer'),
         addScenery: document.getElementById('cbAddScenery'),
         toggleLayers: document.getElementById('cbToggleLayers'),
         pagesTabs: document.getElementById('cbPagesTabs'),
@@ -327,6 +328,10 @@
         if (els.sceneryLayer) {
             els.sceneryLayer.style.width = els.board.style.width;
             els.sceneryLayer.style.height = els.board.style.height;
+        }
+        if (els.guidesLayer) {
+            els.guidesLayer.style.width = els.board.style.width;
+            els.guidesLayer.style.height = els.board.style.height;
         }
 
         els.board.classList.toggle('show-numbers', state.showNumbers);
@@ -1339,6 +1344,107 @@
         saveState();
     }
 
+    // ----------------------------------------------------------------
+    // Guias de alinhamento (estilo Canva) para cenário
+    // ----------------------------------------------------------------
+
+    const GUIDE_TOLERANCE = 8; // px no espaço do board
+
+    function showGuides(guides) {
+        if (!els.guidesLayer) return;
+        els.guidesLayer.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        for (const g of guides) {
+            const el = document.createElement('div');
+            el.className = 'cb-guide-line cb-guide-line--' + g.orient + (g.center ? ' cb-guide-line--center' : '');
+            if (g.orient === 'vertical') el.style.left = g.pos + 'px';
+            else el.style.top = g.pos + 'px';
+            frag.appendChild(el);
+        }
+        els.guidesLayer.appendChild(frag);
+    }
+
+    function clearGuides() {
+        if (els.guidesLayer) els.guidesLayer.innerHTML = '';
+    }
+
+    // Devolve {x,y,guides} já com snap para guias inteligentes (centro do board,
+    // bordas/centros de outros cenários, linhas do grid quando ímã estiver ativo).
+    function applyDragSnaps(item, x, y, snapOn, scaleViewport) {
+        const tolerance = GUIDE_TOLERANCE / (scaleViewport || 1);
+        const guides = [];
+        const w = item.width;
+        const h = item.height;
+        const candidatesX = []; // {pos, source: 'center'|'edge'|'grid'}
+        const candidatesY = [];
+
+        // Centro do board
+        const boardCx = state.cols * CELL_SIZE / 2;
+        const boardCy = state.rows * CELL_SIZE / 2;
+        candidatesX.push({ pos: boardCx, type: 'center' });
+        candidatesY.push({ pos: boardCy, type: 'center' });
+
+        // Bordas e centros de outros cenários
+        for (const other of state.scenery) {
+            if (other.id === item.id || other.hidden) continue;
+            candidatesX.push({ pos: other.x, type: 'edge' });
+            candidatesX.push({ pos: other.x + other.width, type: 'edge' });
+            candidatesX.push({ pos: other.x + other.width / 2, type: 'edge' });
+            candidatesY.push({ pos: other.y, type: 'edge' });
+            candidatesY.push({ pos: other.y + other.height, type: 'edge' });
+            candidatesY.push({ pos: other.y + other.height / 2, type: 'edge' });
+        }
+
+        // Pontos do cenário em movimento que tentam alinhar
+        const ownX = [
+            { value: x, kind: 'left' },
+            { value: x + w, kind: 'right' },
+            { value: x + w / 2, kind: 'centerX' }
+        ];
+        const ownY = [
+            { value: y, kind: 'top' },
+            { value: y + h, kind: 'bottom' },
+            { value: y + h / 2, kind: 'centerY' }
+        ];
+
+        let bestX = null;
+        for (const c of candidatesX) {
+            for (const o of ownX) {
+                const d = Math.abs(o.value - c.pos);
+                if (d < tolerance && (!bestX || d < bestX.dist)) {
+                    bestX = { dist: d, candidate: c, own: o, delta: c.pos - o.value };
+                }
+            }
+        }
+        let bestY = null;
+        for (const c of candidatesY) {
+            for (const o of ownY) {
+                const d = Math.abs(o.value - c.pos);
+                if (d < tolerance && (!bestY || d < bestY.dist)) {
+                    bestY = { dist: d, candidate: c, own: o, delta: c.pos - o.value };
+                }
+            }
+        }
+
+        let nx = x;
+        let ny = y;
+
+        if (bestX) {
+            nx += bestX.delta;
+            guides.push({ orient: 'vertical', pos: bestX.candidate.pos, center: bestX.candidate.type === 'center' });
+        } else if (snapOn) {
+            nx = snapValue(x);
+        }
+        if (bestY) {
+            ny += bestY.delta;
+            guides.push({ orient: 'horizontal', pos: bestY.candidate.pos, center: bestY.candidate.type === 'center' });
+        } else if (snapOn) {
+            ny = snapValue(y);
+        }
+
+        return { x: nx, y: ny, guides };
+    }
+
     // Inverte temporariamente o snap se a tecla Alt (option) estiver pressionada,
     // permitindo posicionamento livre quando o ímã está ativo (ou vice-versa).
     function isSnapActive(e) {
@@ -1359,24 +1465,24 @@
         function onMove(e) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
-            let nx = origX + dx;
-            let ny = origY + dy;
-            if (isSnapActive(e)) {
-                nx = snapValue(nx);
-                ny = snapValue(ny);
-            }
-            item.x = nx;
-            item.y = ny;
+            const rawX = origX + dx;
+            const rawY = origY + dy;
+            const snapOn = isSnapActive(e);
+            const result = applyDragSnaps(item, rawX, rawY, snapOn, scale);
+            item.x = result.x;
+            item.y = result.y;
             if (el) {
                 el.style.left = item.x + 'px';
                 el.style.top = item.y + 'px';
             }
+            showGuides(result.guides);
         }
         function onUp() {
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerup', onUp);
             window.removeEventListener('pointercancel', onUp);
             if (el) el.classList.remove('is-dragging');
+            clearGuides();
             saveState();
         }
         window.addEventListener('pointermove', onMove);
@@ -1397,29 +1503,98 @@
         function onMove(e) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
-            let newW = Math.max(20, origW + dx);
-            let newH = e.shiftKey ? Math.max(20, origH + dy) : newW * ratio;
-            if (isSnapActive(e)) {
-                newW = Math.max(CELL_SIZE, snapValue(newW));
-                newH = e.shiftKey ? Math.max(CELL_SIZE, snapValue(newH)) : newW * ratio;
+            const snapOn = isSnapActive(e);
+            const tolerance = GUIDE_TOLERANCE / (scale || 1);
+
+            const guides = [];
+            // Borda direita (target)
+            let desiredRight = item.x + origW + dx;
+            let snappedRight = desiredRight;
+            const xCandidates = collectSceneryEdgeCandidates(item, 'x');
+            const bestRight = nearestCandidate(desiredRight, xCandidates, tolerance);
+            if (bestRight) {
+                snappedRight = bestRight.pos;
+                guides.push({ orient: 'vertical', pos: bestRight.pos, center: bestRight.type === 'center' });
+            } else if (snapOn) {
+                snappedRight = snapValue(desiredRight);
+                guides.push({ orient: 'vertical', pos: snappedRight, center: false });
             }
+            let newW = Math.max(CELL_SIZE / 2, snappedRight - item.x);
+
+            let newH;
+            if (e.shiftKey) {
+                let desiredBottom = item.y + origH + dy;
+                let snappedBottom = desiredBottom;
+                const yCandidates = collectSceneryEdgeCandidates(item, 'y');
+                const bestBottom = nearestCandidate(desiredBottom, yCandidates, tolerance);
+                if (bestBottom) {
+                    snappedBottom = bestBottom.pos;
+                    guides.push({ orient: 'horizontal', pos: bestBottom.pos, center: bestBottom.type === 'center' });
+                } else if (snapOn) {
+                    snappedBottom = snapValue(desiredBottom);
+                    guides.push({ orient: 'horizontal', pos: snappedBottom, center: false });
+                }
+                newH = Math.max(CELL_SIZE / 2, snappedBottom - item.y);
+            } else {
+                newH = newW * ratio;
+            }
+
             item.width = newW;
             item.height = newH;
             if (el) {
                 el.style.width = newW + 'px';
                 el.style.height = newH + 'px';
             }
+            showGuides(guides);
         }
         function onUp() {
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerup', onUp);
             window.removeEventListener('pointercancel', onUp);
+            clearGuides();
             saveState();
             renderLayersPanel();
         }
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
         window.addEventListener('pointercancel', onUp);
+    }
+
+    function collectSceneryEdgeCandidates(self, axis) {
+        const list = [];
+        if (axis === 'x') {
+            list.push({ pos: state.cols * CELL_SIZE / 2, type: 'center' });
+            list.push({ pos: 0, type: 'edge' });
+            list.push({ pos: state.cols * CELL_SIZE, type: 'edge' });
+            for (const other of state.scenery) {
+                if (other.id === self.id || other.hidden) continue;
+                list.push({ pos: other.x, type: 'edge' });
+                list.push({ pos: other.x + other.width, type: 'edge' });
+                list.push({ pos: other.x + other.width / 2, type: 'edge' });
+            }
+        } else {
+            list.push({ pos: state.rows * CELL_SIZE / 2, type: 'center' });
+            list.push({ pos: 0, type: 'edge' });
+            list.push({ pos: state.rows * CELL_SIZE, type: 'edge' });
+            for (const other of state.scenery) {
+                if (other.id === self.id || other.hidden) continue;
+                list.push({ pos: other.y, type: 'edge' });
+                list.push({ pos: other.y + other.height, type: 'edge' });
+                list.push({ pos: other.y + other.height / 2, type: 'edge' });
+            }
+        }
+        return list;
+    }
+
+    function nearestCandidate(value, candidates, tolerance) {
+        let best = null;
+        for (const c of candidates) {
+            const d = Math.abs(value - c.pos);
+            if (d < tolerance && (!best || d < best.dist)) {
+                best = { dist: d, pos: c.pos, type: c.type };
+            }
+        }
+        return best;
     }
 
     function startSceneryRotate(ev, item) {
