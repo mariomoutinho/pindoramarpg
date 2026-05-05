@@ -2641,11 +2641,30 @@
         const v = DIR_VECTORS[dir] || DIR_VECTORS.n;
         const cx = baseCol + (size - 1) / 2;
         const cy = baseRow + (size - 1) / 2;
-        // Cone Pindorama: a cada passo, a "fileira" tem `step` células
-        // perpendiculares (1, 2, 3, ..., N). Total: 1+2+...+N células.
+        const isDiagonal = v.dx !== 0 && v.dy !== 0;
+
+        if (isDiagonal) {
+            // Cone diagonal: triângulo retângulo preenchido no quadrante de v.
+            // Apice na borda do token; pernas ao longo dos eixos cardeais.
+            // Para um cone de N quadrados de profundidade, célula (dxStep, dyStep)
+            // entra se dxStep + dyStep <= N + 1.
+            // Total: 1+2+...+N = N(N+1)/2 células (10 para N=4).
+            for (let dxStep = 1; dxStep <= len; dxStep++) {
+                for (let dyStep = 1; dyStep <= len; dyStep++) {
+                    if (dxStep + dyStep > len + 1) continue;
+                    const c = Math.round(cx + v.dx * (size / 2 + dxStep - 0.5));
+                    const r = Math.round(cy + v.dy * (size / 2 + dyStep - 0.5));
+                    if (c < 0 || c >= state.cols || r < 0 || r >= state.rows) continue;
+                    cells.add(occupiedKey(c, r));
+                }
+            }
+            return;
+        }
+
+        // Cone cardeal: triângulo isóceles preenchido. A cada passo, a fileira
+        // perpendicular tem `step` células (1, 2, 3, ..., N). Total: N(N+1)/2.
         const perp = { dx: -v.dy, dy: v.dx };
         for (let step = 1; step <= len; step++) {
-            // Centro da fileira do passo atual (a `step` células da borda do token)
             const ax = cx + v.dx * (size / 2 + step - 0.5);
             const ay = cy + v.dy * (size / 2 + step - 0.5);
             // Distribui simetricamente para ímpar; assimétrica (sobra à direita) para par
