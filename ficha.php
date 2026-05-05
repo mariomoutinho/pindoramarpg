@@ -15,7 +15,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260504f" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260501b" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
@@ -49,17 +49,34 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
         <section class="saved-sheets-panel">
             <label for="fichasSalvas">Fichas salvas</label>
             <div class="saved-row">
-                <select id="fichasSalvas">
-                    <option value="">Selecione uma ficha</option>
-                </select>
+                <input type="hidden" id="fichasSalvas" value="" />
+                <button type="button" id="abrirFichasSalvasBtn" class="saved-picker-trigger">
+                    Escolher ficha salva
+                </button>
                 <button type="button" id="carregarFichaBtn">Carregar</button>
             </div>
         </section>
+
+        <div class="sheet-modal-backdrop" id="fichasSalvasModal" hidden>
+            <div class="sheet-modal sheet-list-modal" role="dialog" aria-modal="true" aria-labelledby="fichasSalvasTitulo">
+                <header class="sheet-modal-header">
+                    <div>
+                        <h2 id="fichasSalvasTitulo">Fichas salvas</h2>
+                        <p>Escolha um personagem para carregar.</p>
+                    </div>
+                    <button type="button" id="fecharFichasSalvasBtn" aria-label="Fechar">&times;</button>
+                </header>
+                <div class="sheet-list" id="fichasSalvasLista">
+                    <p class="sheet-list-empty">Carregando fichas...</p>
+                </div>
+            </div>
+        </div>
 
         <form id="fichaForm" class="sheet" method="post" action="salvar-ficha.php" enctype="multipart/form-data">
 
             <input type="hidden" name="id" id="fichaId" />
             <input type="hidden" name="imagem_atual" id="imagemAtual" />
+            <input type="hidden" name="personagem_imagem_ajuste" id="personagemImagemAjuste" value='{"scale":1,"x":0,"y":0}' />
             <input type="hidden" name="remover_personagem_imagem" id="removerPersonagemImagem" value="0" />
             <input type="hidden" name="classes_personagem" id="classesPersonagemJson" />
             <input type="hidden" name="poderes" id="poderesJson" />
@@ -77,6 +94,15 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                         <button type="button" id="btnCarregarImagem">Carregar</button>
                         <button type="button" id="btnEditarImagem">Editar</button>
                         <button type="button" id="btnRemoverImagem">Remover</button>
+                    </div>
+
+                    <div class="character-image-editor" id="characterImageEditor" aria-label="Ajustar imagem do personagem">
+                        <div class="character-token-preview" data-adjust-target="token">
+                            <span>Token no campo</span>
+                            <div class="character-token-frame">
+                                <img id="characterTokenPreview" src="" alt="">
+                            </div>
+                        </div>
                     </div>
 
                     <input
@@ -666,6 +692,21 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
         </form>
 
+        <div class="sheet-modal-backdrop" id="fichaNoticeModal" hidden>
+            <div class="sheet-modal sheet-notice-modal" role="dialog" aria-modal="true" aria-labelledby="fichaNoticeTitulo">
+                <header class="sheet-modal-header">
+                    <div>
+                        <h2 id="fichaNoticeTitulo">Ficha salva</h2>
+                        <p id="fichaNoticeTexto">Tudo certo.</p>
+                    </div>
+                    <button type="button" id="fichaNoticeFechar" aria-label="Fechar">&times;</button>
+                </header>
+                <footer class="sheet-modal-footer">
+                    <button type="button" id="fichaNoticeOk" class="primary">Fechar</button>
+                </footer>
+            </div>
+        </div>
+
         <div class="poder-modal-backdrop" id="poderModal" hidden>
             <div class="poder-modal" role="dialog" aria-modal="true" aria-labelledby="poderModalTitulo">
                 <header class="poder-modal-header">
@@ -785,7 +826,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
     </main>
 
-    <script src="assets/js/ficha.js?v=20260503h"></script>
+    <script src="assets/js/ficha.js?v=20260504e"></script>
     <script src="assets/js/atributos.js?v=20260501u"></script>
     <script src="assets/js/poderes.js?v=20260430j"></script>
     <script src="assets/js/ancestralidades-ficha.js?v=20260504a"></script>

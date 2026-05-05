@@ -312,6 +312,7 @@ const magiasClasseConfig = {
 let catalogoMagiasFicha = [];
 let magiasSelecionadasFicha = [];
 let magiaModalAtual = null;
+let fichasSalvasCache = [];
 
 function normalizarChaveSelecao(valor) {
     return String(valor || "")
@@ -349,8 +350,32 @@ function getNomeClassePorCampo(campo) {
     const chave = chaveClasseSelecionada(campo);
     return Object.keys(classesRPG).find(nome => normalizarChaveSelecao(nome) === chave) || "";
 }
+
+function dispararEventosCampo(campo) {
+    if (!campo) return;
+    campo.dispatchEvent(new Event("input", { bubbles: true }));
+    campo.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function anexarModaisFichaAoBody() {
+    ["fichasSalvasModal", "fichaNoticeModal"].forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+    });
+}
+
+function limparBonusAncestralidadeAplicados() {
+    document.querySelectorAll("[data-bonus-ancestralidade]").forEach(campo => {
+        delete campo.dataset.bonusAncestralidade;
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("fichaForm");
+
+    anexarModaisFichaAoBody();
 
     if (form) {
         form.addEventListener("keydown", function(event) {
@@ -367,6 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
     adicionarEquipamento();
     listarFichas();
     setupCharacterImage();
+    setupCharacterImageAdjustments();
     initResourceBars();
     configurarAutomacoes();
     configurarClasseDinamica();
@@ -397,6 +423,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (carregarFichaBtn) {
         carregarFichaBtn.addEventListener("click", carregarFichaSelecionada);
     }
+
+    const abrirFichasSalvasBtn = document.getElementById("abrirFichasSalvasBtn");
+    if (abrirFichasSalvasBtn) {
+        abrirFichasSalvasBtn.addEventListener("click", abrirModalFichasSalvas);
+    }
+
+    const fecharFichasSalvasBtn = document.getElementById("fecharFichasSalvasBtn");
+    if (fecharFichasSalvasBtn) {
+        fecharFichasSalvasBtn.addEventListener("click", fecharModalFichasSalvas);
+    }
+
+    const fichasSalvasModal = document.getElementById("fichasSalvasModal");
+    if (fichasSalvasModal) {
+        fichasSalvasModal.addEventListener("click", (event) => {
+            if (event.target === fichasSalvasModal) fecharModalFichasSalvas();
+        });
+    }
+
+    const fichaNoticeFechar = document.getElementById("fichaNoticeFechar");
+    const fichaNoticeOk = document.getElementById("fichaNoticeOk");
+    if (fichaNoticeFechar) fichaNoticeFechar.addEventListener("click", fecharAvisoFicha);
+    if (fichaNoticeOk) fichaNoticeOk.addEventListener("click", fecharAvisoFicha);
 
     const novaFichaBtn = document.getElementById("novaFichaBtn");
     if (novaFichaBtn) {
@@ -602,7 +650,7 @@ function trocarEspecializacaoOficio(row) {
         if (typeof window.showToast === "function") {
             window.showToast(`Você já tem um Ofício de ${novoNome}.`);
         } else {
-            alert(`Você já tem um Ofício de ${novoNome}.`);
+            abrirAvisoFicha("Ofício repetido", `Você já tem um Ofício de ${novoNome}.`);
         }
         return;
     }
@@ -630,7 +678,7 @@ function adicionarOficio(especNomeForcado = null) {
     if (!espec || usados.has(espec)) {
         const disponivel = OFICIOS_TIPOS.find(t => !usados.has(t.nome));
         if (!disponivel) {
-            alert("Você já possui ofícios em todas as especializações disponíveis.");
+            abrirAvisoFicha("Ofícios completos", "Você já possui ofícios em todas as especializações disponíveis.");
             return null;
         }
         espec = disponivel.nome;
@@ -1892,7 +1940,7 @@ function rolarDanoAtaque(row) {
     const tipo = row.querySelector('[data-attack="tipo"]')?.value || '';
 
     if (!dano.trim()) {
-        alert('Preencha o campo de Dano antes de rolar.');
+        abrirAvisoFicha("Dano vazio", "Preencha o campo de Dano antes de rolar.");
         return;
     }
 
@@ -1901,7 +1949,7 @@ function rolarDanoAtaque(row) {
     const resultado = rolarFormulaDano(dano, aplicarCrit ? multCrit : 1);
 
     if (!resultado) {
-        alert('Fórmula de dano inválida: ' + dano);
+        abrirAvisoFicha("Dano inválido", "Fórmula de dano inválida: " + dano);
         return;
     }
 
@@ -2603,6 +2651,8 @@ function setupCharacterImage() {
         const reader = new FileReader();
 
         reader.onload = e => {
+            writeCharacterImageAdjustment(defaultCharacterImageAdjustments());
+            applyCharacterImageAdjustment();
             setCharacterPreview(e.target.result);
 
             const removerInput = document.getElementById("removerPersonagemImagem");
@@ -2628,21 +2678,191 @@ function getCharacterPreviewElements() {
         document.getElementById("personagemPreview") ||
         document.getElementById("characterPreview");
 
-    return { box, img };
+    const tokenImg = document.getElementById("characterTokenPreview");
+    const card = document.getElementById("characterCard");
+
+    return { box, img, tokenImg, card };
 }
 
-function setCharacterPreview(src) {
-    const { box, img } = getCharacterPreviewElements();
+function setCharacterPreview(src, ajuste) {
+    const { box, img, tokenImg, card } = getCharacterPreviewElements();
 
     if (!box || !img) return;
 
     if (src) {
         img.src = src;
+        if (tokenImg) tokenImg.src = src;
         box.classList.add("has-image");
+        if (card) card.classList.add("has-image");
     } else {
         img.removeAttribute("src");
+        if (tokenImg) tokenImg.removeAttribute("src");
         box.classList.remove("has-image");
+        if (card) card.classList.remove("has-image");
     }
+
+    if (ajuste) {
+        writeCharacterImageAdjustment(readCharacterImageAdjustmentFromValue(ajuste));
+        applyCharacterImageAdjustment();
+    } else {
+        applyCharacterImageAdjustment();
+    }
+}
+
+function defaultCharacterImageAdjustment() {
+    return { scale: 1, x: 0, y: 0 };
+}
+
+function defaultCharacterImageAdjustments() {
+    return {
+        foto: defaultCharacterImageAdjustment(),
+        token: defaultCharacterImageAdjustment()
+    };
+}
+
+function readCharacterImageAdjustment() {
+    const input = document.getElementById("personagemImagemAjuste");
+    if (!input || !input.value) return defaultCharacterImageAdjustments();
+    return readCharacterImageAdjustmentFromValue(input.value);
+}
+
+function readCharacterImageAdjustmentFromValue(value) {
+    if (!value) return defaultCharacterImageAdjustments();
+    try {
+        const parsed = typeof value === "string" ? JSON.parse(value) : value;
+        if (parsed && (parsed.foto || parsed.token)) {
+            return {
+                foto: normalizeCharacterImageAdjustment(parsed.foto || parsed),
+                token: normalizeCharacterImageAdjustment(parsed.token || parsed.foto || parsed)
+            };
+        }
+        const legacy = normalizeCharacterImageAdjustment(parsed);
+        return { foto: legacy, token: legacy };
+    } catch {
+        return defaultCharacterImageAdjustments();
+    }
+}
+
+function writeCharacterImageAdjustment(ajustes) {
+    const input = document.getElementById("personagemImagemAjuste");
+    if (!input) return;
+    input.value = JSON.stringify({
+        foto: normalizeCharacterImageAdjustment(ajustes.foto),
+        token: normalizeCharacterImageAdjustment(ajustes.token)
+    });
+}
+
+function normalizeCharacterImageAdjustment(ajuste = {}) {
+    return {
+        scale: Math.min(6, Math.max(0.2, Number(ajuste.scale) || 1)),
+        x: Math.min(220, Math.max(-220, Number(ajuste.x) || 0)),
+        y: Math.min(220, Math.max(-220, Number(ajuste.y) || 0))
+    };
+}
+
+function setCharacterImageAdjustment(target, ajuste) {
+    const ajustes = readCharacterImageAdjustment();
+    ajustes[target] = normalizeCharacterImageAdjustment(ajuste);
+    writeCharacterImageAdjustment(ajustes);
+    applyCharacterImageAdjustment();
+}
+
+function applyCharacterImageAdjustment() {
+    const ajustes = readCharacterImageAdjustment();
+    const { box, tokenImg } = getCharacterPreviewElements();
+    applyAdjustmentToElement(box, ajustes.foto, "--char-img");
+    applyAdjustmentToElement(tokenImg?.parentElement, ajustes.token, "--token-img");
+}
+
+function applyAdjustmentToElement(el, ajuste, prefix) {
+    if (!el) return;
+    const normalized = normalizeCharacterImageAdjustment(ajuste);
+    el.style.setProperty(`${prefix}-scale`, String(normalized.scale));
+    el.style.setProperty(`${prefix}-x`, `${normalized.x}%`);
+    el.style.setProperty(`${prefix}-y`, `${normalized.y}%`);
+}
+
+function setupCharacterImageAdjustments() {
+    bindImageAdjustSurface(document.getElementById("characterPreviewBox"), "foto");
+    bindImageAdjustSurface(document.querySelector(".character-token-preview"), "token");
+
+    writeCharacterImageAdjustment(readCharacterImageAdjustment());
+    applyCharacterImageAdjustment();
+}
+
+function bindImageAdjustSurface(surface, target) {
+    if (!surface) return;
+    const pointers = new Map();
+    let start = null;
+
+    surface.addEventListener("pointerdown", event => {
+        if (!surface.closest(".character-card")?.classList.contains("has-image")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        surface.setPointerCapture?.(event.pointerId);
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        start = {
+            ajuste: readCharacterImageAdjustment()[target],
+            center: pointerCenter(pointers),
+            distance: pointerDistance(pointers)
+        };
+        surface.classList.add("is-adjusting");
+    });
+
+    surface.addEventListener("pointermove", event => {
+        if (!pointers.has(event.pointerId) || !start) return;
+        event.preventDefault();
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const currentCenter = pointerCenter(pointers);
+        const rect = surface.getBoundingClientRect();
+        const dx = ((currentCenter.x - start.center.x) / Math.max(1, rect.width)) * 100;
+        const dy = ((currentCenter.y - start.center.y) / Math.max(1, rect.height)) * 100;
+        const currentDistance = pointerDistance(pointers);
+        const pinchScale = start.distance && currentDistance ? currentDistance / start.distance : 1;
+        setCharacterImageAdjustment(target, {
+            scale: start.ajuste.scale * pinchScale,
+            x: start.ajuste.x + dx,
+            y: start.ajuste.y + dy
+        });
+    });
+
+    function finish(event) {
+        pointers.delete(event.pointerId);
+        if (!pointers.size) {
+            start = null;
+            surface.classList.remove("is-adjusting");
+        } else {
+            start = {
+                ajuste: readCharacterImageAdjustment()[target],
+                center: pointerCenter(pointers),
+                distance: pointerDistance(pointers)
+            };
+        }
+    }
+
+    surface.addEventListener("pointerup", finish);
+    surface.addEventListener("pointercancel", finish);
+    surface.addEventListener("wheel", event => {
+        if (!surface.closest(".character-card")?.classList.contains("has-image")) return;
+        event.preventDefault();
+        const ajuste = readCharacterImageAdjustment()[target];
+        const factor = event.deltaY < 0 ? 1.08 : 1 / 1.08;
+        setCharacterImageAdjustment(target, { ...ajuste, scale: ajuste.scale * factor });
+    }, { passive: false });
+}
+
+function pointerCenter(pointers) {
+    const values = Array.from(pointers.values());
+    return {
+        x: values.reduce((sum, pointer) => sum + pointer.x, 0) / values.length,
+        y: values.reduce((sum, pointer) => sum + pointer.y, 0) / values.length
+    };
+}
+
+function pointerDistance(pointers) {
+    const values = Array.from(pointers.values());
+    if (values.length < 2) return 0;
+    return Math.hypot(values[0].x - values[1].x, values[0].y - values[1].y);
 }
 
 function removerImagemPersonagem() {
@@ -2665,6 +2885,8 @@ function removerImagemPersonagem() {
         removerInput.value = "1";
     }
 
+    writeCharacterImageAdjustment(defaultCharacterImageAdjustments());
+    applyCharacterImageAdjustment();
     setCharacterPreview("");
 }
 
@@ -3242,7 +3464,7 @@ async function salvarFicha(event) {
                 fileInput.value = "";
             }
 
-            setCharacterPreview(result.personagem_imagem);
+            setCharacterPreview(result.personagem_imagem, result.personagem_imagem_ajuste);
         } else {
             const imagemAtual = document.getElementById("imagemAtual");
 
@@ -3253,18 +3475,18 @@ async function salvarFicha(event) {
             setCharacterPreview("");
         }
 
-        alert("Ficha salva com sucesso!");
-        listarFichas();
+        await listarFichas();
+        novaFicha();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        abrirAvisoFicha("Ficha salva", result.message || "Ficha salva com sucesso.");
     } catch (error) {
-        alert("Erro ao salvar ficha.\n\nDetalhe: " + error.message);
+        abrirAvisoFicha("Erro ao salvar", error.message || "Não foi possível salvar a ficha.");
         console.error(error);
     }
 }
 
 async function listarFichas() {
-    const select = document.getElementById("fichasSalvas");
-
-    if (!select) return;
+    const lista = document.getElementById("fichasSalvasLista");
 
     try {
         const response = await fetch("listar-fichas.php");
@@ -3274,57 +3496,174 @@ async function listarFichas() {
             throw new Error(fichas.error || fichas.message || "Resposta invalida ao listar fichas.");
         }
 
-        select.innerHTML = `<option value="">Selecione uma ficha</option>`;
-
-        fichas.forEach(ficha => {
-            const option = document.createElement("option");
-            option.value = ficha.id;
-        option.textContent = `${ficha.personagem || "Sem personagem"} — ${ficha.participante || "Sem participante"}`;
-            select.appendChild(option);
-        });
+        fichasSalvasCache = fichas;
+        renderizarListaFichasSalvas();
     } catch (error) {
+        if (lista) {
+            lista.innerHTML = `<p class="sheet-list-empty">Não foi possível carregar as fichas salvas.</p>`;
+        }
         console.error(error);
     }
 }
 
 async function carregarFichaSelecionada() {
-    const select = document.getElementById("fichasSalvas");
-    const id = select?.value;
+    const input = document.getElementById("fichasSalvas");
+    const id = input?.value;
 
     if (!id) {
-        alert("Selecione uma ficha para carregar.");
+        abrirModalFichasSalvas();
         return;
     }
+
+    await carregarFichaPorId(id);
+}
+
+async function carregarFichaPorId(id) {
+    if (!id) return;
 
     const response = await fetch(`buscar-ficha.php?id=${id}`);
     const result = await response.json();
 
     if (!result.success) {
-        alert(result.message || "Erro ao carregar ficha.");
+        abrirAvisoFicha("Erro ao carregar", result.message || "Erro ao carregar ficha.");
         return;
     }
 
     preencherFicha(result.ficha);
+    selecionarFichaNaLista(result.ficha);
+    fecharModalFichasSalvas();
+}
+
+function selecionarFichaNaLista(ficha) {
+    const input = document.getElementById("fichasSalvas");
+    const trigger = document.getElementById("abrirFichasSalvasBtn");
+    if (input) input.value = ficha?.id || "";
+    if (trigger) {
+        const personagem = ficha?.personagem || "Sem personagem";
+        const participante = ficha?.participante ? ` — ${ficha.participante}` : "";
+        trigger.textContent = `${personagem}${participante}`;
+    }
+}
+
+function limparSelecaoFichaSalva() {
+    const input = document.getElementById("fichasSalvas");
+    const trigger = document.getElementById("abrirFichasSalvasBtn");
+    if (input) input.value = "";
+    if (trigger) trigger.textContent = "Escolher ficha salva";
+}
+
+function abrirModalFichasSalvas() {
+    renderizarListaFichasSalvas();
+    const modal = document.getElementById("fichasSalvasModal");
+    if (modal) modal.hidden = false;
+}
+
+function fecharModalFichasSalvas() {
+    const modal = document.getElementById("fichasSalvasModal");
+    if (modal) modal.hidden = true;
+}
+
+function renderizarListaFichasSalvas() {
+    const lista = document.getElementById("fichasSalvasLista");
+    if (!lista) return;
+
+    if (!fichasSalvasCache.length) {
+        lista.innerHTML = `<p class="sheet-list-empty">Nenhuma ficha salva ainda.</p>`;
+        return;
+    }
+
+    lista.innerHTML = "";
+    fichasSalvasCache.forEach(ficha => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "sheet-list-card";
+        item.dataset.fichaId = ficha.id;
+        item.innerHTML = `
+            <span class="sheet-list-info">
+                <strong>${escapeHtml(ficha.personagem || "Sem personagem")}</strong>
+                <em>${escapeHtml(ficha.participante || "Sem participante")}</em>
+                <small>
+                    ${escapeHtml(ficha.ancestralidade || "Sem ancestralidade")}
+                    ${ficha.classe ? ` • ${escapeHtml(formatarNomeFichaLista(ficha.classe))}` : ""}
+                    ${ficha.nivel ? ` • Nível ${escapeHtml(ficha.nivel)}` : ""}
+                </small>
+            </span>
+            <span class="sheet-list-token">
+                ${ficha.personagem_imagem ? `<img src="${escapeHtml(ficha.personagem_imagem)}" alt="">` : "<span>?</span>"}
+            </span>
+        `;
+        const img = item.querySelector("img");
+        if (img) {
+            applySavedSheetTokenAdjustment(img, ficha.personagem_imagem_ajuste);
+        }
+        item.addEventListener("click", () => carregarFichaPorId(ficha.id));
+        lista.appendChild(item);
+    });
+}
+
+function formatarNomeFichaLista(valor) {
+    const chave = normalizarChaveSelecao(valor);
+    const classeCatalogo = Object.keys(classesRPG || {}).find(nome => normalizarChaveSelecao(nome) === chave);
+    if (classeCatalogo) return classeCatalogo;
+    const texto = String(valor || "").replace(/[-_]+/g, " ").trim();
+    return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : "";
+}
+
+function applySavedSheetTokenAdjustment(img, value) {
+    const ajuste = readCharacterImageAdjustmentFromValue(value).token;
+    img.style.setProperty("--saved-token-scale", String(ajuste.scale));
+    img.style.setProperty("--saved-token-x", `${ajuste.x}%`);
+    img.style.setProperty("--saved-token-y", `${ajuste.y}%`);
+}
+
+function abrirAvisoFicha(titulo, texto) {
+    const modal = document.getElementById("fichaNoticeModal");
+    const tituloEl = document.getElementById("fichaNoticeTitulo");
+    const textoEl = document.getElementById("fichaNoticeTexto");
+    if (tituloEl) tituloEl.textContent = titulo;
+    if (textoEl) textoEl.textContent = texto;
+    if (modal) modal.hidden = false;
+}
+
+function fecharAvisoFicha() {
+    const modal = document.getElementById("fichaNoticeModal");
+    if (modal) modal.hidden = true;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function preencherFicha(ficha) {
     const form = document.getElementById("fichaForm");
+    selecionarFichaNaLista(ficha);
+    limparBonusAncestralidadeAplicados();
 
     Object.keys(ficha).forEach(key => {
         const field = form.querySelector(`[name="${key}"]`);
 
-        if (field && !["ataques", "pericias", "personagem_imagem", "equipamentos"].includes(key)) {
+        if (field && !["ataques", "pericias", "personagem_imagem", "personagem_imagem_ajuste", "equipamentos"].includes(key)) {
             if (key === "classe" || key === "origem" || key === "ancestralidade" || key === "divindade") {
                 selecionarOpcaoPorChave(field, ficha[key] ?? "");
+                dispararEventosCampo(field);
             } else {
                 field.value = ficha[key] ?? "";
             }
         }
     });
 
+    definirBaseAutomaticaRecurso("pv", ficha.pv_total);
+    definirBaseAutomaticaRecurso("pm", ficha.pm_total);
+
     if (Array.isArray(ficha.classes) && ficha.classes.length) {
         const classeCampo = document.getElementById("classeSelect") || form.querySelector('[name="classe"]');
         selecionarOpcaoPorChave(classeCampo, ficha.classes[0].id || ficha.classes[0].classe_id || ficha.classe || "");
+        dispararEventosCampo(classeCampo);
     }
 
     const ataques = parseJsonSeguro(ficha.ataques, []);
@@ -3378,6 +3717,9 @@ function preencherFicha(ficha) {
         fileInput.value = "";
     }
 
+    writeCharacterImageAdjustment(readCharacterImageAdjustmentFromValue(ficha.personagem_imagem_ajuste));
+    applyCharacterImageAdjustment();
+
     if (ficha.personagem_imagem) {
         setCharacterPreview(ficha.personagem_imagem);
     } else {
@@ -3408,6 +3750,7 @@ function preencherFicha(ficha) {
     if (Array.isArray(ficha.classes) && ficha.classes.length) {
         const classeCampo = document.getElementById("classeSelect") || form.querySelector('[name="classe"]');
         selecionarOpcaoPorChave(classeCampo, ficha.classes[0].id || ficha.classes[0].classe_id || ficha.classe || "");
+        dispararEventosCampo(classeCampo);
         atualizarResumoClasse();
         atualizarRecursosPorClasse();
         aplicarProficienciasDaClasse();
@@ -3423,12 +3766,28 @@ function parseJsonSeguro(valor, fallback) {
     }
 }
 
+function definirBaseAutomaticaRecurso(resource, total) {
+    const totalInput = document.getElementById(`${resource}Total`);
+    if (totalInput) {
+        totalInput.dataset.autoTotal = String(total ?? totalInput.value ?? 0);
+    }
+}
+
+function limparBaseAutomaticaRecursos() {
+    ["pv", "pm"].forEach(resource => {
+        const totalInput = document.getElementById(`${resource}Total`);
+        if (totalInput) delete totalInput.dataset.autoTotal;
+    });
+}
+
 function novaFicha() {
     const form = document.getElementById("fichaForm");
 
     if (form) {
         form.reset();
     }
+
+    limparBonusAncestralidadeAplicados();
 
     const fichaId = document.getElementById("fichaId");
     const imagemAtual = document.getElementById("imagemAtual");
@@ -3445,6 +3804,8 @@ function novaFicha() {
     if (removerInput) {
         removerInput.value = "0";
     }
+
+    limparBaseAutomaticaRecursos();
 
     const fileInput =
         document.getElementById("personagemImagemFile") ||
@@ -3471,6 +3832,8 @@ function novaFicha() {
     montarPericias();
     magiasSelecionadasFicha = [];
     sincronizarMagiasSelecionadas();
+    writeCharacterImageAdjustment(defaultCharacterImageAdjustments());
+    applyCharacterImageAdjustment();
     setCharacterPreview("");
     syncResource("pv");
     syncResource("pm");
@@ -3496,7 +3859,12 @@ function novaFicha() {
     if (characterCard) {
         characterCard.classList.remove("active");
     }
+
+    limparSelecaoFichaSalva();
 }
+
+window.preencherFicha = preencherFicha;
+window.carregarFichaPorId = carregarFichaPorId;
 function exportarFichaPDF() {
     atualizarTudoAutomatico();
 

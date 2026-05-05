@@ -36,7 +36,7 @@
         rows: 15,
         showNumbers: false,
         viewport: { x: 0, y: 0, scale: 1 },
-        tokens: [],                // { id, fichaId|null, name, image, col, row, sizeCells, rotation }
+        tokens: [],                // { id, fichaId|null, name, tokenImage, tokenImageAdjust, fotoImage, col, row, sizeCells, rotation }
         selectedId: null,
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
@@ -95,7 +95,11 @@
         confirmTargetMeta: document.getElementById('cbConfirmTargetMeta'),
         confirmClose: document.getElementById('cbConfirmClose'),
         confirmCancel: document.getElementById('cbConfirmCancel'),
-        confirmOk: document.getElementById('cbConfirmOk')
+        confirmOk: document.getElementById('cbConfirmOk'),
+        result: document.getElementById('cbResult'),
+        resultBody: document.getElementById('cbResultBody'),
+        resultClose: document.getElementById('cbResultClose'),
+        resultOk: document.getElementById('cbResultOk')
     };
 
     // Estado pendente do modal de confirmação de ação
@@ -145,10 +149,42 @@
             if (snap.rows) state.rows = snap.rows;
             if (typeof snap.showNumbers === 'boolean') state.showNumbers = snap.showNumbers;
             if (snap.viewport) state.viewport = snap.viewport;
-            if (Array.isArray(snap.tokens)) state.tokens = snap.tokens;
+            if (Array.isArray(snap.tokens)) {
+                state.tokens = snap.tokens.map(migrateLegacyTokenFields);
+            }
         } catch (e) {
             // estado corrompido — recomeçar
         }
+    }
+
+    function migrateLegacyTokenFields(token) {
+        if (!token || typeof token !== 'object') return token;
+        if (token.tokenImage === undefined && token.image !== undefined) {
+            token.tokenImage = token.image;
+        }
+        if (token.fotoImage === undefined) {
+            token.fotoImage = token.image ?? token.tokenImage ?? null;
+        }
+        if (token.tokenImageAdjust === undefined && token.imageAdjust !== undefined) {
+            token.tokenImageAdjust = token.imageAdjust;
+        }
+        delete token.image;
+        delete token.imageAdjust;
+        return token;
+    }
+
+    function resolveTokenImageSrc(token) {
+        if (!token) return null;
+        return token.tokenImage || token.fotoImage || token.image || null;
+    }
+
+    function getTokenInitials(name) {
+        const text = String(name || '').trim();
+        if (!text) return '?';
+        const parts = text.split(/\s+/).filter(Boolean);
+        if (!parts.length) return '?';
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     // ----------------------------------------------------------------
@@ -219,14 +255,20 @@
 
         const circle = document.createElement('div');
         circle.className = 'cb-token-circle';
-        if (token.image) {
+        const tokenImageSrc = resolveTokenImageSrc(token);
+        if (tokenImageSrc) {
             const img = document.createElement('img');
-            img.src = token.image;
+            img.src = tokenImageSrc;
             img.alt = token.name || 'Token';
             img.draggable = false;
+            applyTokenImageAdjustment(img, token.tokenImageAdjust ?? token.imageAdjust);
+            img.onerror = () => {
+                img.remove();
+                circle.textContent = getTokenInitials(token.name);
+            };
             circle.appendChild(img);
         } else {
-            circle.textContent = (token.name || '?').trim().charAt(0) || '?';
+            circle.textContent = getTokenInitials(token.name);
         }
         wrap.appendChild(circle);
 
@@ -763,12 +805,15 @@
     // ----------------------------------------------------------------
 
     function addTokenFromFicha(ficha) {
+        const fotoSrc = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
         const t = {
             id: genId(),
             fichaId: ficha.id,
             source: ficha.source || 'ficha',
             name: ficha.personagem || 'Sem nome',
-            image: ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null,
+            tokenImage: fotoSrc,
+            tokenImageAdjust: parseImageAdjustment(ficha.personagem_imagem_ajuste),
+            fotoImage: fotoSrc,
             tamanho: ficha.tamanho || null,
             deslocamento: ficha.deslocamento || null,
             nd: ficha.nd || null,
@@ -802,6 +847,53 @@
         state.selectedId = t.id;
         renderTokens();
         saveState();
+    }
+
+    async function syncFichaTokensFromServer() {
+        const fichaTokens = state.tokens.filter(token => token.fichaId && token.source !== 'bestiario');
+        if (!fichaTokens.length) return;
+
+        let changed = false;
+        for (const token of fichaTokens) {
+            try {
+                const resp = await fetch('buscar-ficha.php?id=' + encodeURIComponent(token.fichaId), {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                if (!resp.ok) continue;
+                const data = await resp.json();
+                const ficha = data && data.success ? data.ficha : null;
+                if (!ficha) continue;
+
+                const nextImage = ficha.personagem_imagem ? resolveImage(ficha.personagem_imagem) : null;
+                const nextAdjust = parseImageAdjustment(ficha.personagem_imagem_ajuste);
+                const nextName = ficha.personagem || token.name;
+
+                if (token.tokenImage !== nextImage) {
+                    token.tokenImage = nextImage;
+                    changed = true;
+                }
+                if (token.fotoImage !== nextImage) {
+                    token.fotoImage = nextImage;
+                    changed = true;
+                }
+                if (JSON.stringify(parseImageAdjustment(token.tokenImageAdjust)) !== JSON.stringify(nextAdjust)) {
+                    token.tokenImageAdjust = nextAdjust;
+                    changed = true;
+                }
+                if (token.name !== nextName) {
+                    token.name = nextName;
+                    changed = true;
+                }
+            } catch (_) {
+                // Mantém o token como está se a ficha não puder ser sincronizada.
+            }
+        }
+
+        if (changed) {
+            renderTokens();
+            saveState();
+        }
     }
 
     function addTokenFromBestiaryToken(token) {
@@ -1005,10 +1097,16 @@
             const trimmed = item.trim();
             if (!trimmed) return null;
             const alcance = inferActionReach(trimmed);
+            const quantidadeAtaques = parseAttackCount({}, trimmed);
+            const bonusAtaque = parseAttackBonus({ nome: trimmed });
+            const danoFormula = parseDamageFormula(trimmed);
             return {
                 nome: trimmed,
                 tipo: fallbackType,
                 alcance,
+                quantidadeAtaques,
+                bonusAtaque,
+                danoFormula,
                 detalhe: alcance ? `Alcance: ${alcance}` : ''
             };
         }
@@ -1092,6 +1190,42 @@
         return path; // caminho relativo já serve (mesma origem)
     }
 
+    function parseImageAdjustment(value) {
+        if (!value) return { scale: 1, x: 0, y: 0 };
+        if (typeof value === 'object') return normalizeImageAdjustment(value.token || value);
+        try {
+            const parsed = JSON.parse(value);
+            return normalizeImageAdjustment(parsed.token || parsed);
+        } catch (_) {
+            return { scale: 1, x: 0, y: 0 };
+        }
+    }
+
+    function normalizeImageAdjustment(value) {
+        return {
+            scale: Math.min(6, Math.max(0.2, Number(value.scale) || 1)),
+            x: Math.min(220, Math.max(-220, Number(value.x) || 0)),
+            y: Math.min(220, Math.max(-220, Number(value.y) || 0))
+        };
+    }
+
+    function applyTokenImageAdjustment(img, adjustment) {
+        const ajuste = parseImageAdjustment(adjustment);
+        img.style.setProperty('--token-img-scale', String(ajuste.scale));
+        img.style.setProperty('--token-img-x', `${ajuste.x}%`);
+        img.style.setProperty('--token-img-y', `${ajuste.y}%`);
+        img.style.setProperty('--saved-token-scale', String(ajuste.scale));
+        img.style.setProperty('--saved-token-x', `${ajuste.x}%`);
+        img.style.setProperty('--saved-token-y', `${ajuste.y}%`);
+    }
+
+    function applyFichaSalvaTokenAdjustment(img, adjustment) {
+        const ajuste = parseImageAdjustment(adjustment);
+        img.style.setProperty('--saved-token-scale', String(ajuste.scale));
+        img.style.setProperty('--saved-token-x', `${ajuste.x}%`);
+        img.style.setProperty('--saved-token-y', `${ajuste.y}%`);
+    }
+
     function parseResource(value) {
         if (value === undefined || value === null || value === '') return null;
         const parsed = Number(value);
@@ -1122,20 +1256,19 @@
         els.modal.hidden = false;
         els.modalSearch.value = '';
         els.modalSearch.focus();
-        if (!state.fichasLoaded) {
-            els.fichaList.innerHTML = '<li class="cb-ficha-empty">Carregando fichas...</li>';
-            try {
-                const resp = await fetch('listar-fichas.php', { credentials: 'same-origin' });
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const data = await resp.json();
-                // Para cada ficha pegamos só a thumb. As fichas básicas trazem id, personagem,
-                // mas não a imagem — buscamos lazy quando o usuário escolhe.
-                state.fichas = Array.isArray(data) ? data : [];
-                state.fichasLoaded = true;
-            } catch (e) {
-                els.fichaList.innerHTML = '<li class="cb-ficha-empty">Não foi possível carregar fichas.</li>';
-                return;
-            }
+        els.fichaList.innerHTML = '<li class="cb-ficha-empty">Carregando fichas...</li>';
+        try {
+            const resp = await fetch('listar-fichas.php', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            state.fichas = Array.isArray(data) ? data : [];
+            state.fichasLoaded = true;
+        } catch (e) {
+            els.fichaList.innerHTML = '<li class="cb-ficha-empty">Não foi possível carregar fichas.</li>';
+            return;
         }
         renderFichaList(state.fichas);
     }
@@ -1241,7 +1374,21 @@
 
             const thumb = document.createElement('div');
             thumb.className = 'cb-ficha-thumb';
-            thumb.textContent = (f.personagem || '?').trim().charAt(0) || '?';
+            if (f.personagem_imagem) {
+                const img = document.createElement('img');
+                img.src = resolveImage(f.personagem_imagem);
+                img.alt = f.personagem || 'Personagem';
+                img.loading = 'lazy';
+                img.onerror = () => {
+                    img.remove();
+                    thumb.textContent = getTokenInitials(f.personagem);
+                };
+                applyFichaSalvaTokenAdjustment(img, f.personagem_imagem_ajuste);
+                thumb.appendChild(img);
+            } else {
+                thumb.textContent = getTokenInitials(f.personagem);
+            }
+            atualizarThumbFichaCompleta(f, thumb);
             li.appendChild(thumb);
 
             const info = document.createElement('div');
@@ -1288,11 +1435,11 @@
                 img.loading = 'lazy';
                 img.onerror = () => {
                     img.remove();
-                    thumb.textContent = (criatura.nome || '?').trim().charAt(0) || '?';
+                    thumb.textContent = getTokenInitials(criatura.nome);
                 };
                 thumb.appendChild(img);
             } else {
-                thumb.textContent = (criatura.nome || '?').trim().charAt(0) || '?';
+                thumb.textContent = getTokenInitials(criatura.nome);
             }
             li.appendChild(thumb);
 
@@ -1326,7 +1473,8 @@
         // Buscar ficha completa para obter a imagem (vem em data.ficha)
         try {
             const resp = await fetch('buscar-ficha.php?id=' + encodeURIComponent(fichaListItem.id), {
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-store'
             });
             const data = await resp.json();
             const ficha = (data && data.success !== false) ? (data.ficha || data) : null;
@@ -1336,7 +1484,8 @@
                     ...ficha,
                     id: ficha.id || fichaListItem.id,
                     personagem: ficha.personagem || fichaListItem.personagem,
-                    personagem_imagem: ficha.personagem_imagem || null,
+                    personagem_imagem: ficha.personagem_imagem || fichaListItem.personagem_imagem || null,
+                    personagem_imagem_ajuste: ficha.personagem_imagem_ajuste || fichaListItem.personagem_imagem_ajuste || null,
                     tamanho: ficha.tamanho || ficha.categoria_tamanho || tamanhoInferido || 'Médio',
                     pv_total: ficha.pv_total,
                     pv_atuais: ficha.pv_atuais,
@@ -1352,6 +1501,37 @@
             addTokenFromFicha(fichaListItem);
         }
         closeModal();
+    }
+
+    async function buscarFichaCompleta(id) {
+        if (!id) return null;
+        const resp = await fetch('buscar-ficha.php?id=' + encodeURIComponent(id), {
+            credentials: 'same-origin',
+            cache: 'no-store'
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data && data.success !== false ? (data.ficha || data) : null;
+    }
+
+    async function atualizarThumbFichaCompleta(fichaResumo, thumb) {
+        try {
+            const ficha = await buscarFichaCompleta(fichaResumo.id);
+            if (!ficha || !ficha.personagem_imagem || !thumb.isConnected) return;
+            thumb.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = resolveImage(ficha.personagem_imagem);
+            img.alt = ficha.personagem || fichaResumo.personagem || 'Personagem';
+            img.loading = 'lazy';
+            img.onerror = () => {
+                img.remove();
+                thumb.textContent = getTokenInitials(ficha.personagem || fichaResumo.personagem);
+            };
+            applyFichaSalvaTokenAdjustment(img, ficha.personagem_imagem_ajuste);
+            thumb.appendChild(img);
+        } catch (_) {
+            // Mantém a miniatura do resumo se a ficha completa falhar.
+        }
     }
 
     async function inferFichaSize(ficha) {
@@ -1537,9 +1717,10 @@
     function buildActionCard(item, token) {
         const card = document.createElement('article');
         card.className = 'cb-action-card';
+        const melee = isMeleeAction(item);
 
         const title = document.createElement('h4');
-        title.textContent = item.nome || 'Ação';
+        title.textContent = getActionDisplayName(item);
         card.appendChild(title);
 
         const metaParts = [item.tipo, item.origem].filter(Boolean);
@@ -1550,37 +1731,35 @@
             card.appendChild(meta);
         }
 
-        if (item.detalhe) {
+        if (melee) {
+            card.appendChild(buildAttackFields(item));
+        } else if (item.detalhe) {
             const detail = document.createElement('p');
             detail.textContent = item.detalhe;
             card.appendChild(detail);
         }
 
-        if (isMeleeAction(item)) {
+        if (melee) {
             const buttons = document.createElement('div');
             buttons.className = 'cb-action-buttons';
 
-            const reach = document.createElement('button');
-            reach.type = 'button';
-            reach.className = 'cb-action-reach-btn';
-            const setReachLabel = () => {
+            const selectAttack = document.createElement('button');
+            selectAttack.type = 'button';
+            selectAttack.className = 'cb-action-attack-btn';
+            const setAttackLabel = () => {
                 const active = isReachPreviewActive(token.id, item);
-                reach.textContent = active ? 'Ocultar alcance' : 'Mostrar alcance';
-                reach.classList.toggle('is-active', active);
+                selectAttack.textContent = active ? 'Ataque selecionado' : 'Selecionar ataque';
+                selectAttack.classList.toggle('is-active', active);
             };
-            setReachLabel();
-            reach.addEventListener('click', () => {
+            setAttackLabel();
+            selectAttack.addEventListener('click', () => {
                 toggleMeleeReachPreview(token, item);
-                setReachLabel();
+                setAttackLabel();
+                if (isReachPreviewActive(token.id, item)) {
+                    closeTokenActionPanel();
+                }
             });
-            buttons.appendChild(reach);
-
-            const attack = document.createElement('button');
-            attack.type = 'button';
-            attack.className = 'cb-action-attack-btn';
-            attack.textContent = 'Atacar alvo';
-            attack.addEventListener('click', () => executeMeleeAttack(token, item));
-            buttons.appendChild(attack);
+            buttons.appendChild(selectAttack);
 
             card.appendChild(buttons);
         }
@@ -1588,9 +1767,60 @@
         return card;
     }
 
+    function buildAttackFields(item) {
+        const wrap = document.createElement('dl');
+        wrap.className = 'cb-attack-fields';
+
+        const quantidade = item.quantidadeAtaques || parseAttackCount(item, item.nome) || 1;
+        const bonus = item.bonusAtaque ?? parseAttackBonus(item);
+        const dano = item.dano || item.danoFormula || parseDamageFormula(`${item.detalhe || ''} ${item.nome || ''}`) || '1d8+4';
+        const fields = [
+            ['Alcance', item.alcance || 'corpo a corpo'],
+            ['Quantidade', quantidade === 1 ? '1 ataque' : `${quantidade} ataques`],
+            ['Teste', formatSignedBonus(bonus)],
+            ['Dano', formatDamageLabel(dano)]
+        ];
+
+        for (const [label, value] of fields) {
+            const row = document.createElement('div');
+            const dt = document.createElement('dt');
+            const dd = document.createElement('dd');
+            dt.textContent = label;
+            dd.textContent = value;
+            row.appendChild(dt);
+            row.appendChild(dd);
+            wrap.appendChild(row);
+        }
+
+        return wrap;
+    }
+
+    function getActionDisplayName(item) {
+        const name = String(item && item.nome || 'Ação');
+        if (normalizeText(name).includes('gavioes espinhosos') || normalizeText(name).includes('gavinhos espinhosos')) {
+            return 'Gravetos espinhosos';
+        }
+        return name.replace(/^\s*\d+\s+/, '');
+    }
+
+    function formatSignedBonus(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return String(value || '+0');
+        return parsed >= 0 ? `+${parsed}` : String(parsed);
+    }
+
+    function formatDamageLabel(value) {
+        const text = String(value || '').trim();
+        if (!text) return '1d8+4 perfuração cada';
+        if (normalizeText(text).includes('perfuracao')) return text;
+        return `${text} perfuração cada`;
+    }
+
     function isMeleeAction(item) {
         return normalizeText(`${item && item.alcance || ''} ${item && item.nome || ''}`).includes('corpo a corpo')
-            || normalizeText(item && item.nome).includes('gavioes espinhosos');
+            || normalizeText(item && item.nome).includes('gavioes espinhosos')
+            || normalizeText(item && item.nome).includes('gavinhos espinhosos')
+            || normalizeText(item && item.nome).includes('gravetos espinhosos');
     }
 
     function actionKey(item) {
@@ -1612,7 +1842,9 @@
             tokenId: token.id,
             actionKey: actionKey(item),
             alcance: item.alcance || 'corpo a corpo',
-            action: item
+            action: item,
+            results: [],
+            totalDamage: 0
         };
         renderBoard();
     }
@@ -1679,7 +1911,13 @@
             if (!isReachPreviewActive(attacker.id, item)) {
                 toggleMeleeReachPreview(attacker, item);
             }
-            alert('Nenhum alvo dentro do alcance corpo a corpo.');
+            openAttackResultModal({
+                attacker,
+                target: null,
+                actionName: getActionDisplayName(item),
+                totalDamage: 0,
+                message: 'Nenhum alvo dentro do alcance corpo a corpo.'
+            });
             return;
         }
 
@@ -1691,32 +1929,67 @@
     function performMeleeAttack(attacker, item, target) {
         if (!attacker || !target) return;
         const attackCount = item.quantidadeAtaques || parseAttackCount(item, item.nome) || 1;
-        const attackBonus = item.bonusAtaque ?? parseAttackBonus(item);
-        const defense = parseDefense(target);
-        const damageFormula = item.danoFormula || parseDamageFormula(item.detalhe || item.nome || '') || '1d8+4';
         const results = [];
         let totalDamage = 0;
 
         for (let i = 0; i < attackCount; i++) {
-            const d20 = rollDie(20);
-            const total = d20 + attackBonus;
-            if (total > defense) {
-                const damage = rollDamage(damageFormula);
-                totalDamage += damage.total;
-                results.push(`Ataque ${i + 1}: ${d20}+${attackBonus}=${total} contra Defesa ${defense}. Acertou: ${damage.rollsText}+${damage.modifier}=${damage.total} perfuração.`);
-            } else {
-                results.push(`Ataque ${i + 1}: ${d20}+${attackBonus}=${total} contra Defesa ${defense}. Errou.`);
-            }
-        }
-
-        if (totalDamage > 0) {
-            applyDamageToToken(target, totalDamage);
+            const result = rollSingleMeleeAttack(attacker, item, target, i + 1);
+            results.push(result);
+            totalDamage += result.damageTotal || 0;
         }
 
         renderTokens();
         selectToken(attacker.id);
         saveState();
-        alert(`${attacker.name} atacou ${target.name} com ${item.nome}.\n\n${results.join('\n')}\n\nDano total: ${totalDamage}. PV de ${target.name}: ${clampResource(target.pvAtual, target.pvMax)}/${target.pvMax || 0}.`);
+        openAttackResultModal({
+            attacker,
+            target,
+            actionName: getActionDisplayName(item),
+            results,
+            totalDamage,
+            pvAtual: clampResource(target.pvAtual, target.pvMax),
+            pvMax: target.pvMax || 0
+        });
+    }
+
+    function rollSingleMeleeAttack(attacker, item, target, index) {
+        const attackBonus = item.bonusAtaque ?? parseAttackBonus(item);
+        const defense = parseDefense(target);
+        const damageFormula = item.danoFormula || parseDamageFormula(item.detalhe || item.nome || '') || '1d8+4';
+        const d20 = rollDie(20);
+        const total = d20 + attackBonus;
+
+        if (total > defense) {
+            const damage = rollDamage(damageFormula);
+            applyDamageToToken(target, damage.total);
+            return {
+                index,
+                targetName: target.name || 'Alvo',
+                d20,
+                total,
+                attackBonus,
+                defense,
+                hit: true,
+                damage,
+                damageTotal: damage.total,
+                pvAtual: clampResource(target.pvAtual, target.pvMax),
+                pvMax: target.pvMax || 0
+            };
+        }
+
+        return {
+            index,
+            targetName: target.name || 'Alvo',
+            d20,
+            total,
+            attackBonus,
+            defense,
+            hit: false,
+            damage: null,
+            damageTotal: 0,
+            pvAtual: clampResource(target.pvAtual, target.pvMax),
+            pvMax: target.pvMax || 0
+        };
     }
 
     function getTokensInMeleeReach(attacker) {
@@ -1835,24 +2108,31 @@
 
     function openAttackConfirmation(attacker, target, action) {
         if (!els.confirm) return;
-        pendingAttack = { attacker, target, action };
+        const totalAttacks = action.quantidadeAtaques || parseAttackCount(action, action.nome) || 1;
+        const attackIndex = getCurrentAttackIndex(action);
+        pendingAttack = { attacker, target, action, attackIndex, totalAttacks };
 
-        const actionName = (action && action.nome) ? action.nome : 'esta ação';
+        const actionName = action ? getActionDisplayName(action) : 'este ataque';
         const attackerName = attacker.name || 'Atacante';
+        const targetName = target.name || 'Alvo';
         els.confirmText.innerHTML =
-            `Direcionar <strong>${escapeHtml(actionName)}</strong> de ` +
-            `<strong>${escapeHtml(attackerName)}</strong> ao alvo abaixo?`;
+            `Deseja usar o <strong>ataque ${escapeHtml(attackIndex)}/${escapeHtml(totalAttacks)}</strong> contra ` +
+            `<strong>${escapeHtml(targetName)}</strong> com ` +
+            `<strong>${escapeHtml(actionName)}</strong> de ` +
+            `<strong>${escapeHtml(attackerName)}</strong>?`;
 
         // Thumbnail do alvo
         els.confirmTargetThumb.innerHTML = '';
-        if (target.image) {
+        const targetImageSrc = resolveTokenImageSrc(target);
+        if (targetImageSrc) {
             const img = document.createElement('img');
-            img.src = target.image;
+            img.src = targetImageSrc;
             img.alt = target.name || 'Alvo';
             img.draggable = false;
+            applyTokenImageAdjustment(img, target.tokenImageAdjust ?? target.imageAdjust);
             els.confirmTargetThumb.appendChild(img);
         } else {
-            els.confirmTargetThumb.textContent = (target.name || '?').trim().charAt(0) || '?';
+            els.confirmTargetThumb.textContent = getTokenInitials(target.name);
         }
 
         els.confirmTargetName.textContent = target.name || 'Alvo';
@@ -1878,11 +2158,132 @@
 
     function confirmPendingAttack() {
         if (!pendingAttack) return;
-        const { attacker, target, action } = pendingAttack;
+        const { attacker, target, action, attackIndex, totalAttacks } = pendingAttack;
         closeAttackConfirmation();
-        performMeleeAttack(attacker, action, target);
-        clearReachPreview(true);
-        closeTokenActionPanel();
+
+        const result = rollSingleMeleeAttack(attacker, action, target, attackIndex);
+        if (state.reachPreview && state.reachPreview.tokenId === attacker.id) {
+            state.reachPreview.results.push(result);
+            state.reachPreview.totalDamage += result.damageTotal || 0;
+        }
+
+        renderTokens();
+        selectToken(attacker.id);
+        saveState();
+
+        if (attackIndex >= totalAttacks) {
+            const results = state.reachPreview ? state.reachPreview.results.slice() : [result];
+            const totalDamage = state.reachPreview ? state.reachPreview.totalDamage : (result.damageTotal || 0);
+            clearReachPreview(true);
+            closeTokenActionPanel();
+            openAttackResultModal({
+                attacker,
+                target,
+                actionName: getActionDisplayName(action),
+                results,
+                totalDamage
+            });
+        } else {
+            renderBoard();
+        }
+    }
+
+    function getCurrentAttackIndex(action) {
+        if (!state.reachPreview || !state.reachPreview.action) return 1;
+        if (state.reachPreview.actionKey !== actionKey(action)) return 1;
+        return (state.reachPreview.results ? state.reachPreview.results.length : 0) + 1;
+    }
+
+    function openAttackResultModal(data) {
+        if (!els.result || !els.resultBody) return;
+        els.resultBody.innerHTML = '';
+
+        const intro = document.createElement('section');
+        intro.className = 'cb-result-summary';
+
+        const title = document.createElement('h3');
+        if (data.target) {
+            title.textContent = `${data.attacker.name || 'Atacante'} atacou ${data.target.name || 'alvo'}`;
+        } else {
+            title.textContent = data.attacker ? `${data.attacker.name || 'Atacante'} preparou ${data.actionName}` : 'Resultado';
+        }
+        intro.appendChild(title);
+
+        const subtitle = document.createElement('p');
+        subtitle.textContent = data.message || `Ação: ${data.actionName}`;
+        intro.appendChild(subtitle);
+        els.resultBody.appendChild(intro);
+
+        if (Array.isArray(data.results) && data.results.length) {
+            const list = document.createElement('div');
+            list.className = 'cb-result-rolls';
+
+            for (const result of data.results) {
+                const row = document.createElement('article');
+                row.className = `cb-result-roll ${result.hit ? 'is-hit' : 'is-miss'}`;
+
+                const die = document.createElement('div');
+                die.className = 'cb-result-die';
+                die.innerHTML = `<span>d20</span><strong>${result.d20}</strong>`;
+                row.appendChild(die);
+
+                const info = document.createElement('div');
+                info.className = 'cb-result-roll-info';
+
+                const heading = document.createElement('h4');
+                heading.textContent = `Ataque ${result.index} contra ${result.targetName || 'alvo'}`;
+                info.appendChild(heading);
+
+                const test = document.createElement('p');
+                test.textContent = `${result.d20} ${formatSignedBonus(result.attackBonus)} = ${result.total} contra Defesa ${result.defense}`;
+                info.appendChild(test);
+
+                const outcome = document.createElement('strong');
+                outcome.className = 'cb-result-outcome';
+                if (result.hit) {
+                    outcome.textContent = `Acertou: ${result.damage.rollsText}${formatSignedBonus(result.damage.modifier)} = ${result.damage.total} perfuração`;
+                } else {
+                    outcome.textContent = 'Errou';
+                }
+                info.appendChild(outcome);
+
+                row.appendChild(info);
+                list.appendChild(row);
+            }
+
+            els.resultBody.appendChild(list);
+        }
+
+        if (data.target) {
+            const footer = document.createElement('section');
+            footer.className = 'cb-result-total';
+            footer.innerHTML = `
+                <span>Dano total</span>
+                <strong>${escapeHtml(data.totalDamage)}</strong>
+                <em>PV de ${escapeHtml(data.target.name || 'alvo')}: ${escapeHtml(data.pvAtual)}/${escapeHtml(data.pvMax)}</em>
+            `;
+            els.resultBody.appendChild(footer);
+        } else if (Array.isArray(data.results) && data.results.length) {
+            const footer = document.createElement('section');
+            footer.className = 'cb-result-total';
+            const affected = data.results
+                .map(result => `${result.targetName}: ${result.pvAtual}/${result.pvMax}`)
+                .filter(Boolean)
+                .join(' • ');
+            footer.innerHTML = `
+                <span>Dano total</span>
+                <strong>${escapeHtml(data.totalDamage)}</strong>
+                <em>${escapeHtml(affected || 'Sem dano aplicado')}</em>
+            `;
+            els.resultBody.appendChild(footer);
+        }
+
+        els.result.hidden = false;
+    }
+
+    function closeAttackResultModal() {
+        if (!els.result) return;
+        els.result.hidden = true;
     }
 
     function normalizeText(value) {
@@ -2008,6 +2409,13 @@
                 if (e.target === els.confirm) closeAttackConfirmation();
             });
         }
+        if (els.result) {
+            els.resultClose.addEventListener('click', closeAttackResultModal);
+            els.resultOk.addEventListener('click', closeAttackResultModal);
+            els.result.addEventListener('click', (e) => {
+                if (e.target === els.result) closeAttackResultModal();
+            });
+        }
         els.modalClose.addEventListener('click', closeModal);
         els.modal.addEventListener('click', (e) => {
             if (e.target === els.modal) closeModal();
@@ -2048,7 +2456,11 @@
             const c = parseInt(els.cols.value, 10);
             const r = parseInt(els.rows.value, 10);
             if (!isFinite(c) || !isFinite(r) || c < 5 || r < 5) {
-                alert('Defina ao menos 5 colunas e 5 linhas.');
+                openAttackResultModal({
+                    actionName: 'Ajuste do campo',
+                    totalDamage: 0,
+                    message: 'Defina ao menos 5 colunas e 5 linhas.'
+                });
                 return;
             }
             state.cols = clamp(c, 5, 60);
@@ -2078,6 +2490,7 @@
             // mantém o tabuleiro visível em redimensionamentos extremos
             applyViewport();
         });
+        window.addEventListener('focus', syncFichaTokensFromServer);
     }
 
     // ----------------------------------------------------------------
@@ -2092,6 +2505,7 @@
         renderBoard();
         renderTokens();
         consumePendingBestiaryToken();
+        syncFichaTokensFromServer();
         if (state.viewport.scale === 1 && state.viewport.x === 0 && state.viewport.y === 0) {
             centerBoard();
         } else {

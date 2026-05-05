@@ -27,11 +27,21 @@
       "fortitude": "+8",
       "reflexos": "+5",
       "vontade": "+4",
-      "ataques": ["Corpo a corpo - 2 Gaviões Espinhosos +10 (1d8+4 pontos de perfuração cada)"],
+      "ataques": [
+        {
+          "nome": "Gravetos espinhosos",
+          "alcance": "corpo a corpo",
+          "quantidadeAtaques": 2,
+          "teste": "+10",
+          "bonusAtaque": 10,
+          "dano": "1d8+4 perfuração cada",
+          "danoFormula": "1d8+4"
+        }
+      ],
       "habilidades": [
         "Camuflagem da Caatinga. Em terreno de vegetação seca, pedregoso ou espinhoso, o Xique-Xique Andante recebe +5 em Furtividade. Se permanecer imóvel, pode ser confundido com vegetação comum; criaturas distraídas sofrem -5 em Percepção para notá-lo.",
         "Corpo Espinhoso. Uma criatura que acerte o Xique-Xique Andante com um ataque desarmado, ou que o agarre, sofre 1d6 pontos de dano de perfuração.",
-        "Laço de Raízes. Se o Xique-Xique Andante acertar os dois ataques de gaviões espinhosos no mesmo alvo em sua rodada, pode fazer uma manobra agarrar como ação livre contra esse alvo, com +10.",
+        "Laço de Raízes. Se o Xique-Xique Andante acertar os dois ataques de gravetos espinhosos no mesmo alvo em sua rodada, pode fazer uma manobra agarrar como ação livre contra esse alvo, com +10.",
         "Rajada de Espinhos (padrão). O Xique-Xique Andante dispara uma nuvem de espinhos em um cone de 4,5m. Criaturas na área sofrem 2d6+2 pontos de dano de perfuração. Reflexos CD 15 reduz à metade.",
         "Vulnerabilidade a Fogo. O Xique-Xique Andante sofre +50% de dano de fogo."
       ],
@@ -59,7 +69,7 @@
         "círculos de vegetação espinhosa mais densa em torno de uma fonte d'água",
         "sensação de estar sendo observado mesmo em terreno aberto"
       ],
-      "fichaCompleta": "Xique-Xique Andante - ND 3\nPlanta Média\n\nIniciativa +5\nSentidos percepção às cegas 3m, visão na penumbra; Percepção +8\n\nDefesa 18\nFort +8, Ref +5, Von +4\nPontos de Vida 55\nDeslocamento 6m\n\nAtaques:\nCorpo a corpo - 2 Gaviões Espinhosos +10 (1d8+4 pontos de perfuração cada)\n\nAtributos:\nFor +4, Des +1, Con +3, Int -3, Sab +2, Car -2\n\nPerícias:\nFurtividade +9, Sobrevivência +8",
+      "fichaCompleta": "Xique-Xique Andante - ND 3\nPlanta Média\n\nIniciativa +5\nSentidos percepção às cegas 3m, visão na penumbra; Percepção +8\n\nDefesa 18\nFort +8, Ref +5, Von +4\nPontos de Vida 55\nDeslocamento 6m\n\nAtaques:\nGravetos espinhosos\nAlcance: corpo a corpo\nQuantidade: 2 ataques\nTeste: +10\nDano: 1d8+4 perfuração cada\n\nAtributos:\nFor +4, Des +1, Con +3, Int -3, Sab +2, Car -2\n\nPerícias:\nFurtividade +9, Sobrevivência +8",
       "taticasCombate": "- Começa o combate escondido, tentando surpreender.\n- Se houver dois ou mais inimigos agrupados, abre com Rajada de Espinhos.\n- Depois foca em um alvo por vez com os dois gaviões, tentando usar Laço de Raízes para agarrar combatentes mais frágeis ou impedir conjuradores e arqueiros de recuar.\n- Prefere lutar em terreno difícil, entre pedras e vegetação espinhosa.\n- Evita oponentes com fogo evidente.\n- Se sofrer muito dano de fogo, pode recuar para cobertura vegetal.\n- Contra grupos despreparados, tenta separar um membro do restante e neutralizá-lo rapidamente.",
       "usoCampanha": "O Xique-Xique Andante funciona muito bem como:\n- ameaça de viagem no sertão;\n- guardião natural de cacimbas, olhos d'água ou ruínas;\n- criatura associada a maldições da seca;\n- obstáculo em missões de escolta, travessia ou busca por recursos;\n- encontro temático para mostrar que a Caatinga é viva, hostil e sagrada.\n\nEle também combina com aventuras em que o grupo precise decidir entre destruir a criatura ou compreender por que a terra a criou.",
       "ganchosAventura": [
@@ -70,7 +80,7 @@
         "Colheita proibida. Um alquimista quer espinhos raros da criatura para fabricar venenos e remédios, mas a coleta atrai a ira de espíritos locais."
       ],
       "tesouroRecompensas": "O monstro em si raramente carrega tesouro, mas seu corpo pode render:\n- espinhos grandes úteis como matéria-prima alquímica ou artesanal;\n- seiva resinosa com valor para curandeiros, alquimistas ou envenenadores;\n- fibras resistentes para cordas, talismãs ou componentes rituais.\n\nNa toca ou arredores podem ser encontrados:\n- cantis, facas, moedas e bugigangas de vítimas anteriores;\n- mapas, bilhetes ou relíquias presas entre os espinhos;\n- pequenas reservas de água protegidas pela criatura.",
-      "variacoesND": "ND 1 - Broto Espinhoso\nVersão menor, usada em pares ou bandos pequenos. Defesa 16, PV 22. 1 ataque de gavião +7 (1d6+2). Rajada de Espinhos causa 1d6+1, CD 13. Sem percepção às cegas ou com versão reduzida.\n\nND 5 - Mandacaru-Mor\nVersão maior e mais antiga, quase um totem vivo da seca. Defesa 20, PV 90+. Gaviões mais fortes e área maior de espinhos. Pode agarrar mais facilmente e controlar melhor o terreno. Excelente como guardião de local sagrado ou encontro principal da Caatinga.",
+      "variacoesND": "ND 1 - Broto Espinhoso\nVersão menor, usada em pares ou bandos pequenos. Defesa 16, PV 22. 1 ataque de graveto +7 (1d6+2). Rajada de Espinhos causa 1d6+1, CD 13. Sem percepção às cegas ou com versão reduzida.\n\nND 5 - Mandacaru-Mor\nVersão maior e mais antiga, quase um totem vivo da seca. Defesa 20, PV 90+. Gravetos mais fortes e área maior de espinhos. Pode agarrar mais facilmente e controlar melhor o terreno. Excelente como guardião de local sagrado ou encontro principal da Caatinga.",
       "comparacaoEquilibrio": "Para ND 3, o Xique-Xique Andante foi pensado com:\n- Defesa 18: boa, mas não excessiva para seu ND.\n- PV 55: um pouco acima da média de uma ameaça leve, compensado por deslocamento baixo e vulnerabilidade a fogo.\n- Ataque +10: adequado para ameaçar personagens do nível correspondente sem tornar os acertos automáticos.\n- Dano por rodada: consistente, com pico moderado entre dois ataques ou Rajada de Espinhos em grupo.\n- CD 15: coerente para uma habilidade especial de ND 3.\n- Complexidade tática média: suficiente para ser interessante em mesa sem travar o combate.",
       "registroConsistencia": "Nicho: ameaça vegetal territorial da Caatinga.\nPapel tático: emboscador/controlador.\nDiferencial: criatura-planta que protege fontes de água e controla terreno com espinhos, agarrões e camuflagem.",
       "notasDesign": "O Xique-Xique Andante foi construído para representar a Caatinga como ambiente vivo, defensivo e perigoso. Sua baixa mobilidade é compensada por furtividade, controle de terreno, dois ataques e uma habilidade em cone. A vulnerabilidade a fogo cria uma fraqueza temática e mecânica clara.",
@@ -86,7 +96,7 @@
         "deslocamento": "6m",
         "ataquesPrincipais": [
           {
-            "nome": "2 Gaviões Espinhosos",
+            "nome": "Gravetos espinhosos",
             "teste": "+10",
             "dano": "1d8+4 perfuração cada",
             "quantidadeAtaques": 2,

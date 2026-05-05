@@ -5,6 +5,7 @@ require_once 'config.php';
 header('Content-Type: application/json');
 
 $id = $_POST['id'] ?? null;
+garantirColunaAjusteImagem($pdo);
 
 $campos = [
     'participante',
@@ -15,6 +16,7 @@ $campos = [
     'nivel',
     'divindade',
     'personagem_imagem',
+    'personagem_imagem_ajuste',
 
     'forca',
     'destreza',
@@ -202,10 +204,11 @@ try {
 
     $pdo->commit();
 
-    echo json_encode([
+echo json_encode([
         'success'           => true,
         'id'                => $fichaId,
         'personagem_imagem' => $imagemSalva,
+        'personagem_imagem_ajuste' => $dados['personagem_imagem_ajuste'] ?? null,
         'message'           => $id ? 'Ficha atualizada com sucesso.' : 'Ficha criada com sucesso.',
     ]);
 } catch (PDOException $e) {
@@ -217,4 +220,21 @@ try {
         'message' => 'Erro ao salvar a ficha.',
         'error' => $e->getMessage()
     ]);
+}
+
+function garantirColunaAjusteImagem(PDO $pdo): void
+{
+    static $verificada = false;
+    if ($verificada) return;
+    $verificada = true;
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'personagem_imagem_ajuste'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE fichas ADD COLUMN personagem_imagem_ajuste TEXT NULL AFTER personagem_imagem");
+        }
+    } catch (PDOException $e) {
+        // Se a conta do banco não puder alterar schema, a exceção principal do save
+        // mostrará o problema real ao tentar gravar a coluna.
+    }
 }
