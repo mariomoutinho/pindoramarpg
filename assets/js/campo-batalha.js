@@ -472,9 +472,7 @@
             return;
         }
 
-        // Se há um preview de área ativo, qualquer clique no stage confirma o ataque
-        // (com a área atualmente apontada pelo mouse). Vale para clicks em células
-        // vazias OU sobre tokens.
+        // Preview de área ativo: clique dentro da área confirma; clique fora cancela.
         if (state.reachPreview
             && state.reachPreview.action
             && isAreaAttack(state.reachPreview.action)) {
@@ -482,9 +480,15 @@
             if (attacker) {
                 ev.preventDefault();
                 ev.stopPropagation();
-                // Atualiza o aim com a célula clicada antes de executar
+                // Atualiza o aim com a célula clicada (caso o pointermove não tenha disparado)
                 updateAreaAim(ev.clientX, ev.clientY);
-                executeAreaAttack(attacker, state.reachPreview.action);
+                const cell = screenToCell(ev.clientX, ev.clientY);
+                const reachCells = buildActionReachCells(attacker, state.reachPreview.action);
+                if (reachCells.has(occupiedKey(cell.col, cell.row))) {
+                    executeAreaAttack(attacker, state.reachPreview.action);
+                } else {
+                    clearReachPreview(true);
+                }
                 return;
             }
         }
@@ -2635,22 +2639,19 @@
 
     function addConeCells(cells, baseCol, baseRow, size, len, dir) {
         const v = DIR_VECTORS[dir] || DIR_VECTORS.n;
-        // Origem: borda do token na direção indicada (centralizada na lateral correspondente)
         const cx = baseCol + (size - 1) / 2;
         const cy = baseRow + (size - 1) / 2;
-        // Para diagonais e cardeais, usamos o mesmo padrão: a cada passo, a "largura"
-        // perpendicular cresce 2 (1, 3, 5, 7...). O step avança v unidades.
+        // Cone Pindorama: a cada passo, a "fileira" tem `step` células
+        // perpendiculares (1, 2, 3, ..., N). Total: 1+2+...+N células.
+        const perp = { dx: -v.dy, dy: v.dx };
         for (let step = 1; step <= len; step++) {
-            // Origem do passo (deslocamento ao longo de v) — começa colado à borda do token
-            const px = cx + v.dx * (size / 2 + (step - 1));
-            const py = cy + v.dy * (size / 2 + (step - 1));
-            // Próximo passo
-            const ax = cx + v.dx * (size / 2 + step);
-            const ay = cy + v.dy * (size / 2 + step);
-            const half = step; // cells lateralmente: -(half-1)..(half-1)
-            // Vetor perpendicular
-            const perp = { dx: -v.dy, dy: v.dx };
-            for (let s = -(half - 1); s <= (half - 1); s++) {
+            // Centro da fileira do passo atual (a `step` células da borda do token)
+            const ax = cx + v.dx * (size / 2 + step - 0.5);
+            const ay = cy + v.dy * (size / 2 + step - 0.5);
+            // Distribui simetricamente para ímpar; assimétrica (sobra à direita) para par
+            const halfL = Math.floor((step - 1) / 2);
+            const halfR = Math.ceil((step - 1) / 2);
+            for (let s = -halfL; s <= halfR; s++) {
                 const c = Math.round(ax + perp.dx * s);
                 const r = Math.round(ay + perp.dy * s);
                 if (c < 0 || c >= state.cols || r < 0 || r >= state.rows) continue;
