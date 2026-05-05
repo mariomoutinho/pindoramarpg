@@ -20,7 +20,7 @@ function bestiarioOptions(array $valores): string
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/classes.css?v=20260503j" />
-    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505f" />
+    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
