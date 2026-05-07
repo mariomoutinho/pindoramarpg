@@ -1479,11 +1479,53 @@
             && Math.abs((interaction.tempRow ?? token.row) - token.row) < 0.18;
         const snappedCol = clamp(Math.round(interaction.tempCol), 0, state.cols - maxW);
         const snappedRow = clamp(Math.round(interaction.tempRow), 0, state.rows - maxH);
+
+        // Sub-fase D: deduz o custo do drag do orçamento de movimento da
+        // rodada. Usa o mesmo chebyshev + custoMovimento aplicados no
+        // badge durante o drag, garantindo coerência visual.
+        if (!didClick
+            && interaction.originCol != null
+            && (snappedCol !== interaction.originCol || snappedRow !== interaction.originRow)
+            && window.PindoramaRegras) {
+            const passos = chebyshevPath(
+                interaction.originCol, interaction.originRow,
+                snappedCol, snappedRow
+            );
+            if (passos.length) {
+                let ortogonais = 0, diagonais = 0,
+                    ortogonaisDificeis = 0, diagonaisDificeis = 0;
+                for (const p of passos) {
+                    const dificil = isTerrainDifficult(p.col, p.row);
+                    if (p.kind === 'diag') {
+                        if (dificil) diagonaisDificeis++; else diagonais++;
+                    } else {
+                        if (dificil) ortogonaisDificeis++; else ortogonais++;
+                    }
+                }
+                const custo = window.PindoramaRegras.custoMovimento({
+                    ortogonais, diagonais,
+                    ortogonaisDificeis, diagonaisDificeis
+                });
+                if (custo.quadrados > 0) {
+                    const before = Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0;
+                    token.movimentoUsado = before + custo.quadrados;
+                    const total = tokenDeslocamentoQuadrados(token);
+                    const restante = Math.max(0, total - token.movimentoUsado);
+                    addLog({
+                        title: 'Movimento',
+                        detail: `${token.name || 'Token'}: +${custo.quadrados} qd (acumulado ${token.movimentoUsado}/${total}, ${restante} restante${restante === 1 ? '' : 's'}).`
+                    });
+                }
+            }
+        }
+
         token.col = snappedCol;
         token.row = snappedRow;
         const el = els.tokensLayer.querySelector(`[data-token-id="${token.id}"]`);
         if (el) el.classList.remove('is-dragging');
         updateTokenElement(token);
+        // Atualiza o painel de status quando o token mexido é o selecionado.
+        if (state.selectedId === token.id) renderSelectedTokenTools();
         // Sub-fase C: re-renderiza o tabuleiro também quando o token
         // arrastado é o selecionado, para reposicionar o preview de
         // movimento centrado na nova célula.
@@ -5958,6 +6000,8 @@
         }
         if (els.editSelectedToken) els.editSelectedToken.disabled = false;
         els.selectedTokenTools.innerHTML = '';
+        // Sub-fase D: status de deslocamento (vai antes das ações).
+        els.selectedTokenTools.appendChild(buildMovementStatusSection(token));
         const actions = [
             ['Abrir ficha', () => openLinkedSheetOrEditor(token)],
             ['Editar token', () => openTokenEditor(token.id)],
@@ -5978,6 +6022,84 @@
         els.selectedTokenTools.appendChild(buildSaveTestsSection(token));
         els.selectedTokenTools.appendChild(buildDamageApplicationSection(token));
         els.selectedTokenTools.appendChild(buildManeuverSection(token));
+    }
+
+    // Sub-fase D: status de deslocamento da rodada para o token selecionado.
+    // Mostra usado/total, permite ao facilitador editar manualmente e
+    // zerar com um clique. Não bloqueia movimento — é só orientativo.
+    function buildMovementStatusSection(token) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cb-movement-section';
+
+        const total = tokenDeslocamentoQuadrados(token);
+        const usado = Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0;
+        const restante = Math.max(0, total - usado);
+        const totalMetros = window.PindoramaRegras
+            ? window.PindoramaRegras.quadradosParaMetros(total)
+            : total * 1.5;
+
+        const title = document.createElement('h3');
+        title.className = 'cb-movement-title';
+        title.textContent = 'Deslocamento';
+        wrap.appendChild(title);
+
+        const status = document.createElement('p');
+        status.className = 'cb-movement-status' + (usado > total ? ' is-over' : '');
+        const restanteFmt = `<strong>${restante}</strong>`;
+        const totalFmt = `<strong>${total}</strong>`;
+        const palavraQd = total === 1 ? 'quadrado' : 'quadrados';
+        const palavraRest = restante === 1 ? 'restante' : 'restantes';
+        status.innerHTML = `${restanteFmt} de ${totalFmt} ${palavraQd} ${palavraRest}`
+            + ` <span class="cb-movement-meta">(${total} qd ≈ ${totalMetros} m por rodada)</span>`;
+        wrap.appendChild(status);
+
+        const controls = document.createElement('div');
+        controls.className = 'cb-movement-controls';
+
+        const usedLabel = document.createElement('label');
+        usedLabel.className = 'cb-movement-input';
+        usedLabel.appendChild(document.createTextNode('Usado'));
+        const usedInput = document.createElement('input');
+        usedInput.type = 'number';
+        usedInput.min = '0';
+        usedInput.step = '1';
+        usedInput.value = String(usado);
+        usedInput.title = 'Edite manualmente o deslocamento já gasto na rodada (uso do facilitador).';
+        usedInput.addEventListener('change', () => {
+            const v = Math.max(0, Math.round(Number(usedInput.value) || 0));
+            if (v === (Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0)) return;
+            token.movimentoUsado = v;
+            addLog({
+                title: 'Deslocamento ajustado',
+                detail: `${token.name || 'Token'}: gasto definido para ${v}/${total}.`
+            });
+            renderBoard();
+            renderSelectedTokenTools();
+            saveState();
+        });
+        usedLabel.appendChild(usedInput);
+        controls.appendChild(usedLabel);
+
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'cb-movement-reset';
+        resetBtn.textContent = 'Zerar';
+        resetBtn.title = 'Zera o deslocamento gasto deste token (sem afetar os outros).';
+        resetBtn.addEventListener('click', () => {
+            if ((Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0) === 0) return;
+            token.movimentoUsado = 0;
+            addLog({
+                title: 'Deslocamento zerado',
+                detail: `${token.name || 'Token'}: gasto zerado pelo facilitador.`
+            });
+            renderBoard();
+            renderSelectedTokenTools();
+            saveState();
+        });
+        controls.appendChild(resetBtn);
+
+        wrap.appendChild(controls);
+        return wrap;
     }
 
     /* Bloco "Manobra de combate" no painel do token selecionado.

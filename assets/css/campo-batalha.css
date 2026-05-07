@@ -3086,6 +3086,93 @@
 .cb-maneuver-result.is-fail { color: #8b1d35; font-style: normal; font-weight: 700; }
 .cb-maneuver-result.is-tie  { color: #6f4a16; font-style: normal; font-weight: 700; }
 
+/* Sub-fase D: status de deslocamento da rodada (token selecionado). */
+.cb-movement-section {
+    width: 100%;
+    margin: 6px 0 10px;
+    padding: 10px 12px;
+    background: rgba(220, 245, 232, 0.28);
+    border: 1.5px solid rgba(60, 130, 90, 0.4);
+    border-radius: 10px;
+}
+
+.cb-movement-title {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--purple-dark);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.cb-movement-status {
+    margin: 0 0 8px;
+    font-size: 0.92rem;
+    color: var(--purple-dark);
+    line-height: 1.35;
+}
+
+.cb-movement-status strong {
+    color: #1f6b39;
+    font-size: 1.05rem;
+}
+
+.cb-movement-status.is-over strong {
+    color: #9b254d;
+}
+
+.cb-movement-meta {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.cb-movement-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cb-movement-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cb-movement-input input {
+    width: 56px;
+    padding: 4px 6px;
+    border: 1.5px solid var(--purple);
+    border-radius: 8px;
+    font: 700 0.92rem inherit;
+    color: var(--purple-dark);
+    background: #fff;
+    text-align: center;
+}
+
+.cb-movement-reset {
+    padding: 5px 12px;
+    border: 1.5px solid #1f6b39;
+    border-radius: 999px;
+    background: #fff;
+    color: #1f6b39;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+.cb-movement-reset:hover {
+    background: rgba(60, 130, 90, 0.12);
+}
+
 /* ====================================================================
    Toolbar lateral esquerda (Fase 2 do redesign Mesa de Jogo)
    Coluna estreita com botões compactos por glifo + tooltip nativo.
