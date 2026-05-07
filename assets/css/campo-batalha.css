@@ -2609,3 +2609,64 @@
     font-weight: 700;
     margin-top: 2px;
 }
+
+/* =====================================================
+   Condições táticas do token (item E)
+   Cobertura, camuflagem, flanqueamento — aplicadas
+   automaticamente no roll de ataque single-target.
+===================================================== */
+.cb-tactical-section {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(118, 84, 124, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.cb-tactical-title {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: var(--purple-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+}
+.cb-tactical-hint {
+    margin: 0 0 4px;
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.3;
+}
+.cb-tactical-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--purple-dark);
+}
+.cb-tactical-select span {
+    font-weight: 700;
+}
+.cb-tactical-select select {
+    padding: 4px 6px;
+    border: 1px solid rgba(118, 84, 124, 0.45);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--purple-dark);
+    font-family: inherit;
+    font-size: 0.8rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.cb-tactical-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--purple-dark);
+    font-weight: 700;
+    cursor: pointer;
+}
+.cb-tactical-checkbox input { cursor: pointer; }

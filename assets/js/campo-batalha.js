@@ -716,6 +716,12 @@
         token.conditions = Array.isArray(token.conditions)
             ? token.conditions
             : String(token.conditions || '').split(',').map(s => s.trim()).filter(Boolean);
+        // Condições táticas do capítulo "Jogando" (cobertura, camuflagem,
+        // flanqueamento). Ficam separadas das `conditions` livres para
+        // poder aplicar modificadores automáticos no roll de ataque.
+        token.cobertura = ['leve', 'total'].includes(token.cobertura) ? token.cobertura : 'nenhuma';
+        token.camuflagem = ['leve', 'total'].includes(token.camuflagem) ? token.camuflagem : 'nenhuma';
+        token.flanqueado = !!token.flanqueado;
         delete token.image;
         delete token.imageAdjust;
         return token;
@@ -4585,12 +4591,115 @@
         });
     }
 
+    /* Verifica condições táticas do alvo (cobertura, camuflagem) e
+       calcula modificadores antes do roll de ataque. Devolve um objeto
+       com as informações ou um sinal de bloqueio/miss prévio. */
+    function applyTacticalConditions(attacker, item, target) {
+        const out = {
+            blocked: false,
+            blockReason: '',
+            preMiss: false,
+            preMissReason: '',
+            attackBonusExtra: 0,
+            defenseBonus: 0,
+            notes: []
+        };
+
+        // Cobertura total: ataque bloqueado, sem rolagem.
+        if (target.cobertura === 'total') {
+            out.blocked = true;
+            out.blockReason = 'Alvo sob cobertura total — não pode ser atacado.';
+            return out;
+        }
+
+        // Camuflagem: rola d10 secundário antes do d20. Se cair na faixa
+        // de falha, o ataque erra automaticamente, independente do roll.
+        // 20% (1-2) para leve; 50% (1-5) para total.
+        if (target.camuflagem === 'leve' || target.camuflagem === 'total') {
+            const limite = target.camuflagem === 'total' ? 5 : 2;
+            const rolagem = rollDie(10);
+            const falha = rolagem <= limite;
+            out.notes.push('Camuflagem ' + target.camuflagem + ' (1d10=' + rolagem + ' vs ≤' + limite + ': ' + (falha ? 'FALHA' : 'OK') + ')');
+            if (falha) {
+                out.preMiss = true;
+                out.preMissReason = 'Camuflagem ' + target.camuflagem + ': 1d10=' + rolagem + ' (≤' + limite + ' = falha).';
+                return out;
+            }
+        }
+
+        // Cobertura leve: +5 na Defesa do alvo.
+        if (target.cobertura === 'leve') {
+            out.defenseBonus += 5;
+            out.notes.push('Cobertura leve: +5 Defesa');
+        }
+
+        // Flanqueamento: +2 no ataque corpo a corpo se o alvo está flanqueado.
+        // Não se aplica a ataques à distância nem desarmados (regra do livro).
+        if (target.flanqueado && isAttackCorpoACorpo(item)) {
+            out.attackBonusExtra += 2;
+            out.notes.push('Flanqueamento: +2 ataque (corpo a corpo)');
+        }
+
+        return out;
+    }
+
+    function isAttackCorpoACorpo(item) {
+        const alc = normalizeText(item && item.alcance);
+        // Heurística: vazio, "corpo a corpo" ou alcance "1" são corpo a corpo.
+        if (!alc || alc === 'corpo' || alc.includes('corpo a corpo')) return true;
+        // Áreas e alcances curtos/longos/médios = à distância.
+        if (alc.includes('curto') || alc.includes('medio') || alc.includes('longo')
+            || alc.includes('cone') || alc.includes('linha')
+            || alc.includes('raio') || alc.includes('esfera')
+            || alc.includes('cubo') || alc.includes('quadrado') || alc.includes('cilindro')) return false;
+        return true;
+    }
+
     function rollSingleMeleeAttack(attacker, item, target, index) {
-        const attackBonus = parseAttackBonus(item);
-        const defense = parseDefense(target);
+        const tactical = applyTacticalConditions(attacker, item, target);
+        const baseAttackBonus = parseAttackBonus(item);
+        const baseDefense = parseDefense(target);
+        const attackBonus = baseAttackBonus + tactical.attackBonusExtra;
+        const defense = baseDefense + tactical.defenseBonus;
         const damageFormula = item.danoFormula || parseDamageFormula(item.dano || item.detalhe || item.nome || '') || '1d8';
         const tipoBonus = String(item.tipoBonus || '').toLowerCase();
         const acertoAutomatico = tipoBonus === 'automatico' || item.acertoAutomatico === true;
+
+        // Bloqueio total: cobertura total impede o ataque inteiro.
+        if (tactical.blocked) {
+            addLog({
+                title: 'Ataque bloqueado',
+                detail: (attacker.name || 'Atacante') + ' → ' + (target.name || 'Alvo') + ': ' + tactical.blockReason
+            });
+            return {
+                index, targetName: target.name || 'Alvo',
+                d20: null, total: null,
+                attackBonus: baseAttackBonus, defense: baseDefense,
+                hit: false, blocked: true, tacticalNotes: tactical.notes,
+                tacticalReason: tactical.blockReason,
+                damage: null, damageTotal: 0,
+                pvAtual: clampResource(target.pvAtual, target.pvMax),
+                pvMax: target.pvMax || 0
+            };
+        }
+
+        // Falha por camuflagem (antes do d20).
+        if (tactical.preMiss) {
+            addLog({
+                title: 'Ataque desviado',
+                detail: (attacker.name || 'Atacante') + ' → ' + (target.name || 'Alvo') + ': ' + tactical.preMissReason
+            });
+            return {
+                index, targetName: target.name || 'Alvo',
+                d20: null, total: null,
+                attackBonus: baseAttackBonus, defense: baseDefense,
+                hit: false, preMiss: true, tacticalNotes: tactical.notes,
+                tacticalReason: tactical.preMissReason,
+                damage: null, damageTotal: 0,
+                pvAtual: clampResource(target.pvAtual, target.pvMax),
+                pvMax: target.pvMax || 0
+            };
+        }
 
         // Caminho 1: acerto automático (não rola d20). Pode haver teste de save do alvo.
         if (acertoAutomatico) {
@@ -4605,6 +4714,9 @@
                 ? Math.floor(damage.total / 2)
                 : damage.total;
             applyDamageToToken(target, finalDamage);
+            if (tactical.notes.length) {
+                addLog({ title: 'Modificadores táticos', detail: tactical.notes.join(' · ') });
+            }
             return {
                 index,
                 targetName: target.name || 'Alvo',
@@ -4618,6 +4730,7 @@
                 damageTotal: finalDamage,
                 damageFull: damage.total,
                 save: saveResult,
+                tacticalNotes: tactical.notes,
                 pvAtual: clampResource(target.pvAtual, target.pvMax),
                 pvMax: target.pvMax || 0
             };
@@ -4625,6 +4738,10 @@
 
         const d20 = rollDie(20);
         const total = d20 + attackBonus;
+
+        if (tactical.notes.length) {
+            addLog({ title: 'Modificadores táticos', detail: tactical.notes.join(' · ') });
+        }
 
         if (total > defense) {
             const damage = rollDamage(damageFormula);
@@ -4639,6 +4756,7 @@
                 hit: true,
                 damage,
                 damageTotal: damage.total,
+                tacticalNotes: tactical.notes,
                 pvAtual: clampResource(target.pvAtual, target.pvMax),
                 pvMax: target.pvMax || 0
             };
@@ -4654,6 +4772,7 @@
             hit: false,
             damage: null,
             damageTotal: 0,
+            tacticalNotes: tactical.notes,
             pvAtual: clampResource(target.pvAtual, target.pvMax),
             pvMax: target.pvMax || 0
         };
@@ -5652,6 +5771,99 @@
             btn.addEventListener('click', handler);
             els.selectedTokenTools.appendChild(btn);
         }
+        els.selectedTokenTools.appendChild(buildTacticalConditionsSection(token));
+    }
+
+    function buildTacticalConditionsSection(token) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cb-tactical-section';
+
+        const title = document.createElement('h3');
+        title.className = 'cb-tactical-title';
+        title.textContent = 'Condições táticas';
+        wrap.appendChild(title);
+
+        const hint = document.createElement('p');
+        hint.className = 'cb-tactical-hint';
+        hint.textContent = 'Aplicadas automaticamente quando o token for atacado. Veja o log para o detalhamento.';
+        wrap.appendChild(hint);
+
+        // Cobertura
+        wrap.appendChild(buildTacticalSelect({
+            label: 'Cobertura',
+            value: token.cobertura,
+            options: [
+                ['nenhuma', 'Nenhuma'],
+                ['leve', 'Leve (+5 Defesa)'],
+                ['total', 'Total (não pode ser atacado)']
+            ],
+            onChange: (val) => {
+                token.cobertura = val;
+                addLog({
+                    title: 'Cobertura',
+                    detail: (token.name || 'Token') + ': ' + ({ nenhuma: 'sem cobertura', leve: 'leve (+5 Defesa)', total: 'total (não pode ser atacado)' })[val]
+                });
+                saveState();
+            }
+        }));
+
+        // Camuflagem
+        wrap.appendChild(buildTacticalSelect({
+            label: 'Camuflagem',
+            value: token.camuflagem,
+            options: [
+                ['nenhuma', 'Nenhuma'],
+                ['leve', 'Leve (20% falha)'],
+                ['total', 'Total (50% falha)']
+            ],
+            onChange: (val) => {
+                token.camuflagem = val;
+                addLog({
+                    title: 'Camuflagem',
+                    detail: (token.name || 'Token') + ': ' + ({ nenhuma: 'sem camuflagem', leve: 'leve (20% falha)', total: 'total (50% falha)' })[val]
+                });
+                saveState();
+            }
+        }));
+
+        // Flanqueado
+        const flankRow = document.createElement('label');
+        flankRow.className = 'cb-tactical-checkbox';
+        const flankBox = document.createElement('input');
+        flankBox.type = 'checkbox';
+        flankBox.checked = !!token.flanqueado;
+        flankBox.addEventListener('change', () => {
+            token.flanqueado = flankBox.checked;
+            addLog({
+                title: 'Flanqueamento',
+                detail: (token.name || 'Token') + (flankBox.checked ? ' está flanqueado (+2 ataque corpo a corpo contra ele).' : ' não está mais flanqueado.')
+            });
+            saveState();
+        });
+        flankRow.appendChild(flankBox);
+        flankRow.appendChild(document.createTextNode(' Flanqueado (+2 atq corpo a corpo)'));
+        wrap.appendChild(flankRow);
+
+        return wrap;
+    }
+
+    function buildTacticalSelect({ label, value, options, onChange }) {
+        const row = document.createElement('label');
+        row.className = 'cb-tactical-select';
+        const text = document.createElement('span');
+        text.textContent = label;
+        row.appendChild(text);
+        const sel = document.createElement('select');
+        for (const [val, text2] of options) {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = text2;
+            if (val === value) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        sel.addEventListener('change', () => onChange(sel.value));
+        row.appendChild(sel);
+        return row;
     }
 
     function resourceSummary(token) {
