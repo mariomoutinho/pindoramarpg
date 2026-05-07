@@ -722,6 +722,18 @@
         token.cobertura = ['leve', 'total'].includes(token.cobertura) ? token.cobertura : 'nenhuma';
         token.camuflagem = ['leve', 'total'].includes(token.camuflagem) ? token.camuflagem : 'nenhuma';
         token.flanqueado = !!token.flanqueado;
+        // Sub-fase A: rastreio tático por rodada (iniciativa e movimento).
+        // - movimentoUsado: quadrados já gastos na rodada (reset em nova rodada).
+        // - iniciativaMod: cache numérico do bônus textual (ex.: "+5" → 5).
+        if (!Number.isFinite(token.movimentoUsado)) {
+            token.movimentoUsado = 0;
+        }
+        const modParsed = parseSignedNumber(token.iniciativa);
+        if (Number.isFinite(modParsed)) {
+            token.iniciativaMod = modParsed;
+        } else if (!Number.isFinite(token.iniciativaMod)) {
+            token.iniciativaMod = 0;
+        }
         delete token.image;
         delete token.imageAdjust;
         return token;
@@ -3078,7 +3090,7 @@
                 }
             }
         }
-        state.tokens.push(t);
+        state.tokens.push(migrateLegacyTokenFields(t));
         state.selectedId = t.id;
         renderTokens();
         saveState();
@@ -6878,6 +6890,53 @@
     function parseSignedNumber(value) {
         const match = String(value ?? '').match(/[+-]?\d+/);
         return match ? Number(match[0]) : null;
+    }
+
+    // ----------------------------------------------------------------
+    // Helpers táticos (Sub-fase A): iniciativa e deslocamento por token
+    // ----------------------------------------------------------------
+
+    // Modificador de iniciativa (numérico). Usa o cache `iniciativaMod`
+    // se já houver, senão extrai do campo textual `iniciativa` ("+5").
+    function tokenIniciativaMod(token) {
+        if (!token) return 0;
+        if (Number.isFinite(token.iniciativaMod)) return token.iniciativaMod;
+        return parseSignedNumber(token.iniciativa) ?? 0;
+    }
+
+    // Deslocamento total do token em quadrados.
+    // Aceita "9m", "6 m", "6 quadrados", "6", number, vazio. Default 6
+    // quadrados (9 m — Médio padrão) quando o token/ficha não trouxer
+    // o dado. Ficha hoje não tem coluna `deslocamento`; quando vier,
+    // o campo já é lido daqui sem nova mudança (Sub-fase A).
+    function tokenDeslocamentoQuadrados(token) {
+        const DEFAULT_QUADRADOS = 6;
+        if (!token) return DEFAULT_QUADRADOS;
+        const raw = token.deslocamento;
+        if (raw == null || raw === '') return DEFAULT_QUADRADOS;
+        if (typeof raw === 'number' && Number.isFinite(raw)) {
+            return Math.max(0, Math.round(raw));
+        }
+        const txt = String(raw).toLowerCase();
+        const numMatch = txt.match(/-?\d+(?:[.,]\d+)?/);
+        if (!numMatch) return DEFAULT_QUADRADOS;
+        const num = Number(numMatch[0].replace(',', '.'));
+        if (!Number.isFinite(num)) return DEFAULT_QUADRADOS;
+        if (/quadrad|qd|\bsq\b/.test(txt)) return Math.max(0, Math.round(num));
+        // Sem unidade explícita ou com "m" → considera metros e converte.
+        const regras = window.PindoramaRegras;
+        if (regras && typeof regras.metrosParaQuadrados === 'function') {
+            return Math.max(0, regras.metrosParaQuadrados(num));
+        }
+        return Math.max(0, Math.ceil(num / 1.5));
+    }
+
+    // Quadrados de movimento ainda disponíveis na rodada atual.
+    function tokenMovimentoRestante(token) {
+        if (!token) return 0;
+        const total = tokenDeslocamentoQuadrados(token);
+        const usado = Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0;
+        return Math.max(0, total - usado);
     }
 
     function normalizeText(value) {
