@@ -46,7 +46,11 @@ function avatarFichaSalva(array $ficha): array
         ? normalizarAjusteAvatarFicha($ficha['personagem_token_imagem_ajuste'] ?? null)
         : normalizarAjusteAvatarFicha($ficha['personagem_imagem_ajuste'] ?? null);
 
-    return ['src' => $src, 'ajuste' => $ajuste];
+    return [
+        'src' => $src,
+        'ajuste' => $ajuste,
+        'origem' => $temToken ? 'token' : ($src ? 'photo' : 'placeholder'),
+    ];
 }
 ?>
 <!DOCTYPE html>
@@ -57,7 +61,7 @@ function avatarFichaSalva(array $ficha): array
     <title>Listar Fichas — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/home.css?v=20260502" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body class="home-body">
@@ -85,7 +89,7 @@ function avatarFichaSalva(array $ficha): array
                     $nivel = (int) ($f['nivel'] ?? 1);
                 ?>
                     <a class="home-card-ficha" href="ficha.php?id=<?= (int) $f['id'] ?>">
-                        <div class="home-card-thumb">
+                        <div class="home-card-thumb" data-avatar-source="<?= htmlspecialchars($avatar['origem']) ?>">
                             <?php if ($img): ?>
                                 <img
                                     src="<?= htmlspecialchars($img) ?>"

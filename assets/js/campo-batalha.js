@@ -5358,6 +5358,74 @@
         els.sheetWindowHeader.addEventListener('pointercancel', finish);
     }
 
+    function bindFloatingModalDrag(backdrop) {
+        if (!backdrop) return;
+        const modal = backdrop.querySelector('.cb-modal');
+        const header = modal?.querySelector('.cb-modal-header');
+        if (!modal || !header || header.dataset.dragBound === '1') return;
+        header.dataset.dragBound = '1';
+
+        let drag = null;
+        header.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('button, input, select, textarea, a')) return;
+            const rect = modal.getBoundingClientRect();
+            modal.classList.add('is-floating');
+            modal.style.left = `${rect.left}px`;
+            modal.style.top = `${rect.top}px`;
+            modal.style.right = 'auto';
+            modal.style.bottom = 'auto';
+            drag = {
+                dx: event.clientX - rect.left,
+                dy: event.clientY - rect.top,
+                pointerId: event.pointerId
+            };
+            event.preventDefault();
+            header.setPointerCapture?.(event.pointerId);
+        });
+
+        header.addEventListener('pointermove', (event) => {
+            if (!drag || event.pointerId !== drag.pointerId) return;
+            const width = modal.offsetWidth;
+            const height = modal.offsetHeight;
+            const maxLeft = Math.max(8, window.innerWidth - width - 8);
+            const maxTop = Math.max(8, window.innerHeight - height - 8);
+            const left = clamp(event.clientX - drag.dx, 8, maxLeft);
+            const top = clamp(event.clientY - drag.dy, 8, maxTop);
+            modal.style.left = `${left}px`;
+            modal.style.top = `${top}px`;
+        });
+
+        const finish = (event) => {
+            if (drag && event?.pointerId && event.pointerId !== drag.pointerId) return;
+            drag = null;
+        };
+        header.addEventListener('pointerup', finish);
+        header.addEventListener('pointercancel', finish);
+    }
+
+    function bindBattleModalsDrag() {
+        [
+            els.sceneryModal,
+            els.modal,
+            els.tokenEditorModal,
+            els.imageCropModal,
+            els.adjustModal,
+            els.confirm,
+            els.result
+        ].forEach(bindFloatingModalDrag);
+    }
+
+    function bindSheetWindowOutsideClose() {
+        if (!els.sheetWindow || els.sheetWindow.dataset.outsideCloseBound === '1') return;
+        els.sheetWindow.dataset.outsideCloseBound = '1';
+        document.addEventListener('pointerdown', (event) => {
+            if (els.sheetWindow.hidden) return;
+            if (els.sheetWindow.contains(event.target)) return;
+            if (event.target.closest('.cb-token, .cb-action-panel, .cb-modal-backdrop, .cb-layers-panel')) return;
+            closeSheetWindow();
+        });
+    }
+
     async function openTokenEditor(id) {
         const token = state.tokens.find(t => t.id === id);
         if (!token || !els.tokenEditorModal) return;
@@ -5849,6 +5917,8 @@
         }
         if (els.sheetWindowClose) els.sheetWindowClose.addEventListener('click', closeSheetWindow);
         bindSheetWindowDrag();
+        bindSheetWindowOutsideClose();
+        bindBattleModalsDrag();
         if (els.mapImage) {
             els.mapImage.addEventListener('change', () => {
                 state.mapBackground = els.mapImage.value.trim();

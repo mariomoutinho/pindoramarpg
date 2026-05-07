@@ -1344,6 +1344,11 @@
     overflow: hidden;
 }
 
+.cb-modal.is-floating {
+    position: fixed;
+    margin: 0;
+}
+
 .cb-adjust-modal {
     width: min(560px, 100%);
 }
@@ -1472,6 +1477,14 @@
     justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 2px solid rgba(118, 84, 124, 0.2);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.cb-modal-header:active,
+.cb-sheet-window-header:active {
+    cursor: grabbing;
 }
 
 .cb-modal-header h2 {
