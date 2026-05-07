@@ -2305,3 +2305,40 @@
         max-height: 48vh;
     }
 }
+
+/* =====================================================
+   Badge flutuante de custo de movimento
+   Mostra "X quadrados / Y m" enquanto o token é arrastado.
+   Regra: ortogonal=1, diagonal=2 (livro Pindorama).
+===================================================== */
+.cb-move-badge {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    background: rgba(105, 67, 111, 0.95);
+    color: #fff;
+    padding: 6px 11px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(59, 29, 67, 0.4);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+.cb-move-badge.is-active {
+    opacity: 1;
+}
+.cb-move-badge .cb-move-badge-cells {
+    display: block;
+    font-size: 0.95rem;
+}
+.cb-move-badge .cb-move-badge-meters {
+    display: block;
+    font-size: 0.78rem;
+    opacity: 0.85;
+    font-weight: 600;
+}

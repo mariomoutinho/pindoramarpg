@@ -1175,6 +1175,8 @@
             offsetY: start.y - token.row * CELL_SIZE,
             tempCol: token.col,
             tempRow: token.row,
+            originCol: token.col,
+            originRow: token.row,
             startClientX: ev.clientX,
             startClientY: ev.clientY,
             longPressFired: false,
@@ -1186,9 +1188,53 @@
             if (!interaction || interaction.type !== 'token-drag' || interaction.pointerId !== ev.pointerId) return;
             interaction.longPressFired = true;
             if (el) el.classList.remove('is-dragging');
+            hideMoveBadge();
             openTokenActionPanel(token.id);
         }, LONG_PRESS_MS);
         try { els.stage.setPointerCapture(ev.pointerId); } catch (_) {}
+    }
+
+    // ----------- Badge flutuante de custo de movimento --------------
+    // Mostra "X quadrados / Y m" próximo ao cursor enquanto o token é
+    // arrastado. Cálculo: diagonal = 2 quadrados, ortogonal = 1 quadrado
+    // (regra do livro Pindorama). Terreno difícil será integrado no
+    // próximo passo; por enquanto a badge mostra custo em terreno normal.
+    let moveBadgeEl = null;
+    function ensureMoveBadge() {
+        if (moveBadgeEl) return moveBadgeEl;
+        const el = document.createElement('div');
+        el.className = 'cb-move-badge';
+        el.setAttribute('aria-hidden', 'true');
+        el.innerHTML =
+            '<span class="cb-move-badge-cells">0 quadrados</span>' +
+            '<span class="cb-move-badge-meters">0 m</span>';
+        document.body.appendChild(el);
+        moveBadgeEl = el;
+        return el;
+    }
+    function updateMoveBadge(clientX, clientY, custo) {
+        const el = ensureMoveBadge();
+        const q = custo.quadrados;
+        const m = custo.metros;
+        const cellsTxt = q === 1 ? '1 quadrado' : (q + ' quadrados');
+        const metersTxt = (m % 1 === 0 ? String(m) : m.toFixed(1).replace('.', ',')) + ' m';
+        el.querySelector('.cb-move-badge-cells').textContent = cellsTxt;
+        el.querySelector('.cb-move-badge-meters').textContent = metersTxt;
+        // Posiciona a 16px à direita/abaixo do cursor; se aproximar da
+        // borda direita da viewport, recua para a esquerda.
+        const margin = 16;
+        const vw = window.innerWidth;
+        let x = clientX + margin;
+        const rectW = el.offsetWidth || 100;
+        if (x + rectW + margin > vw) {
+            x = clientX - margin - rectW;
+        }
+        el.style.left = x + 'px';
+        el.style.top = (clientY + margin) + 'px';
+        el.classList.add('is-active');
+    }
+    function hideMoveBadge() {
+        if (moveBadgeEl) moveBadgeEl.classList.remove('is-active');
     }
 
     function handleTokenDragMove(ev) {
@@ -1211,6 +1257,26 @@
         interaction.tempCol = rawCol;
         interaction.tempRow = rawRow;
 
+        // Feedback de custo de movimento (regra ortogonal=1, diagonal=2).
+        // Usa a posição arredondada para refletir o snap final.
+        if (window.PindoramaRegras && interaction.originCol != null) {
+            const intCol = Math.round(rawCol);
+            const intRow = Math.round(rawRow);
+            const dx = Math.abs(intCol - interaction.originCol);
+            const dy = Math.abs(intRow - interaction.originRow);
+            const diagonais = Math.min(dx, dy);
+            const ortogonais = Math.max(dx, dy) - diagonais;
+            const custo = window.PindoramaRegras.custoMovimento({
+                ortogonais: ortogonais,
+                diagonais: diagonais
+            });
+            if (custo.quadrados > 0) {
+                updateMoveBadge(ev.clientX, ev.clientY, custo);
+            } else {
+                hideMoveBadge();
+            }
+        }
+
         // Se o alcance da ação está ativo neste token, atualiza a marcação ao mover
         if (state.reachPreview && state.reachPreview.tokenId === token.id) {
             const max = Math.max(1, Number(token.sizeCells || 1));
@@ -1227,10 +1293,12 @@
     function finishTokenDrag() {
         const token = state.tokens.find(t => t.id === interaction.tokenId);
         if (!token) {
+            hideMoveBadge();
             interaction = null;
             return;
         }
         clearTokenLongPress();
+        hideMoveBadge();
         if (interaction.longPressFired) {
             const el = els.tokensLayer.querySelector(`[data-token-id="${token.id}"]`);
             if (el) el.classList.remove('is-dragging');
