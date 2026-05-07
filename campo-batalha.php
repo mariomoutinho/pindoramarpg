@@ -11,7 +11,7 @@ exigirLogin();
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260507l" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260507m" />
 </head>
 <body class="cb-body">
     <script src="assets/js/transitions.js?v=20260503d"></script>
@@ -157,26 +157,28 @@ exigirLogin();
                     <div class="cb-sidebar-list" id="cbSidebarTokens"></div>
                 </div>
 
-                <div class="cb-sidebar-panel" data-panel="iniciativa">
-                    <header class="cb-sidebar-header">
-                        <h2>Iniciativa</h2>
-                        <button type="button" id="cbNextTurn">Próximo</button>
-                    </header>
-                    <div class="cb-round-bar">
-                        <strong class="cb-round-label">Rodada <span id="cbRoundNumber">1</span></strong>
-                        <div class="cb-round-controls">
-                            <button type="button" id="cbRoundIncrement" title="+1 rodada (sem trocar de turno)">+1</button>
-                            <button type="button" id="cbRoundReset" title="Reiniciar para rodada 1">Reset</button>
+                <div class="cb-sidebar-panel cb-panel-initiative" data-panel="iniciativa">
+                    <div class="cb-initiative-head">
+                        <header class="cb-sidebar-header">
+                            <h2>Iniciativa</h2>
+                            <button type="button" id="cbNextTurn">Próximo</button>
+                        </header>
+                        <div class="cb-round-bar">
+                            <strong class="cb-round-label">Rodada <span id="cbRoundNumber">1</span></strong>
+                            <div class="cb-round-controls">
+                                <button type="button" id="cbRoundIncrement" title="+1 rodada (sem trocar de turno)">+1</button>
+                                <button type="button" id="cbRoundReset" title="Reiniciar para rodada 1">Reset</button>
+                            </div>
+                        </div>
+                        <div class="cb-initiative-actions">
+                            <button type="button" id="cbRollSceneInitiative" class="cb-primary" title="Rola d20+modificador para todos os tokens da cena e ordena automaticamente">Rolar cena</button>
+                            <button type="button" id="cbAddTurnSelected" title="Rola apenas para o token selecionado">Rolar seleção</button>
+                            <button type="button" id="cbSortTurns" title="Reordena por iniciativa (desempata por modificador)">Ordenar</button>
+                            <button type="button" id="cbResetMovimentos" title="Zera o deslocamento gasto de todos os tokens">Resetar movs.</button>
                         </div>
                     </div>
-                    <div class="cb-initiative-actions">
-                        <button type="button" id="cbRollSceneInitiative" class="cb-primary" title="Rola d20+modificador para todos os tokens da cena e ordena automaticamente">Rolar cena</button>
-                        <button type="button" id="cbAddTurnSelected" title="Rola apenas para o token selecionado">Rolar seleção</button>
-                        <button type="button" id="cbSortTurns" title="Reordena por iniciativa (desempata por modificador)">Ordenar</button>
-                        <button type="button" id="cbResetMovimentos" title="Zera o deslocamento gasto de todos os tokens">Resetar movs.</button>
-                    </div>
-                    <p class="cb-initiative-hint">Marque "Surpreso" em participantes que entraram surpresos. Eles ficam destacados na rodada 1 e não devem agir nela (regra do livro).</p>
                     <div class="cb-turn-list" id="cbTurnList"></div>
+                    <p class="cb-initiative-hint">Surpresos não agem na rodada 1 — use o botão S para marcar.</p>
                 </div>
 
                 <div class="cb-sidebar-panel" data-panel="cena">

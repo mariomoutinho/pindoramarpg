@@ -1341,12 +1341,13 @@
         el.setAttribute('aria-hidden', 'true');
         el.innerHTML =
             '<span class="cb-move-badge-cells">0 quadrados</span>' +
-            '<span class="cb-move-badge-meters">0 m</span>';
+            '<span class="cb-move-badge-meters">0 m</span>' +
+            '<span class="cb-move-badge-budget"></span>';
         document.body.appendChild(el);
         moveBadgeEl = el;
         return el;
     }
-    function updateMoveBadge(clientX, clientY, custo) {
+    function updateMoveBadge(clientX, clientY, custo, opts) {
         const el = ensureMoveBadge();
         const q = custo.quadrados;
         const m = custo.metros;
@@ -1354,6 +1355,25 @@
         const metersTxt = (m % 1 === 0 ? String(m) : m.toFixed(1).replace('.', ',')) + ' m';
         el.querySelector('.cb-move-badge-cells').textContent = cellsTxt;
         el.querySelector('.cb-move-badge-meters').textContent = metersTxt;
+
+        // Sub-fase F: linha de orçamento e estado over-budget.
+        const budgetSpan = el.querySelector('.cb-move-badge-budget');
+        let isOver = false;
+        if (opts && Number.isFinite(opts.totalBudget) && Number.isFinite(opts.alreadyUsed)) {
+            const total = opts.totalBudget;
+            const ja = opts.alreadyUsed;
+            const projetado = ja + q;
+            const restanteAposEsse = total - projetado;
+            const sinal = restanteAposEsse >= 0 ? '' : '−';
+            budgetSpan.textContent = `${projetado}/${total} qd (${sinal}${Math.abs(restanteAposEsse)} restante${Math.abs(restanteAposEsse) === 1 ? '' : 's'})`;
+            budgetSpan.style.display = '';
+            isOver = projetado > total;
+        } else {
+            budgetSpan.textContent = '';
+            budgetSpan.style.display = 'none';
+        }
+        el.classList.toggle('is-over', isOver);
+
         // Posiciona a 16px à direita/abaixo do cursor; se aproximar da
         // borda direita da viewport, recua para a esquerda.
         const margin = 16;
@@ -1368,7 +1388,10 @@
         el.classList.add('is-active');
     }
     function hideMoveBadge() {
-        if (moveBadgeEl) moveBadgeEl.classList.remove('is-active');
+        if (moveBadgeEl) {
+            moveBadgeEl.classList.remove('is-active');
+            moveBadgeEl.classList.remove('is-over');
+        }
     }
 
     /* Gera a sequência de passos do origem (c0,r0) ao destino (c1,r1)
@@ -1438,7 +1461,12 @@
                 ortogonaisDificeis, diagonaisDificeis
             });
             if (custo.quadrados > 0) {
-                updateMoveBadge(ev.clientX, ev.clientY, custo);
+                // Sub-fase F: passa o orçamento da rodada para o badge
+                // poder mostrar X/Y restantes e alertar em vermelho ao
+                // ultrapassar a ação de movimento.
+                const totalBudget = tokenDeslocamentoQuadrados(token);
+                const alreadyUsed = Number.isFinite(token.movimentoUsado) ? token.movimentoUsado : 0;
+                updateMoveBadge(ev.clientX, ev.clientY, custo, { totalBudget, alreadyUsed });
             } else {
                 hideMoveBadge();
             }
@@ -7066,7 +7094,10 @@
                 + (hasActed ? ' has-acted' : '')
                 + (isSurprisedNow ? ' is-surprised-now' : '');
 
-            // Sub-fase E: thumbnail compacta à esquerda.
+            // Sub-fase F: linha 1 (thumb + body + iniciativa).
+            const main = document.createElement('div');
+            main.className = 'cb-turn-row-main';
+
             const thumb = document.createElement('div');
             thumb.className = 'cb-turn-thumb';
             const tokenSrc = token ? resolveTokenImageSrc(token) : null;
@@ -7083,9 +7114,8 @@
             } else {
                 thumb.textContent = getTokenInitials(token?.name || '?');
             }
-            row.appendChild(thumb);
+            main.appendChild(thumb);
 
-            // Bloco central: nome (clicável) + meta (movimento + status).
             const body = document.createElement('div');
             body.className = 'cb-turn-body';
 
@@ -7093,6 +7123,7 @@
             nameBtn.type = 'button';
             nameBtn.className = 'cb-turn-name';
             nameBtn.textContent = token?.name || 'Token removido';
+            nameBtn.title = token?.name || 'Token removido';
             nameBtn.addEventListener('click', () => {
                 if (token) selectToken(token.id);
             });
@@ -7126,27 +7157,28 @@
             if (isSurprisedNow) {
                 const tag = document.createElement('span');
                 tag.className = 'cb-turn-status cb-turn-status--surprised';
-                tag.textContent = 'Surpreso — não age';
+                tag.textContent = 'Surpreso';
                 meta.appendChild(tag);
             }
             body.appendChild(meta);
-            row.appendChild(body);
+            main.appendChild(body);
 
-            // Input numérico de iniciativa (editável).
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.className = 'cb-turn-init';
-            input.value = String(turn.initiative);
-            input.title = 'Editar manualmente o resultado de iniciativa.';
-            input.addEventListener('change', () => {
-                turn.initiative = Number(input.value) || 0;
+            const initInput = document.createElement('input');
+            initInput.type = 'number';
+            initInput.className = 'cb-turn-init';
+            initInput.value = String(turn.initiative);
+            initInput.title = 'Editar manualmente o resultado de iniciativa.';
+            initInput.addEventListener('change', () => {
+                turn.initiative = Number(initInput.value) || 0;
                 saveState();
             });
-            row.appendChild(input);
+            main.appendChild(initInput);
 
-            // Bloco de ações compactas: focar, surpreso, remover.
+            row.appendChild(main);
+
+            // Sub-fase F: linha 2 (ações compactas alinhadas à direita).
             const actions = document.createElement('div');
-            actions.className = 'cb-turn-actions';
+            actions.className = 'cb-turn-row-actions';
 
             if (token) {
                 const focusBtn = document.createElement('button');
@@ -7162,14 +7194,16 @@
                 actions.appendChild(focusBtn);
             }
 
-            const surpriseLabel = document.createElement('label');
-            surpriseLabel.className = 'cb-turn-surprise' + (turn.surprised ? ' is-on' : '');
-            surpriseLabel.title = 'Marca este participante como surpreso. Personagens surpresos não devem agir na rodada 1 (regra do livro).';
-            const surpriseBox = document.createElement('input');
-            surpriseBox.type = 'checkbox';
-            surpriseBox.checked = !!turn.surprised;
-            surpriseBox.addEventListener('change', () => {
-                turn.surprised = surpriseBox.checked;
+            const surpriseBtn = document.createElement('button');
+            surpriseBtn.type = 'button';
+            surpriseBtn.className = 'cb-turn-surprise-mini' + (turn.surprised ? ' is-on' : '');
+            surpriseBtn.title = turn.surprised
+                ? 'Marcado como surpreso (não age na rodada 1). Clique para desmarcar.'
+                : 'Marcar como surpreso (não age na rodada 1).';
+            surpriseBtn.setAttribute('aria-pressed', turn.surprised ? 'true' : 'false');
+            surpriseBtn.textContent = 'S';
+            surpriseBtn.addEventListener('click', () => {
+                turn.surprised = !turn.surprised;
                 addLog({
                     title: turn.surprised ? 'Marcado surpreso' : 'Removida surpresa',
                     detail: (token?.name || 'Token') + (turn.surprised ? ' começa surpreso (não age na rodada 1).' : ' não está mais surpreso.')
@@ -7177,14 +7211,14 @@
                 renderTurnList();
                 saveState();
             });
-            surpriseLabel.appendChild(surpriseBox);
-            surpriseLabel.appendChild(document.createTextNode('Surpreso'));
-            actions.appendChild(surpriseLabel);
+            actions.appendChild(surpriseBtn);
 
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'cb-turn-remove';
-            remove.textContent = 'Remover';
+            remove.title = 'Remover este participante da iniciativa.';
+            remove.textContent = '×';
+            remove.setAttribute('aria-label', 'Remover');
             remove.addEventListener('click', () => {
                 state.turns.splice(idx, 1);
                 state.currentTurnIndex = Math.min(state.currentTurnIndex, Math.max(0, state.turns.length - 1));
