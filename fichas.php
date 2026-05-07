@@ -61,7 +61,7 @@ function avatarFichaSalva(array $ficha): array
     <title>Listar Fichas — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/home.css?v=20260507e" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260507f" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body class="home-body">

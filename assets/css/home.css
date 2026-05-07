@@ -433,6 +433,110 @@
     }
 }
 
+/* ---------- Cards do Acervo (referencia.php) com imagem de fundo ----------
+   Cada arquivo deve estar em assets/img/acervo-cards/. As imagens têm
+   espaço livre à esquerda (onde fica o texto), por isso fixamos a posição
+   em "center right" e aplicamos um gradiente claro da esquerda para a
+   direita por cima, garantindo contraste do texto. Os títulos viram
+   caixa-alta para combinar com a estética cordel/xilogravura. */
+.acervo-card-bg {
+    position: relative;
+    min-height: 110px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.6);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center right;
+    transition: transform 160ms ease, box-shadow 160ms ease,
+                background-size 320ms ease, border-color 160ms ease;
+}
+
+.acervo-card-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.92) 0%,
+        rgba(255, 255, 255, 0.78) 35%,
+        rgba(255, 255, 255, 0.45) 65%,
+        rgba(255, 255, 255, 0.18) 100%
+    );
+    pointer-events: none;
+    transition: opacity 160ms ease;
+}
+
+.acervo-card-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
+.acervo-card-bg:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    background-size: 112% auto;
+    border-color: var(--purple-dark);
+}
+.acervo-card-bg:hover::before {
+    opacity: 0.78;
+}
+
+.acervo-card-bg:focus-visible {
+    outline: 2px solid var(--purple-dark);
+    outline-offset: 2px;
+}
+
+.acervo-card-bg strong {
+    text-transform: uppercase;
+    font-size: clamp(0.95rem, 2.4vw, 1.1rem);
+    letter-spacing: 0.6px;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+.acervo-card-bg span {
+    color: var(--purple-dark);
+    opacity: 0.82;
+}
+
+/* Especificidade dupla (.acervo-card-bg.acervo-card--xyz) garante que a
+   imagem prevaleça mesmo no hover, sem disputar com o shorthand
+   `background: #fff` aplicado por .home-card-ref:hover. */
+.acervo-card-bg.acervo-card--jogando {
+    background-image: url('../img/acervo-cards/jogando-bg.png');
+}
+.acervo-card-bg.acervo-card--ancestralidades {
+    background-image: url('../img/acervo-cards/ancestralidades-bg.png');
+}
+.acervo-card-bg.acervo-card--origens {
+    background-image: url('../img/acervo-cards/origens-bg.png');
+}
+.acervo-card-bg.acervo-card--classes {
+    background-image: url('../img/acervo-cards/classes-bg.png');
+}
+.acervo-card-bg.acervo-card--divindades {
+    background-image: url('../img/acervo-cards/divindades-bg.png');
+}
+.acervo-card-bg.acervo-card--poderes {
+    background-image: url('../img/acervo-cards/poderes-bg.png');
+}
+.acervo-card-bg.acervo-card--magias {
+    background-image: url('../img/acervo-cards/magias-bg.png');
+}
+.acervo-card-bg.acervo-card--pericias {
+    background-image: url('../img/acervo-cards/pericias-bg.png');
+}
+.acervo-card-bg.acervo-card--equipamentos {
+    background-image: url('../img/acervo-cards/equipamentos-bg.png');
+}
+.acervo-card-bg.acervo-card--bestiario {
+    background-image: url('../img/acervo-cards/bestiario-bg.png');
+}
+
+@media (max-width: 600px) {
+    .acervo-card-bg {
+        min-height: 96px;
+    }
+}
+
 /* ---------- Responsivo ---------- */
 
 @media (max-width: 600px) {
