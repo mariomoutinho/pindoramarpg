@@ -16,7 +16,7 @@
 
         <section class="home-hero">
             <div class="home-logo-frame">
-                <img src="assets/img/logo-pindorama-rpg-transparent.png" alt="Pindorama RPG" />
+                <img src="assets/img/branding/pindorama-logo-nova.png" alt="Logo do Pindorama RPG" />
             </div>
         </section>
 

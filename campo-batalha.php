@@ -17,7 +17,7 @@
         <header class="cb-topbar">
             <div class="cb-title">
                 <a href="index.php" class="cb-brand-link" title="Voltar ao menu" aria-label="Voltar ao menu">
-                    <img src="assets/img/logo-pindorama-rpg.png" alt="Pindorama RPG" />
+                    <img src="assets/img/branding/pindorama-logo-nova.png" alt="Logo do Pindorama RPG" />
                 </a>
                 <div>
                     <h1>Campo de Batalha</h1>

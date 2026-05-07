@@ -31,7 +31,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
         <header class="top-actions">
             <div class="top-actions-titulo">
                 <a href="index.php" class="brand-menu-link" title="Voltar ao menu" aria-label="Voltar ao menu">
-                    <img src="assets/img/logo-pindorama-rpg.png" alt="Pindorama RPG" />
+                    <img src="assets/img/branding/pindorama-logo-nova.png" alt="Logo do Pindorama RPG" />
                 </a>
                 <div>
                     <h1>Ficha Pindorama</h1>
