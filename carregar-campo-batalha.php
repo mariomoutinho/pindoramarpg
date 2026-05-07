@@ -27,7 +27,7 @@ if (!is_array($state)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'O estado salvo do Campo de Batalha está inválido.',
+        'message' => 'O estado salvo da Mesa de Jogo está inválido.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

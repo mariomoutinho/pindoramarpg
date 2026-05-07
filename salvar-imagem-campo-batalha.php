@@ -62,7 +62,7 @@ if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Não foi possível criar a pasta de imagens do Campo de Batalha.',
+        'message' => 'Não foi possível criar a pasta de imagens da Mesa de Jogo.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -84,7 +84,7 @@ if (!move_uploaded_file($tmpName, $destino)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Não foi possível salvar a imagem do Campo de Batalha.',
+        'message' => 'Não foi possível salvar a imagem da Mesa de Jogo.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

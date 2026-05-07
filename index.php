@@ -30,8 +30,8 @@
                 <span>Veja personagens salvos.</span>
             </a>
             <a class="home-card-ref home-card-home home-card-campo-batalha" href="campo-batalha.php">
-                <strong>Campo de Batalha</strong>
-                <span>Mesa virtual e tokens.</span>
+                <strong>Mesa de Jogo</strong>
+                <span>Cenas em grid, mapas e tokens.</span>
             </a>
             <a class="home-card-ref home-card-home home-card-acervo" href="referencia.php">
                 <strong>Acervo</strong>

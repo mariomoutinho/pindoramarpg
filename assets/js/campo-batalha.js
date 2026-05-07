@@ -315,7 +315,7 @@
             setSaveStatus('Salvo.', 'ok');
         } catch (error) {
             setSaveStatus('Falha ao salvar.', 'error');
-            alert('Não foi possível salvar o Campo de Batalha. Se a imagem for muito grande, reduza o arquivo ou aumente o limite de upload do PHP.');
+            alert('Não foi possível salvar a Mesa de Jogo. Se a imagem for muito grande, reduza o arquivo ou aumente o limite de upload do PHP.');
         } finally {
             if (els.saveBattle) els.saveBattle.disabled = false;
         }

@@ -35,7 +35,7 @@ function bestiarioOptions(array $valores): string
             <div class="actions">
                 <a class="system-link-btn" href="index.php">Menu</a>
                 <a class="system-link-btn" href="referencia.php">Acervo</a>
-                <a class="system-link-btn" href="campo-batalha.php">Campo de Batalha</a>
+                <a class="system-link-btn" href="campo-batalha.php">Mesa de Jogo</a>
             </div>
         </header>
 
@@ -85,7 +85,7 @@ function bestiarioOptions(array $valores): string
                 <section class="bestiario-lista-header">
                     <div>
                         <h2>Criaturas</h2>
-                        <p>Catálogo preparado para fichas completas e tokens de Campo de Batalha.</p>
+                        <p>Catálogo preparado para fichas completas e tokens de Mesa de Jogo.</p>
                     </div>
                     <span id="bestiarioContador">0 criaturas</span>
                 </section>

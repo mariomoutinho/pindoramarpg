@@ -10,7 +10,7 @@ if (!is_array($state)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => 'Dados inválidos para salvar o Campo de Batalha.',
+        'message' => 'Dados inválidos para salvar a Mesa de Jogo.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -19,7 +19,7 @@ if (!array_key_exists('pages', $state) || !is_array($state['pages'])) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => 'O Campo de Batalha precisa conter ao menos a lista de cenas.',
+        'message' => 'A Mesa de Jogo precisa conter ao menos a lista de cenas.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -54,7 +54,7 @@ if ($json === false || file_put_contents($tmpFile, $json, LOCK_EX) === false || 
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Não foi possível salvar o estado do Campo de Batalha.',
+        'message' => 'Não foi possível salvar o estado da Mesa de Jogo.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

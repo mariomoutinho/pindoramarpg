@@ -123,6 +123,6 @@ $todas = $stmtAll->fetchAll();
     </div>
 </div>
 
-<p><a href="ficha.php?id=<?= $ficha['id'] ?>">→ Abrir ficha.php</a> | <a href="campo-batalha.php">→ Campo de Batalha</a></p>
+<p><a href="ficha.php?id=<?= $ficha['id'] ?>">→ Abrir ficha.php</a> | <a href="campo-batalha.php">→ Mesa de Jogo</a></p>
 </body>
 </html>

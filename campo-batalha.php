@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>Campo de Batalha — Pindorama RPG</title>
+    <title>Mesa de Jogo — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
@@ -20,8 +20,8 @@
                     <img src="assets/img/branding/pindorama-logo-nova.png" alt="Logo do Pindorama RPG" />
                 </a>
                 <div>
-                    <h1>Campo de Batalha</h1>
-                    <p>Posicione tokens no grid, arraste, redimensione e gire.</p>
+                    <h1>Mesa de Jogo</h1>
+                    <p>Cenas em grid (1 quadrado = 1,5 m): tavernas, masmorras, florestas, batalhas — posicione tokens, arraste, redimensione e gire.</p>
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
                 </div>
             </section>
 
-            <aside class="cb-sidebar" aria-label="Painel do campo de batalha">
+            <aside class="cb-sidebar" aria-label="Painel da mesa de jogo">
                 <div class="cb-sidebar-tabs" role="tablist" aria-label="Seções">
                     <button type="button" class="is-active" data-tab="registro">Registro</button>
                     <button type="button" data-tab="personagens">Personagens</button>
@@ -442,6 +442,7 @@
 
     </main>
 
+    <script src="assets/js/regras-distancia.js?v=20260507a"></script>
     <script src="assets/js/campo-batalha.js?v=20260505ab"></script>
 </body>
 </html>
