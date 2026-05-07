@@ -6,7 +6,7 @@
     <title>Referência — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/home.css?v=20260502" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body class="home-body">

@@ -3,6 +3,16 @@
    Aproveita variáveis e fundo definidos em ficha.css
    ==================================================================== */
 
+/* Fonte temática usada nos botões/títulos das páginas home/lista/referência.
+   Arquivo já presente em assets/fonts/EldesCordel.ttf */
+@font-face {
+    font-family: 'Eldes Cordel';
+    src: url('../fonts/EldesCordel.ttf') format('truetype');
+    font-display: swap;
+    font-weight: normal;
+    font-style: normal;
+}
+
 .home-body {
     min-height: 100vh;
     display: flex;
@@ -21,7 +31,8 @@
 }
 
 .home-shell-list,
-.home-shell-ref {
+.home-shell-ref,
+.home-shell-home {
     width: min(720px, 100%);
 }
 
@@ -128,8 +139,9 @@
     color: var(--purple-dark);
     text-align: center;
     text-decoration: none;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.15rem;
+    font-family: 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.4px;
     font-weight: bold;
     box-shadow: 0 2px 8px rgba(59, 29, 67, 0.08);
     transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
@@ -298,7 +310,9 @@
 }
 
 .home-card-ref strong {
-    font-size: 1.05rem;
+    font-family: 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.3px;
     color: var(--purple-dark);
 }
 
