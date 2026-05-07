@@ -12,9 +12,13 @@
     // ----------------------------------------------------------------
 
     const STORAGE_KEY = 'pindorama:campo-batalha:v1';
+    const SERVER_STATE_URL = 'carregar-campo-batalha.php';
+    const SERVER_SAVE_URL = 'salvar-campo-batalha.php';
+    const SERVER_IMAGE_UPLOAD_URL = 'salvar-imagem-campo-batalha.php';
+    const CLIENT_UPLOAD_TARGET_BYTES = 1800 * 1024;
     const BESTIARIO_STORAGE_KEY = 'pindorama.bestiario.criaturas';
     const BESTIARIO_TOKEN_KEY = 'pindorama.campoBatalha.tokenPendente';
-    const CELL_SIZE = 56;          // tamanho base da célula em pixels
+    let CELL_SIZE = 56;            // tamanho base da célula em pixels, persistido por cena
     const MIN_SCALE = 0.4;
     const MAX_SCALE = 3;
     const LONG_PRESS_MS = 520;
@@ -35,14 +39,21 @@
         cols: 20,
         rows: 15,
         showNumbers: false,
+        gridOpacity: 0.45,
+        mapBackground: '',
         viewport: { x: 0, y: 0, scale: 1 },
         tokens: [],                // { id, fichaId|null, name, tokenImage, tokenImageAdjust, fotoImage, col, row, sizeCells, rotation }
         scenery: [],               // { id, name, src, x, y, width, height, rotation, zIndex, hidden, locked }
         snapToGrid: false,         // ímã: cenário gruda nas células do grid
+        activeImageLayer: 'scenery',
         selectedId: null,
         selectedSceneryId: null,
         pages: [],                 // [{ id, name, cols, rows, viewport, tokens, scenery, showNumbers }]
         activePageId: null,
+        activeSidebarTab: 'registro',
+        rollLog: [],
+        turns: [],
+        currentTurnIndex: 0,
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
         bestiario: [],             // cache da lista de criaturas do bestiário
@@ -51,8 +62,11 @@
         ancestralidadeSizes: {},
         ancestralidadeSizesLoaded: false,
         modalMode: 'fichas',
-        reachPreview: null
+        reachPreview: null,
+        tokenEditorId: null
     };
+    let saveTimer = null;
+    let pendingServerSave = null;
 
     // ----------------------------------------------------------------
     // Refs DOM
@@ -62,6 +76,7 @@
         stage: document.getElementById('cbStage'),
         viewport: document.getElementById('cbViewport'),
         board: document.getElementById('cbBoard'),
+        mapBackground: document.getElementById('cbMapBackground'),
         tokensLayer: document.getElementById('cbTokensLayer'),
         addToken: document.getElementById('cbAddToken'),
         addBestiaryToken: document.getElementById('cbAddBestiaryToken'),
@@ -78,10 +93,15 @@
         adjustY: document.getElementById('cbAdjustY'),
         adjustReset: document.getElementById('cbAdjustReset'),
         adjustUseBestiario: document.getElementById('cbAdjustUseBestiario'),
+        adjustSaveSource: document.getElementById('cbAdjustSaveSource'),
         sceneryLayer: document.getElementById('cbSceneryLayer'),
+        npcLayer: document.getElementById('cbNpcLayer'),
         guidesLayer: document.getElementById('cbGuidesLayer'),
         addScenery: document.getElementById('cbAddScenery'),
+        addNpcImage: document.getElementById('cbAddNpcImage'),
         toggleLayers: document.getElementById('cbToggleLayers'),
+        saveBattle: document.getElementById('cbSaveBattle'),
+        saveStatus: document.getElementById('cbSaveStatus'),
         pagesTabs: document.getElementById('cbPagesTabs'),
         addPage: document.getElementById('cbAddPage'),
         layersPanel: document.getElementById('cbLayersPanel'),
@@ -92,9 +112,11 @@
         sceneryName: document.getElementById('cbSceneryName'),
         sceneryUrl: document.getElementById('cbSceneryUrl'),
         sceneryFile: document.getElementById('cbSceneryFile'),
+        sceneryLayerTarget: document.getElementById('cbSceneryLayerTarget'),
         sceneryCancel: document.getElementById('cbSceneryCancel'),
         sceneryConfirm: document.getElementById('cbSceneryConfirm'),
         snapToGrid: document.getElementById('cbSnapToGrid'),
+        imageLayer: document.getElementById('cbImageLayer'),
         zoomIn: document.getElementById('cbZoomIn'),
         zoomOut: document.getElementById('cbZoomOut'),
         zoomReset: document.getElementById('cbZoomReset'),
@@ -133,7 +155,60 @@
         result: document.getElementById('cbResult'),
         resultBody: document.getElementById('cbResultBody'),
         resultClose: document.getElementById('cbResultClose'),
-        resultOk: document.getElementById('cbResultOk')
+        resultOk: document.getElementById('cbResultOk'),
+        imageCropModal: document.getElementById('cbImageCropModal'),
+        imageCropClose: document.getElementById('cbImageCropClose'),
+        imageCropPreview: document.getElementById('cbImageCropPreview'),
+        imageCropPreviewImg: document.getElementById('cbImageCropPreviewImg'),
+        imageCropZoom: document.getElementById('cbImageCropZoom'),
+        imageCropX: document.getElementById('cbImageCropX'),
+        imageCropY: document.getElementById('cbImageCropY'),
+        imageCropReset: document.getElementById('cbImageCropReset'),
+        sidebarTabs: document.querySelectorAll('.cb-sidebar-tabs button'),
+        sidebarPanels: document.querySelectorAll('.cb-sidebar-panel'),
+        clearLog: document.getElementById('cbClearLog'),
+        diceForm: document.getElementById('cbDiceForm'),
+        diceFormula: document.getElementById('cbDiceFormula'),
+        logList: document.getElementById('cbLogList'),
+        refreshFichas: document.getElementById('cbRefreshFichas'),
+        sidebarFichaSearch: document.getElementById('cbSidebarFichaSearch'),
+        sidebarFichas: document.getElementById('cbSidebarFichas'),
+        refreshBestiary: document.getElementById('cbRefreshBestiary'),
+        sidebarBestiarySearch: document.getElementById('cbSidebarBestiarySearch'),
+        sidebarBestiary: document.getElementById('cbSidebarBestiary'),
+        editSelectedToken: document.getElementById('cbEditSelectedToken'),
+        selectedTokenTools: document.getElementById('cbSelectedTokenTools'),
+        sidebarTokens: document.getElementById('cbSidebarTokens'),
+        nextTurn: document.getElementById('cbNextTurn'),
+        addTurnSelected: document.getElementById('cbAddTurnSelected'),
+        sortTurns: document.getElementById('cbSortTurns'),
+        turnList: document.getElementById('cbTurnList'),
+        mapImage: document.getElementById('cbMapImage'),
+        mapFile: document.getElementById('cbMapFile'),
+        gridOpacity: document.getElementById('cbGridOpacity'),
+        gridSize: document.getElementById('cbGridSize'),
+        clearMapImage: document.getElementById('cbClearMapImage'),
+        tokenEditorModal: document.getElementById('cbTokenEditorModal'),
+        tokenEditorClose: document.getElementById('cbTokenEditorClose'),
+        tokenEditorCancel: document.getElementById('cbTokenEditorCancel'),
+        tokenEditorSave: document.getElementById('cbTokenEditorSave'),
+        tokenName: document.getElementById('cbTokenName'),
+        tokenImage: document.getElementById('cbTokenImage'),
+        tokenType: document.getElementById('cbTokenType'),
+        tokenSheetLink: document.getElementById('cbTokenSheetLink'),
+        tokenLayer: document.getElementById('cbTokenLayer'),
+        tokenWidthCells: document.getElementById('cbTokenWidthCells'),
+        tokenHeightCells: document.getElementById('cbTokenHeightCells'),
+        tokenPvAtual: document.getElementById('cbTokenPvAtual'),
+        tokenPvMax: document.getElementById('cbTokenPvMax'),
+        tokenPmAtual: document.getElementById('cbTokenPmAtual'),
+        tokenPmMax: document.getElementById('cbTokenPmMax'),
+        tokenConditions: document.getElementById('cbTokenConditions'),
+        sheetWindow: document.getElementById('cbSheetWindow'),
+        sheetWindowHeader: document.getElementById('cbSheetWindowHeader'),
+        sheetWindowTitle: document.getElementById('cbSheetWindowTitle'),
+        sheetWindowClose: document.getElementById('cbSheetWindowClose'),
+        sheetFrame: document.getElementById('cbSheetFrame')
     };
 
     // Estado pendente do modal de confirmação de ação
@@ -159,21 +234,194 @@
     // Persistência
     // ----------------------------------------------------------------
 
+    function makeStateSnapshot() {
+        syncLiveToActivePage();
+        return {
+            pages: state.pages,
+            activePageId: state.activePageId,
+            snapToGrid: !!state.snapToGrid,
+            activeImageLayer: state.activeImageLayer,
+            activeSidebarTab: state.activeSidebarTab
+        };
+    }
+
     function saveState() {
+        const snap = makeStateSnapshot();
         try {
-            syncLiveToActivePage();
-            const snap = {
-                pages: state.pages,
-                activePageId: state.activePageId,
-                snapToGrid: !!state.snapToGrid
-            };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
         } catch (e) {
-            // localStorage cheio ou bloqueado — ignorar silenciosamente
+            console.warn('Não foi possível salvar o Campo de Batalha no navegador. Tentando salvar no servidor.', e);
+        }
+        scheduleServerSave(snap);
+    }
+
+    function scheduleServerSave(snapshot) {
+        pendingServerSave = snapshot;
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => flushServerSave(false), 350);
+    }
+
+    async function flushServerSave(useBeacon = false, explicitSnapshot = null) {
+        if (!pendingServerSave && !explicitSnapshot) return true;
+        const snapshot = pendingServerSave;
+        pendingServerSave = null;
+        window.clearTimeout(saveTimer);
+        saveTimer = null;
+        const body = JSON.stringify(explicitSnapshot || snapshot);
+
+        if (useBeacon && navigator.sendBeacon) {
+            const blob = new Blob([body], { type: 'application/json' });
+            navigator.sendBeacon(SERVER_SAVE_URL, blob);
+            return true;
+        }
+
+        try {
+            const resp = await fetch(SERVER_SAVE_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            if (!data.success) throw new Error(data.message || 'Falha ao salvar.');
+            return true;
+        } catch (error) {
+            console.warn('Não foi possível salvar o Campo de Batalha no servidor.', error);
+            pendingServerSave = explicitSnapshot || snapshot;
+            throw error;
         }
     }
 
-    function loadState() {
+    function setSaveStatus(text, kind = '') {
+        if (!els.saveStatus) return;
+        els.saveStatus.textContent = text || '';
+        els.saveStatus.classList.toggle('is-ok', kind === 'ok');
+        els.saveStatus.classList.toggle('is-error', kind === 'error');
+    }
+
+    async function confirmSaveBattle() {
+        const snapshot = makeStateSnapshot();
+        if (els.saveBattle) els.saveBattle.disabled = true;
+        setSaveStatus('Salvando...', '');
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+        } catch (e) {
+            console.warn('O navegador não guardou uma cópia local do Campo de Batalha.', e);
+        }
+        try {
+            await flushServerSave(false, snapshot);
+            pendingServerSave = null;
+            setSaveStatus('Salvo.', 'ok');
+        } catch (error) {
+            setSaveStatus('Falha ao salvar.', 'error');
+            alert('Não foi possível salvar o Campo de Batalha. Se a imagem for muito grande, reduza o arquivo ou aumente o limite de upload do PHP.');
+        } finally {
+            if (els.saveBattle) els.saveBattle.disabled = false;
+        }
+    }
+
+    async function uploadBattleImage(file) {
+        const uploadFile = await prepareBattleImageForUpload(file);
+        const form = new FormData();
+        form.append('imagem', uploadFile, uploadFile.name || file.name || 'campo.webp');
+        const resp = await fetch(SERVER_IMAGE_UPLOAD_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: form
+        });
+        let data = null;
+        try {
+            data = await resp.json();
+        } catch (_) {}
+        if (!resp.ok || !data?.success || !data.path) {
+            throw new Error(data?.message || 'Não foi possível salvar a imagem.');
+        }
+        return data.path;
+    }
+
+    async function prepareBattleImageForUpload(file) {
+        if (!file || file.size <= CLIENT_UPLOAD_TARGET_BYTES || file.type === 'image/gif') {
+            return file;
+        }
+
+        setSaveStatus('Otimizando imagem...', '');
+        const img = await loadImageFromFile(file);
+        const sizes = [2600, 2200, 1800, 1400];
+        const qualities = [0.86, 0.76, 0.66, 0.56];
+        let best = null;
+
+        for (const maxSide of sizes) {
+            const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+            const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+            const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) break;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            for (const quality of qualities) {
+                const blob = await canvasToBlob(canvas, 'image/webp', quality)
+                    || await canvasToBlob(canvas, 'image/jpeg', quality);
+                if (!blob) continue;
+                if (!best || blob.size < best.size) best = blob;
+                if (blob.size <= CLIENT_UPLOAD_TARGET_BYTES) {
+                    return new File([blob], replaceImageExtension(file.name, blob.type), { type: blob.type });
+                }
+            }
+        }
+
+        if (best && best.size < file.size) {
+            return new File([best], replaceImageExtension(file.name, best.type), { type: best.type });
+        }
+
+        return file;
+    }
+
+    function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Não foi possível ler a imagem enviada.'));
+            };
+            img.src = url;
+        });
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+        return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    }
+
+    function replaceImageExtension(name, mime) {
+        const ext = mime === 'image/jpeg' ? 'jpg' : 'webp';
+        const base = String(name || 'campo').replace(/\.[^.]+$/, '');
+        return `${base || 'campo'}.${ext}`;
+    }
+
+    async function loadState() {
+        try {
+            const resp = await fetch(SERVER_STATE_URL, {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.success && data.state && applyStateSnapshot(data.state)) {
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Não foi possível carregar o Campo de Batalha do servidor.', e);
+        }
+
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) {
@@ -181,34 +429,55 @@
                 return;
             }
             const snap = JSON.parse(raw);
-            if (typeof snap.snapToGrid === 'boolean') state.snapToGrid = snap.snapToGrid;
-            if (Array.isArray(snap.pages) && snap.pages.length) {
-                state.pages = snap.pages.map(normalizePage);
-                state.activePageId = snap.activePageId && state.pages.find(p => p.id === snap.activePageId)
-                    ? snap.activePageId
-                    : state.pages[0].id;
-                const active = state.pages.find(p => p.id === state.activePageId) || state.pages[0];
-                loadPageIntoLive(active);
-            } else {
-                // Snapshot legado de página única
-                const legacy = normalizePage({
-                    id: 'page_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36),
-                    name: 'Cena 1',
-                    cols: snap.cols || 20,
-                    rows: snap.rows || 15,
-                    viewport: snap.viewport || { x: 0, y: 0, scale: 1 },
-                    tokens: Array.isArray(snap.tokens) ? snap.tokens.map(migrateLegacyTokenFields) : [],
-                    scenery: [],
-                    showNumbers: !!snap.showNumbers
-                });
-                state.pages = [legacy];
-                state.activePageId = legacy.id;
-                loadPageIntoLive(legacy);
-                saveState();
-            }
+            applyStateSnapshot(snap);
         } catch (e) {
             ensureInitialPage();
         }
+    }
+
+    function applyStateSnapshot(snap) {
+        if (!snap || typeof snap !== 'object') return false;
+        if (typeof snap.snapToGrid === 'boolean') state.snapToGrid = snap.snapToGrid;
+        if (snap.activeImageLayer === 'npcs' || snap.activeImageLayer === 'scenery') {
+            state.activeImageLayer = snap.activeImageLayer;
+        }
+        if (snap.activeSidebarTab) state.activeSidebarTab = snap.activeSidebarTab;
+        if (Array.isArray(snap.pages) && snap.pages.length) {
+            state.pages = snap.pages.map(normalizePage);
+            state.activePageId = snap.activePageId && state.pages.find(p => p.id === snap.activePageId)
+                ? snap.activePageId
+                : state.pages[0].id;
+            const active = state.pages.find(p => p.id === state.activePageId) || state.pages[0];
+            loadPageIntoLive(active);
+            return true;
+        }
+
+        if (snap.cols || snap.rows || Array.isArray(snap.tokens)) {
+            const legacy = normalizePage({
+                id: 'page_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36),
+                name: 'Cena 1',
+                cols: snap.cols || 20,
+                rows: snap.rows || 15,
+                viewport: snap.viewport || { x: 0, y: 0, scale: 1 },
+                tokens: Array.isArray(snap.tokens) ? snap.tokens.map(migrateLegacyTokenFields) : [],
+                scenery: [],
+                showNumbers: !!snap.showNumbers,
+                gridOpacity: snap.gridOpacity,
+                gridSize: snap.gridSize,
+                mapBackground: snap.mapBackground,
+                rollLog: snap.rollLog,
+                turns: snap.turns,
+                currentTurnIndex: snap.currentTurnIndex
+            });
+            state.pages = [legacy];
+            state.activePageId = legacy.id;
+            loadPageIntoLive(legacy);
+            saveState();
+            return true;
+        }
+
+        ensureInitialPage();
+        return true;
     }
 
     function ensureInitialPage() {
@@ -227,7 +496,13 @@
             viewport: { x: 0, y: 0, scale: 1 },
             tokens: [],
             scenery: [],
-            showNumbers: false
+            showNumbers: false,
+            gridOpacity: 0.45,
+            gridSize: CELL_SIZE,
+            mapBackground: '',
+            rollLog: [],
+            turns: [],
+            currentTurnIndex: 0
         });
     }
 
@@ -242,11 +517,27 @@
                 : { x: 0, y: 0, scale: 1 },
             tokens: Array.isArray(page.tokens) ? page.tokens.map(migrateLegacyTokenFields) : [],
             scenery: Array.isArray(page.scenery) ? page.scenery.map(normalizeSceneryItem) : [],
-            showNumbers: !!page.showNumbers
+            showNumbers: !!page.showNumbers,
+            gridOpacity: clamp(Number(page.gridOpacity) || 0.45, 0.05, 1),
+            gridSize: clamp(Math.round(Number(page.gridSize) || CELL_SIZE), 36, 96),
+            mapBackground: page.mapBackground || '',
+            rollLog: Array.isArray(page.rollLog) ? page.rollLog.slice(0, 80) : [],
+            turns: Array.isArray(page.turns) ? page.turns.map(normalizeTurn).filter(Boolean) : [],
+            currentTurnIndex: Math.max(0, Number(page.currentTurnIndex) || 0)
+        };
+    }
+
+    function normalizeTurn(turn) {
+        if (!turn || !turn.tokenId) return null;
+        return {
+            id: turn.id || ('turn_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36)),
+            tokenId: turn.tokenId,
+            initiative: Number(turn.initiative) || 0
         };
     }
 
     function normalizeSceneryItem(item) {
+        const layer = item.layer === 'npcs' ? 'npcs' : 'scenery';
         return {
             id: item.id || ('scn_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36)),
             name: item.name || 'Cenário',
@@ -258,7 +549,18 @@
             rotation: Number(item.rotation) || 0,
             zIndex: Number.isFinite(item.zIndex) ? item.zIndex : 0,
             hidden: !!item.hidden,
-            locked: !!item.locked
+            locked: !!item.locked,
+            layer,
+            crop: normalizeImageCrop(item.crop)
+        };
+    }
+
+    function normalizeImageCrop(value) {
+        const v = value && typeof value === 'object' ? value : {};
+        return {
+            scale: Math.min(6, Math.max(0.2, Number(v.scale) || 1)),
+            x: Math.min(220, Math.max(-220, Number(v.x) || 0)),
+            y: Math.min(220, Math.max(-220, Number(v.y) || 0))
         };
     }
 
@@ -271,6 +573,12 @@
         page.tokens = state.tokens;
         page.scenery = state.scenery;
         page.showNumbers = state.showNumbers;
+        page.gridOpacity = state.gridOpacity;
+        page.gridSize = CELL_SIZE;
+        page.mapBackground = state.mapBackground;
+        page.rollLog = state.rollLog;
+        page.turns = state.turns;
+        page.currentTurnIndex = state.currentTurnIndex;
     }
 
     function loadPageIntoLive(page) {
@@ -280,6 +588,12 @@
         state.tokens = page.tokens;
         state.scenery = page.scenery;
         state.showNumbers = page.showNumbers;
+        state.gridOpacity = page.gridOpacity;
+        state.mapBackground = page.mapBackground || '';
+        CELL_SIZE = page.gridSize || 56;
+        state.rollLog = page.rollLog || [];
+        state.turns = page.turns || [];
+        state.currentTurnIndex = Math.min(page.currentTurnIndex || 0, Math.max(0, state.turns.length - 1));
         state.selectedId = null;
         state.selectedSceneryId = null;
     }
@@ -295,9 +609,23 @@
         if (token.tokenImageAdjust === undefined && token.imageAdjust !== undefined) {
             token.tokenImageAdjust = token.imageAdjust;
         }
+        token.widthCells = clamp(Math.round(Number(token.widthCells || token.sizeCells || 1)), 1, 6);
+        token.heightCells = clamp(Math.round(Number(token.heightCells || token.sizeCells || 1)), 1, 6);
+        token.sizeCells = Math.max(token.widthCells, token.heightCells);
+        token.layer = ['mapa', 'tokens', 'mestre'].includes(token.layer) ? token.layer : 'tokens';
+        token.type = token.type || token.tipoToken || inferTokenType(token);
+        token.conditions = Array.isArray(token.conditions)
+            ? token.conditions
+            : String(token.conditions || '').split(',').map(s => s.trim()).filter(Boolean);
         delete token.image;
         delete token.imageAdjust;
         return token;
+    }
+
+    function inferTokenType(token) {
+        if (token.source === 'bestiario') return 'criatura';
+        if (token.fichaId) return 'personagem';
+        return 'generico';
     }
 
     function resolveTokenImageSrc(token) {
@@ -319,15 +647,25 @@
     // ----------------------------------------------------------------
 
     function renderBoard() {
+        document.documentElement.style.setProperty('--cb-grid-opacity', String(state.gridOpacity));
         els.board.style.gridTemplateColumns = `repeat(${state.cols}, ${CELL_SIZE}px)`;
         els.board.style.gridTemplateRows = `repeat(${state.rows}, ${CELL_SIZE}px)`;
         els.board.style.width = (state.cols * CELL_SIZE) + 'px';
         els.board.style.height = (state.rows * CELL_SIZE) + 'px';
+        if (els.mapBackground) {
+            els.mapBackground.style.width = els.board.style.width;
+            els.mapBackground.style.height = els.board.style.height;
+            els.mapBackground.style.backgroundImage = state.mapBackground ? `url("${cssUrl(state.mapBackground)}")` : '';
+        }
         els.tokensLayer.style.width = els.board.style.width;
         els.tokensLayer.style.height = els.board.style.height;
         if (els.sceneryLayer) {
             els.sceneryLayer.style.width = els.board.style.width;
             els.sceneryLayer.style.height = els.board.style.height;
+        }
+        if (els.npcLayer) {
+            els.npcLayer.style.width = els.board.style.width;
+            els.npcLayer.style.height = els.board.style.height;
         }
         if (els.guidesLayer) {
             els.guidesLayer.style.width = els.board.style.width;
@@ -369,23 +707,30 @@
     function renderTokens() {
         els.tokensLayer.innerHTML = '';
         const frag = document.createDocumentFragment();
-        for (const t of state.tokens) {
+        const layerOrder = { mapa: 0, tokens: 1, mestre: 2 };
+        for (const t of [...state.tokens].sort((a, b) => (layerOrder[a.layer] ?? 1) - (layerOrder[b.layer] ?? 1))) {
             frag.appendChild(buildTokenElement(t));
         }
         els.tokensLayer.appendChild(frag);
         updateActionButtons();
+        renderSidebarTokens();
+        renderSelectedTokenTools();
+        renderTurnList();
     }
 
     function buildTokenElement(token) {
-        const sizePx = token.sizeCells * CELL_SIZE;
+        const widthPx = tokenWidthCells(token) * CELL_SIZE;
+        const heightPx = tokenHeightCells(token) * CELL_SIZE;
         const wrap = document.createElement('div');
         wrap.className = 'cb-token';
         if (token.id === state.selectedId) wrap.classList.add('is-selected');
+        if (isCurrentTurnToken(token.id)) wrap.classList.add('is-current-turn');
+        wrap.dataset.layer = token.layer || 'tokens';
         wrap.dataset.tokenId = token.id;
         wrap.style.left = (token.col * CELL_SIZE) + 'px';
         wrap.style.top = (token.row * CELL_SIZE) + 'px';
-        wrap.style.width = sizePx + 'px';
-        wrap.style.height = sizePx + 'px';
+        wrap.style.width = widthPx + 'px';
+        wrap.style.height = heightPx + 'px';
         wrap.style.transform = `rotate(${token.rotation || 0}deg)`;
 
         const circle = document.createElement('div');
@@ -429,6 +774,18 @@
         wrap.appendChild(rotate);
 
         return wrap;
+    }
+
+    function cssUrl(value) {
+        return String(value || '').replace(/["\\]/g, '\\$&');
+    }
+
+    function tokenWidthCells(token) {
+        return clamp(Math.round(Number(token.widthCells || token.sizeCells || 1)), 1, 6);
+    }
+
+    function tokenHeightCells(token) {
+        return clamp(Math.round(Number(token.heightCells || token.sizeCells || 1)), 1, 6);
     }
 
     function buildResourceBars(token) {
@@ -478,11 +835,12 @@
     function updateTokenElement(token) {
         const el = els.tokensLayer.querySelector(`[data-token-id="${token.id}"]`);
         if (!el) return;
-        const sizePx = token.sizeCells * CELL_SIZE;
+        const widthPx = tokenWidthCells(token) * CELL_SIZE;
+        const heightPx = tokenHeightCells(token) * CELL_SIZE;
         el.style.left = (token.col * CELL_SIZE) + 'px';
         el.style.top = (token.row * CELL_SIZE) + 'px';
-        el.style.width = sizePx + 'px';
-        el.style.height = sizePx + 'px';
+        el.style.width = widthPx + 'px';
+        el.style.height = heightPx + 'px';
         el.style.transform = `rotate(${token.rotation || 0}deg)`;
     }
 
@@ -491,6 +849,7 @@
             el.classList.toggle('is-selected', el.dataset.tokenId === state.selectedId);
         });
         updateActionButtons();
+        renderSelectedTokenTools();
     }
 
     function updateActionButtons() {
@@ -584,18 +943,18 @@
         const sceneryEl = ev.target.closest('.cb-scenery');
         if (sceneryHandle && sceneryEl) {
             const item = state.scenery.find(s => s.id === sceneryEl.dataset.sceneryId);
-            if (item && !item.locked) {
+            if (item && !item.locked && isActiveImageLayerItem(item)) {
                 ev.preventDefault();
                 ev.stopPropagation();
                 selectScenery(item.id);
-                if (sceneryHandle.dataset.handle === 'resize') startSceneryResize(ev, item);
+                if (sceneryHandle.dataset.handle === 'resize') startSceneryResize(ev, item, sceneryHandle.dataset.dir || 'se');
                 else if (sceneryHandle.dataset.handle === 'rotate') startSceneryRotate(ev, item);
                 return;
             }
         }
         if (sceneryEl && !ev.target.closest('.cb-token')) {
             const item = state.scenery.find(s => s.id === sceneryEl.dataset.sceneryId);
-            if (item && !item.locked) {
+            if (item && !item.locked && isActiveImageLayerItem(item)) {
                 ev.preventDefault();
                 ev.stopPropagation();
                 selectScenery(item.id);
@@ -867,11 +1226,12 @@
             return;
         }
         // snap-to-grid + clamp dentro do tabuleiro
-        const max = token.sizeCells;
+        const maxW = tokenWidthCells(token);
+        const maxH = tokenHeightCells(token);
         const didClick = Math.abs((interaction.tempCol ?? token.col) - token.col) < 0.18
             && Math.abs((interaction.tempRow ?? token.row) - token.row) < 0.18;
-        const snappedCol = clamp(Math.round(interaction.tempCol), 0, state.cols - max);
-        const snappedRow = clamp(Math.round(interaction.tempRow), 0, state.rows - max);
+        const snappedCol = clamp(Math.round(interaction.tempCol), 0, state.cols - maxW);
+        const snappedRow = clamp(Math.round(interaction.tempRow), 0, state.rows - maxH);
         token.col = snappedCol;
         token.row = snappedRow;
         const el = els.tokensLayer.querySelector(`[data-token-id="${token.id}"]`);
@@ -902,7 +1262,8 @@
             type: 'resize',
             pointerId: ev.pointerId,
             tokenId: token.id,
-            startSize: token.sizeCells,
+            startWidth: tokenWidthCells(token),
+            startHeight: tokenHeightCells(token),
             startPx: { x: start.x, y: start.y }
         };
         try { els.stage.setPointerCapture(ev.pointerId); } catch (_) {}
@@ -922,9 +1283,12 @@
         const maxByCols = state.cols - token.col;
         const maxByRows = state.rows - token.row;
         const finalSize = Math.min(newSize, maxByCols, maxByRows);
-        if (finalSize !== token.sizeCells) {
+        if (finalSize !== token.sizeCells || finalSize !== token.widthCells || finalSize !== token.heightCells) {
             token.sizeCells = finalSize;
+            token.widthCells = finalSize;
+            token.heightCells = finalSize;
             updateTokenElement(token);
+            renderSelectedTokenTools();
         }
     }
 
@@ -948,7 +1312,7 @@
     function handleRotateMove(ev) {
         const token = state.tokens.find(t => t.id === interaction.tokenId);
         if (!token) return;
-        const sizePx = token.sizeCells * CELL_SIZE;
+        const sizePx = Math.max(tokenWidthCells(token), tokenHeightCells(token)) * CELL_SIZE;
         const center = screenToViewport(ev.clientX, ev.clientY);
         const cx = token.col * CELL_SIZE + sizePx / 2;
         const cy = token.row * CELL_SIZE + sizePx / 2;
@@ -979,15 +1343,19 @@
         }
         state.selectedId = id;
         updateSelectionVisuals();
+        renderSidebarTokens();
+        renderSelectedTokenTools();
     }
 
     function removeSelectedToken() {
         if (!state.selectedId) return;
         state.tokens = state.tokens.filter(t => t.id !== state.selectedId);
+        state.turns = state.turns.filter(turn => turn.tokenId !== state.selectedId);
         state.selectedId = null;
         clearReachPreview(false);
         renderBoard();
         renderTokens();
+        renderTurnList();
         saveState();
     }
 
@@ -1005,6 +1373,8 @@
         if (!confirm('Remover todos os tokens e cenários da página atual?')) return;
         state.tokens = [];
         state.scenery = [];
+        state.turns = [];
+        state.currentTurnIndex = 0;
         state.selectedId = null;
         state.selectedSceneryId = null;
         clearReachPreview(false);
@@ -1012,6 +1382,7 @@
         renderTokens();
         renderScenery();
         renderLayersPanel();
+        renderTurnList();
         saveState();
     }
 
@@ -1078,9 +1449,14 @@
         els.cols.value = state.cols;
         els.rows.value = state.rows;
         els.toggleNumbers.checked = state.showNumbers;
+        if (els.mapImage) els.mapImage.value = state.mapBackground || '';
+        if (els.gridOpacity) els.gridOpacity.value = String(state.gridOpacity);
+        if (els.gridSize) els.gridSize.value = String(CELL_SIZE);
         updateActionButtons();
         renderPagesBar();
         renderLayersPanel();
+        renderLog();
+        renderTurnList();
         saveState();
     }
 
@@ -1140,39 +1516,55 @@
     function renderScenery() {
         if (!els.sceneryLayer) return;
         els.sceneryLayer.innerHTML = '';
+        if (els.npcLayer) els.npcLayer.innerHTML = '';
         const sorted = [...state.scenery].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-        const frag = document.createDocumentFragment();
+        const sceneryFrag = document.createDocumentFragment();
+        const npcFrag = document.createDocumentFragment();
         for (const item of sorted) {
             if (item.hidden) continue;
-            frag.appendChild(buildSceneryElement(item));
+            const el = buildSceneryElement(item);
+            if (item.layer === 'npcs') npcFrag.appendChild(el);
+            else sceneryFrag.appendChild(el);
         }
-        els.sceneryLayer.appendChild(frag);
+        els.sceneryLayer.appendChild(sceneryFrag);
+        if (els.npcLayer) els.npcLayer.appendChild(npcFrag);
     }
 
     function buildSceneryElement(item) {
         const el = document.createElement('div');
         el.className = 'cb-scenery';
         el.dataset.sceneryId = item.id;
+        el.dataset.layer = item.layer || 'scenery';
+        if ((item.layer || 'scenery') !== state.activeImageLayer) el.classList.add('is-inactive-layer');
         if (item.locked) el.classList.add('is-locked');
-        if (item.id === state.selectedSceneryId) el.classList.add('is-selected');
+        if (item.id === state.selectedSceneryId && (item.layer || 'scenery') === state.activeImageLayer) el.classList.add('is-selected');
         el.style.left = item.x + 'px';
         el.style.top = item.y + 'px';
         el.style.width = item.width + 'px';
         el.style.height = item.height + 'px';
         el.style.transform = `rotate(${item.rotation || 0}deg)`;
         el.style.zIndex = String(item.zIndex || 0);
+        if ((item.layer || 'scenery') === 'npcs') {
+            const crop = normalizeImageCrop(item.crop);
+            el.style.setProperty('--scenery-crop-scale', String(crop.scale));
+            el.style.setProperty('--scenery-crop-x', `${crop.x}%`);
+            el.style.setProperty('--scenery-crop-y', `${crop.y}%`);
+        }
 
         const img = document.createElement('img');
         img.src = item.src;
-        img.alt = item.name || 'Cenário';
+        img.alt = item.name || ((item.layer || 'scenery') === 'npcs' ? 'NPC' : 'Cenário');
         img.draggable = false;
         el.appendChild(img);
 
-        if (item.id === state.selectedSceneryId && !item.locked) {
-            const resize = document.createElement('div');
-            resize.className = 'cb-scenery-handle cb-scenery-handle--resize';
-            resize.dataset.handle = 'resize';
-            el.appendChild(resize);
+        if (item.id === state.selectedSceneryId && !item.locked && (item.layer || 'scenery') === state.activeImageLayer) {
+            for (const dir of ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']) {
+                const resize = document.createElement('div');
+                resize.className = `cb-scenery-handle cb-scenery-handle--resize cb-scenery-handle--${dir}`;
+                resize.dataset.handle = 'resize';
+                resize.dataset.dir = dir;
+                el.appendChild(resize);
+            }
 
             const rotate = document.createElement('div');
             rotate.className = 'cb-scenery-handle cb-scenery-handle--rotate';
@@ -1183,8 +1575,22 @@
         return el;
     }
 
+    function getSceneryElement(id) {
+        return els.sceneryLayer?.querySelector(`[data-scenery-id="${id}"]`)
+            || els.npcLayer?.querySelector(`[data-scenery-id="${id}"]`)
+            || null;
+    }
+
+    function isActiveImageLayerItem(item) {
+        return !!item && (item.layer || 'scenery') === state.activeImageLayer;
+    }
+
     function selectScenery(id) {
         if (state.selectedSceneryId === id) return;
+        if (id) {
+            const item = state.scenery.find(s => s.id === id);
+            if (item && !isActiveImageLayerItem(item)) return;
+        }
         state.selectedSceneryId = id;
         if (id) {
             state.selectedId = null;
@@ -1194,10 +1600,17 @@
         renderLayersPanel();
     }
 
-    function openSceneryModal() {
+    function openSceneryModal(layer = 'scenery') {
         if (!els.sceneryModal) return;
+        const targetLayer = layer === 'npcs' ? 'npcs' : 'scenery';
         els.sceneryName.value = '';
         els.sceneryUrl.value = '';
+        if (els.sceneryLayerTarget) els.sceneryLayerTarget.value = targetLayer;
+        const title = document.getElementById('cbSceneryTitle');
+        if (title) title.textContent = targetLayer === 'npcs' ? 'Adicionar imagem de NPC' : 'Adicionar cenário';
+        if (els.sceneryName) {
+            els.sceneryName.placeholder = targetLayer === 'npcs' ? 'ex.: Guarda, Vendedor, Criatura decorativa' : 'ex.: Tapete, Pedra, Mesa';
+        }
         if (els.sceneryFile) els.sceneryFile.value = '';
         els.sceneryModal.hidden = false;
         setTimeout(() => els.sceneryName?.focus(), 50);
@@ -1207,28 +1620,41 @@
         if (els.sceneryModal) els.sceneryModal.hidden = true;
     }
 
-    function confirmAddScenery() {
+    async function confirmAddScenery() {
         const name = (els.sceneryName.value || 'Cenário').trim() || 'Cenário';
         const url = (els.sceneryUrl.value || '').trim();
         const file = els.sceneryFile?.files?.[0] || null;
+        const layer = els.sceneryLayerTarget?.value === 'npcs' ? 'npcs' : 'scenery';
         if (file) {
-            const reader = new FileReader();
-            reader.addEventListener('load', () => {
-                addSceneryItem(name, String(reader.result || ''));
+            const originalText = els.sceneryConfirm?.textContent || 'Adicionar';
+            if (els.sceneryConfirm) {
+                els.sceneryConfirm.disabled = true;
+                els.sceneryConfirm.textContent = 'Salvando...';
+            }
+            try {
+                const path = await uploadBattleImage(file);
+                addSceneryItem(name, path, layer);
                 closeSceneryModal();
-            });
-            reader.readAsDataURL(file);
+            } catch (error) {
+                alert(error.message || 'Não foi possível salvar a imagem do cenário.');
+            } finally {
+                if (els.sceneryConfirm) {
+                    els.sceneryConfirm.disabled = false;
+                    els.sceneryConfirm.textContent = originalText;
+                }
+            }
             return;
         }
         if (!url) {
             alert('Informe uma URL/caminho ou carregue uma imagem.');
             return;
         }
-        addSceneryItem(name, url);
+        addSceneryItem(name, url, layer);
         closeSceneryModal();
     }
 
-    function addSceneryItem(name, src) {
+    function addSceneryItem(name, src, layer = 'scenery') {
+        const targetLayer = layer === 'npcs' ? 'npcs' : 'scenery';
         const baseW = Math.min(state.cols * CELL_SIZE, 6 * CELL_SIZE);
         const item = normalizeSceneryItem({
             id: 'scn_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36),
@@ -1241,9 +1667,12 @@
             rotation: 0,
             zIndex: nextSceneryZIndex(),
             hidden: false,
-            locked: false
+            locked: false,
+            layer: targetLayer
         });
         state.scenery.push(item);
+        state.activeImageLayer = targetLayer;
+        if (els.imageLayer) els.imageLayer.value = targetLayer;
         state.selectedSceneryId = item.id;
         renderScenery();
         renderLayersPanel();
@@ -1265,8 +1694,9 @@
     }
 
     function nextSceneryZIndex() {
-        if (!state.scenery.length) return 1;
-        return Math.max(...state.scenery.map(s => s.zIndex || 0)) + 1;
+        const items = state.scenery.filter(s => (s.layer || 'scenery') === state.activeImageLayer);
+        if (!items.length) return 1;
+        return Math.max(...items.map(s => s.zIndex || 0)) + 1;
     }
 
     function removeSelectedScenery() {
@@ -1282,7 +1712,9 @@
 
     function moveSceneryLayer(id, delta) {
         // delta: +1 = para frente (topo), -1 = para trás (fundo)
-        const sorted = [...state.scenery].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+        const sorted = [...state.scenery]
+            .filter(item => (item.layer || 'scenery') === state.activeImageLayer)
+            .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
         const idx = sorted.findIndex(s => s.id === id);
         if (idx < 0) return;
         const target = idx + delta;
@@ -1311,6 +1743,21 @@
         const item = state.scenery.find(s => s.id === id);
         if (!item) return;
         item.locked = !item.locked;
+        renderScenery();
+        renderLayersPanel();
+        saveState();
+    }
+
+    function setActiveImageLayer(layer) {
+        const next = layer === 'npcs' ? 'npcs' : 'scenery';
+        state.activeImageLayer = next;
+        if (els.imageLayer) els.imageLayer.value = next;
+        if (state.selectedSceneryId) {
+            const selected = state.scenery.find(s => s.id === state.selectedSceneryId);
+            if (selected && (selected.layer || 'scenery') !== next) {
+                state.selectedSceneryId = null;
+            }
+        }
         renderScenery();
         renderLayersPanel();
         saveState();
@@ -1387,6 +1834,7 @@
         // Bordas e centros de outros cenários
         for (const other of state.scenery) {
             if (other.id === item.id || other.hidden) continue;
+            if ((other.layer || 'scenery') !== (item.layer || 'scenery')) continue;
             candidatesX.push({ pos: other.x, type: 'edge' });
             candidatesX.push({ pos: other.x + other.width, type: 'edge' });
             candidatesX.push({ pos: other.x + other.width / 2, type: 'edge' });
@@ -1459,7 +1907,7 @@
         const origX = item.x;
         const origY = item.y;
         const scale = state.viewport.scale || 1;
-        const el = els.sceneryLayer.querySelector(`[data-scenery-id="${item.id}"]`);
+        const el = getSceneryElement(item.id);
         if (el) el.classList.add('is-dragging');
 
         function onMove(e) {
@@ -1490,62 +1938,49 @@
         window.addEventListener('pointercancel', onUp);
     }
 
-    function startSceneryResize(ev, item) {
+    function startSceneryResize(ev, item, dir = 'se') {
         if (item.locked) return;
         const startX = ev.clientX;
         const startY = ev.clientY;
+        const origX = item.x;
+        const origY = item.y;
         const origW = item.width;
         const origH = item.height;
         const ratio = origW > 0 ? origH / origW : 1;
         const scale = state.viewport.scale || 1;
-        const el = els.sceneryLayer.querySelector(`[data-scenery-id="${item.id}"]`);
+        const el = getSceneryElement(item.id);
 
         function onMove(e) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
             const snapOn = isSnapActive(e);
             const tolerance = GUIDE_TOLERANCE / (scale || 1);
+            const box = resizeSceneryBox({
+                item,
+                dir,
+                origX,
+                origY,
+                origW,
+                origH,
+                ratio,
+                dx,
+                dy,
+                snapOn,
+                tolerance,
+                preserveRatio: !e.shiftKey
+            });
 
-            const guides = [];
-            // Borda direita (target)
-            let desiredRight = item.x + origW + dx;
-            let snappedRight = desiredRight;
-            const xCandidates = collectSceneryEdgeCandidates(item, 'x');
-            const bestRight = nearestCandidate(desiredRight, xCandidates, tolerance);
-            if (bestRight) {
-                snappedRight = bestRight.pos;
-                guides.push({ orient: 'vertical', pos: bestRight.pos, center: bestRight.type === 'center' });
-            } else if (snapOn) {
-                snappedRight = snapValue(desiredRight);
-                guides.push({ orient: 'vertical', pos: snappedRight, center: false });
-            }
-            let newW = Math.max(CELL_SIZE / 2, snappedRight - item.x);
-
-            let newH;
-            if (e.shiftKey) {
-                let desiredBottom = item.y + origH + dy;
-                let snappedBottom = desiredBottom;
-                const yCandidates = collectSceneryEdgeCandidates(item, 'y');
-                const bestBottom = nearestCandidate(desiredBottom, yCandidates, tolerance);
-                if (bestBottom) {
-                    snappedBottom = bestBottom.pos;
-                    guides.push({ orient: 'horizontal', pos: bestBottom.pos, center: bestBottom.type === 'center' });
-                } else if (snapOn) {
-                    snappedBottom = snapValue(desiredBottom);
-                    guides.push({ orient: 'horizontal', pos: snappedBottom, center: false });
-                }
-                newH = Math.max(CELL_SIZE / 2, snappedBottom - item.y);
-            } else {
-                newH = newW * ratio;
-            }
-
-            item.width = newW;
-            item.height = newH;
+            item.x = box.x;
+            item.y = box.y;
+            item.width = box.width;
+            item.height = box.height;
             if (el) {
-                el.style.width = newW + 'px';
-                el.style.height = newH + 'px';
+                el.style.left = item.x + 'px';
+                el.style.top = item.y + 'px';
+                el.style.width = item.width + 'px';
+                el.style.height = item.height + 'px';
             }
-            showGuides(guides);
+            showGuides(box.guides);
         }
         function onUp() {
             window.removeEventListener('pointermove', onMove);
@@ -1560,6 +1995,86 @@
         window.addEventListener('pointercancel', onUp);
     }
 
+    function resizeSceneryBox(opts) {
+        const {
+            item,
+            dir,
+            origX,
+            origY,
+            origW,
+            origH,
+            ratio,
+            dx,
+            dy,
+            snapOn,
+            tolerance,
+            preserveRatio
+        } = opts;
+        const min = CELL_SIZE / 2;
+        const movesW = dir.includes('w');
+        const movesE = dir.includes('e');
+        const movesN = dir.includes('n');
+        const movesS = dir.includes('s');
+        const diagonal = (movesW || movesE) && (movesN || movesS);
+        const guides = [];
+
+        let left = origX;
+        let right = origX + origW;
+        let top = origY;
+        let bottom = origY + origH;
+
+        if (movesW) left = snapSceneryEdge(item, 'x', origX + dx, snapOn, tolerance, guides);
+        if (movesE) right = snapSceneryEdge(item, 'x', origX + origW + dx, snapOn, tolerance, guides);
+        if (movesN) top = snapSceneryEdge(item, 'y', origY + dy, snapOn, tolerance, guides);
+        if (movesS) bottom = snapSceneryEdge(item, 'y', origY + origH + dy, snapOn, tolerance, guides);
+
+        if (right - left < min) {
+            if (movesW) left = right - min;
+            else right = left + min;
+        }
+        if (bottom - top < min) {
+            if (movesN) top = bottom - min;
+            else bottom = top + min;
+        }
+
+        if (preserveRatio && diagonal) {
+            const widthFromPointer = right - left;
+            const heightFromPointer = bottom - top;
+            const useWidth = Math.abs(widthFromPointer - origW) >= Math.abs((heightFromPointer / ratio) - origW);
+            if (useWidth) {
+                const h = Math.max(min, widthFromPointer * ratio);
+                if (movesN) top = bottom - h;
+                else bottom = top + h;
+            } else {
+                const w = Math.max(min, heightFromPointer / ratio);
+                if (movesW) left = right - w;
+                else right = left + w;
+            }
+        }
+
+        return {
+            x: left,
+            y: top,
+            width: Math.max(min, right - left),
+            height: Math.max(min, bottom - top),
+            guides
+        };
+    }
+
+    function snapSceneryEdge(item, axis, desired, snapOn, tolerance, guides) {
+        let value = desired;
+        const candidates = collectSceneryEdgeCandidates(item, axis);
+        const best = nearestCandidate(desired, candidates, tolerance);
+        if (best) {
+            value = best.pos;
+            guides.push({ orient: axis === 'x' ? 'vertical' : 'horizontal', pos: best.pos, center: best.type === 'center' });
+        } else if (snapOn) {
+            value = snapValue(desired);
+            guides.push({ orient: axis === 'x' ? 'vertical' : 'horizontal', pos: value, center: false });
+        }
+        return value;
+    }
+
     function collectSceneryEdgeCandidates(self, axis) {
         const list = [];
         if (axis === 'x') {
@@ -1568,6 +2083,7 @@
             list.push({ pos: state.cols * CELL_SIZE, type: 'edge' });
             for (const other of state.scenery) {
                 if (other.id === self.id || other.hidden) continue;
+                if ((other.layer || 'scenery') !== (self.layer || 'scenery')) continue;
                 list.push({ pos: other.x, type: 'edge' });
                 list.push({ pos: other.x + other.width, type: 'edge' });
                 list.push({ pos: other.x + other.width / 2, type: 'edge' });
@@ -1578,6 +2094,7 @@
             list.push({ pos: state.rows * CELL_SIZE, type: 'edge' });
             for (const other of state.scenery) {
                 if (other.id === self.id || other.hidden) continue;
+                if ((other.layer || 'scenery') !== (self.layer || 'scenery')) continue;
                 list.push({ pos: other.y, type: 'edge' });
                 list.push({ pos: other.y + other.height, type: 'edge' });
                 list.push({ pos: other.y + other.height / 2, type: 'edge' });
@@ -1599,7 +2116,7 @@
 
     function startSceneryRotate(ev, item) {
         if (item.locked) return;
-        const el = els.sceneryLayer.querySelector(`[data-scenery-id="${item.id}"]`);
+        const el = getSceneryElement(item.id);
         if (!el) return;
         const rect = el.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
@@ -1640,11 +2157,15 @@
     function renderLayersPanel() {
         if (!els.layersList || els.layersPanel.hidden) return;
         els.layersList.innerHTML = '';
-        const sorted = [...state.scenery].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0));
+        const sorted = [...state.scenery]
+            .filter(item => (item.layer || 'scenery') === state.activeImageLayer)
+            .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0));
         if (!sorted.length) {
             const empty = document.createElement('li');
             empty.className = 'cb-layer-empty';
-            empty.textContent = 'Nenhum cenário nesta página. Use "+ Cenário" para adicionar.';
+            empty.textContent = state.activeImageLayer === 'npcs'
+                ? 'Nenhuma imagem de NPC nesta página. Use "+ Imagem NPC" para adicionar.'
+                : 'Nenhum cenário nesta página. Use "+ Cenário" para adicionar.';
             els.layersList.appendChild(empty);
             return;
         }
@@ -1677,7 +2198,7 @@
             info.appendChild(nm);
             const meta = document.createElement('div');
             meta.className = 'cb-layer-meta';
-            meta.textContent = `${Math.round(item.width)}×${Math.round(item.height)} • z=${item.zIndex || 0}`;
+            meta.textContent = `${item.layer === 'npcs' ? 'NPCs' : 'Cenário'} • ${Math.round(item.width)}×${Math.round(item.height)} • z=${item.zIndex || 0}`;
             info.appendChild(meta);
             li.appendChild(info);
 
@@ -1714,6 +2235,20 @@
             lockBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSceneryLocked(item.id); });
             actions.appendChild(lockBtn);
 
+            if ((item.layer || 'scenery') === 'npcs') {
+                const cropBtn = document.createElement('button');
+                cropBtn.type = 'button';
+                cropBtn.title = 'Cortar imagem';
+                cropBtn.textContent = 'Cortar';
+                cropBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setActiveImageLayer('npcs');
+                    selectScenery(item.id);
+                    openImageCropModal(item.id);
+                });
+                actions.appendChild(cropBtn);
+            }
+
             const renBtn = document.createElement('button');
             renBtn.type = 'button';
             renBtn.title = 'Renomear';
@@ -1739,6 +2274,143 @@
             frag.appendChild(li);
         });
         els.layersList.appendChild(frag);
+    }
+
+    // ----------------------------------------------------------------
+    // Corte de imagens da camada de NPCs
+    // ----------------------------------------------------------------
+
+    const imageCropState = { itemId: null };
+
+    function openImageCropModal(itemId) {
+        if (!els.imageCropModal) return;
+        const item = state.scenery.find(s => s.id === itemId);
+        if (!item || (item.layer || 'scenery') !== 'npcs') return;
+        imageCropState.itemId = item.id;
+        const crop = normalizeImageCrop(item.crop);
+        els.imageCropZoom.value = String(crop.scale);
+        els.imageCropX.value = String(crop.x);
+        els.imageCropY.value = String(crop.y);
+        els.imageCropPreviewImg.src = item.src;
+        els.imageCropPreviewImg.alt = item.name || 'NPC';
+        els.imageCropPreview.classList.add('has-image');
+        applyImageCropPreview(crop);
+        els.imageCropModal.hidden = false;
+    }
+
+    function closeImageCropModal() {
+        imageCropState.itemId = null;
+        if (els.imageCropModal) els.imageCropModal.hidden = true;
+        if (els.imageCropPreviewImg) els.imageCropPreviewImg.removeAttribute('src');
+        if (els.imageCropPreview) els.imageCropPreview.classList.remove('has-image');
+    }
+
+    function applyImageCropPreview(crop) {
+        if (!els.imageCropPreview) return;
+        const next = normalizeImageCrop(crop);
+        els.imageCropPreview.style.setProperty('--adjust-scale', String(next.scale));
+        els.imageCropPreview.style.setProperty('--adjust-x', `${next.x}%`);
+        els.imageCropPreview.style.setProperty('--adjust-y', `${next.y}%`);
+    }
+
+    function readImageCropForm() {
+        return normalizeImageCrop({
+            scale: els.imageCropZoom?.value,
+            x: els.imageCropX?.value,
+            y: els.imageCropY?.value
+        });
+    }
+
+    function commitImageCropToItem() {
+        const item = state.scenery.find(s => s.id === imageCropState.itemId);
+        if (!item) return;
+        const crop = readImageCropForm();
+        item.crop = crop;
+        const el = getSceneryElement(item.id);
+        if (el) {
+            el.style.setProperty('--scenery-crop-scale', String(crop.scale));
+            el.style.setProperty('--scenery-crop-x', `${crop.x}%`);
+            el.style.setProperty('--scenery-crop-y', `${crop.y}%`);
+        }
+        saveState();
+    }
+
+    function resetImageCropToCenter() {
+        if (!els.imageCropZoom || !els.imageCropX || !els.imageCropY) return;
+        els.imageCropZoom.value = '1';
+        els.imageCropX.value = '0';
+        els.imageCropY.value = '0';
+        applyImageCropPreview({ scale: 1, x: 0, y: 0 });
+        commitImageCropToItem();
+    }
+
+    function bindImageCropPreviewDrag() {
+        if (!els.imageCropPreview) return;
+        const pointers = new Map();
+        let start = null;
+
+        els.imageCropPreview.addEventListener('pointerdown', (event) => {
+            if (!els.imageCropPreview.classList.contains('has-image')) return;
+            if (event.target.closest('button, input, label')) return;
+            event.preventDefault();
+            els.imageCropPreview.setPointerCapture?.(event.pointerId);
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            start = {
+                crop: readImageCropForm(),
+                center: pointerCenter(pointers),
+                distance: pointerDistance(pointers)
+            };
+            els.imageCropPreview.classList.add('is-adjusting');
+        });
+
+        els.imageCropPreview.addEventListener('pointermove', (event) => {
+            if (!start || !pointers.has(event.pointerId)) return;
+            event.preventDefault();
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            const center = pointerCenter(pointers);
+            const rect = els.imageCropPreview.getBoundingClientRect();
+            const dx = ((center.x - start.center.x) / Math.max(1, rect.width)) * 100;
+            const dy = ((center.y - start.center.y) / Math.max(1, rect.height)) * 100;
+            const distance = pointerDistance(pointers);
+            const pinchScale = start.distance && distance ? distance / start.distance : 1;
+            const next = normalizeImageCrop({
+                scale: start.crop.scale * pinchScale,
+                x: start.crop.x + dx,
+                y: start.crop.y + dy
+            });
+            els.imageCropZoom.value = String(next.scale);
+            els.imageCropX.value = String(next.x);
+            els.imageCropY.value = String(next.y);
+            applyImageCropPreview(next);
+            commitImageCropToItem();
+        });
+
+        function finish(event) {
+            pointers.delete(event.pointerId);
+            if (!pointers.size) {
+                start = null;
+                els.imageCropPreview.classList.remove('is-adjusting');
+            } else {
+                start = {
+                    crop: readImageCropForm(),
+                    center: pointerCenter(pointers),
+                    distance: pointerDistance(pointers)
+                };
+            }
+        }
+
+        els.imageCropPreview.addEventListener('pointerup', finish);
+        els.imageCropPreview.addEventListener('pointercancel', finish);
+        els.imageCropPreview.addEventListener('wheel', (event) => {
+            if (!els.imageCropPreview.classList.contains('has-image')) return;
+            event.preventDefault();
+            const current = readImageCropForm();
+            const factor = event.deltaY < 0 ? 1.08 : 1 / 1.08;
+            const next = normalizeImageCrop({ ...current, scale: current.scale * factor });
+            els.imageCropZoom.value = String(next.scale);
+            applyImageCropPreview(next);
+            commitImageCropToItem();
+        }, { passive: false });
     }
 
     // ----------------------------------------------------------------
@@ -1848,6 +2520,92 @@
         const img = tokenEl ? tokenEl.querySelector('.cb-token-circle img') : null;
         if (img) applyTokenImageAdjustment(img, ajuste);
         saveState();
+    }
+
+    async function saveAdjustToSource() {
+        const id = adjustModalState.tokenId;
+        if (!id) return;
+        const token = state.tokens.find(t => t.id === id);
+        if (!token) return;
+        const ajuste = readAdjustForm();
+        commitAdjustToToken();
+
+        if (token.source === 'bestiario' && token.fichaId) {
+            await saveBestiaryTokenAdjust(token, ajuste);
+            return;
+        }
+
+        if (token.fichaId) {
+            await saveFichaTokenAdjust(token, ajuste);
+            return;
+        }
+
+        alert('Este token não está ligado a uma ficha salva ou criatura do bestiário.');
+    }
+
+    async function saveBestiaryTokenAdjust(token, ajuste) {
+        if (!state.bestiarioLoaded) {
+            try {
+                const resp = await fetch('data/bestiario.json', { credentials: 'same-origin', cache: 'no-store' });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    loadBestiaryData(data);
+                    state.bestiarioLoaded = true;
+                }
+            } catch (_) {
+                // Continua com o que estiver em memória/localStorage.
+            }
+        }
+
+        const criatura = state.bestiario.find(c => c.id === token.fichaId);
+        if (!criatura) {
+            alert('Não encontrei a criatura correspondente no bestiário.');
+            return;
+        }
+
+        const src = token.tokenImage || token.tokenImagem || token.imagem || criatura.tokenImagem || criatura.imagem || '';
+        criatura.tokenImagem = src;
+        criatura.tokenImagemAjuste = normalizeAdjust(ajuste);
+        criatura.token = {
+            ...(criatura.token || {}),
+            imagem: src,
+            tokenImagem: src,
+            imagemAjuste: criatura.tokenImagemAjuste,
+            tokenImagemAjuste: criatura.tokenImagemAjuste
+        };
+        token.tokenImageAdjust = criatura.tokenImagemAjuste;
+        token.tokenImageAdjustCustom = false;
+        try {
+            localStorage.setItem(BESTIARIO_STORAGE_KEY, JSON.stringify(state.bestiario));
+            saveState();
+            alert(`Token salvo no bestiário para ${criatura.nome || token.name}.`);
+        } catch (_) {
+            alert('Não foi possível salvar no armazenamento local do navegador.');
+        }
+    }
+
+    async function saveFichaTokenAdjust(token, ajuste) {
+        try {
+            const resp = await fetch('salvar-token-ajuste.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: token.fichaId,
+                    ajuste: normalizeAdjust(ajuste)
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                throw new Error(data.message || 'Falha ao salvar ajuste.');
+            }
+            token.tokenImageAdjust = normalizeAdjust(ajuste);
+            token.tokenImageAdjustCustom = false;
+            saveState();
+            alert(`Token salvo na ficha de ${token.name || 'personagem'}.`);
+        } catch (error) {
+            alert(error.message || 'Não foi possível salvar o token na ficha.');
+        }
     }
 
     function bindAdjustPreviewDrag() {
@@ -1966,6 +2724,10 @@
             pvMax: parseResource(ficha.pv_total ?? ficha.pvMax),
             pmAtual: parseResource(ficha.pm_atuais ?? ficha.pmAtual ?? ficha.pmMax ?? ficha.pm_total),
             pmMax: parseResource(ficha.pm_total ?? ficha.pmMax),
+            iniciativa: ficha.iniciativa_total ?? ficha.iniciativa ?? ficha.iniciativaBonus ?? null,
+            bar1Attribute: 'pv',
+            bar2Attribute: 'pm',
+            bar3Attribute: '',
             defesa: ficha.defesa || null,
             // Atributos para fallback de saves (Reflexos = Des, Fortitude = Con, Vontade = Sab)
             forca: ficha.forca,
@@ -1987,6 +2749,11 @@
             col: 0,
             row: 0,
             sizeCells: sizeCellsFromCategory(ficha.tamanho),
+            widthCells: sizeCellsFromCategory(ficha.tamanho),
+            heightCells: sizeCellsFromCategory(ficha.tamanho),
+            layer: 'tokens',
+            type: ficha.source === 'bestiario' ? 'criatura' : (ficha.id ? 'personagem' : 'generico'),
+            conditions: [],
             rotation: 0
         };
         // tenta achar uma célula vazia
@@ -2036,6 +2803,7 @@
             token.tamanho = fresh.tamanho;
             token.deslocamento = fresh.deslocamento;
             token.nd = fresh.nd;
+            token.iniciativa = fresh.iniciativa ?? criatura.iniciativa ?? token.iniciativa;
             token.bioma = fresh.bioma;
             token.papelTatico = fresh.papelTatico;
             token.defesa = fresh.defesa;
@@ -2115,7 +2883,20 @@
                 token.sabedoria = ficha.sabedoria;
                 token.carisma = ficha.carisma;
                 token.nivel = parseResource(ficha.nivel);
+                token.iniciativa = ficha.iniciativa_total ?? ficha.iniciativa ?? token.iniciativa;
                 if (ficha.defesa_total !== undefined) token.defesa = ficha.defesa_total;
+                const pvMax = parseResource(ficha.pv_total ?? ficha.pvMax);
+                const pmMax = parseResource(ficha.pm_total ?? ficha.pmMax);
+                if (pvMax !== null) token.pvMax = pvMax;
+                if (pmMax !== null) token.pmMax = pmMax;
+                if (token.bar1Attribute === 'pv' || token.pvAtual === null || token.pvAtual === undefined) {
+                    const pvAtual = parseResource(ficha.pv_atuais ?? ficha.pvAtual);
+                    if (pvAtual !== null) token.pvAtual = clamp(pvAtual, 0, token.pvMax || pvAtual);
+                }
+                if (token.bar2Attribute === 'pm' || token.pmAtual === null || token.pmAtual === undefined) {
+                    const pmAtual = parseResource(ficha.pm_atuais ?? ficha.pmAtual);
+                    if (pmAtual !== null) token.pmAtual = clamp(pmAtual, 0, token.pmMax || pmAtual);
+                }
                 synced++;
             } catch (_) {
                 // Mantém o token como está se a ficha não puder ser sincronizada.
@@ -2148,6 +2929,7 @@
             pmAtual: token.pmAtual ?? token.pmAtuais ?? token.pmMax,
             pmMax: token.pmMax,
             defesa: token.defesa,
+            iniciativa: token.iniciativa,
             bioma: token.bioma,
             papelTatico: token.papelTatico,
             ataquesPrincipais: token.ataques || token.ataquesPrincipais || [],
@@ -2182,6 +2964,7 @@
             pmAtual: token.pmAtual ?? token.pmAtuais ?? criatura.pmAtual ?? criatura.pmAtuais ?? criatura.pmMax,
             pmMax: token.pmMax ?? criatura.pmMax,
             defesa: token.defesa ?? criatura.defesa,
+            iniciativa: token.iniciativa ?? criatura.iniciativa,
             deslocamento: token.deslocamento || criatura.deslocamento,
             ataques: token.ataques || token.ataquesPrincipais || criatura.ataques || [],
             ataquesPrincipais: token.ataquesPrincipais || token.ataques || criatura.ataques || [],
@@ -2215,9 +2998,10 @@
         const occupied = new Set();
         for (const token of state.tokens) {
             if (token.id === exceptId) continue;
-            const size = Math.max(1, Number(token.sizeCells || 1));
-            for (let row = token.row; row < token.row + size; row++) {
-                for (let col = token.col; col < token.col + size; col++) {
+            const width = tokenWidthCells(token);
+            const height = tokenHeightCells(token);
+            for (let row = token.row; row < token.row + height; row++) {
+                for (let col = token.col; col < token.col + width; col++) {
                     occupied.add(occupiedKey(col, row));
                 }
             }
@@ -2226,10 +3010,11 @@
     }
 
     function canPlaceTokenAt(token, col, row, occupied) {
-        const size = Math.max(1, Number(token.sizeCells || 1));
-        if (col < 0 || row < 0 || col + size > state.cols || row + size > state.rows) return false;
-        for (let y = row; y < row + size; y++) {
-            for (let x = col; x < col + size; x++) {
+        const width = tokenWidthCells(token);
+        const height = tokenHeightCells(token);
+        if (col < 0 || row < 0 || col + width > state.cols || row + height > state.rows) return false;
+        for (let y = row; y < row + height; y++) {
+            for (let x = col; x < col + width; x++) {
                 if (occupied.has(occupiedKey(x, y))) return false;
             }
         }
@@ -2983,6 +3768,7 @@
         token[currentKey] = clamp(next, 0, max);
         renderTokens();
         selectToken(token.id);
+        addLog({ title: `${isPv ? 'PV' : 'PM'} ajustado`, detail: `${token.name || 'Token'}: ${token[currentKey]}/${max}` });
         saveState();
     }
 
@@ -4262,11 +5048,537 @@
         }
 
         els.result.hidden = false;
+        if (data.actionName || data.message) {
+            addLog({
+                title: data.actionName || 'Resultado',
+                detail: data.target
+                    ? `${data.attacker?.name || 'Atacante'} contra ${data.target.name || 'alvo'}: ${data.totalDamage || 0} de dano`
+                    : (data.message || `Total ${data.totalDamage || 0}`)
+            });
+        }
     }
 
     function closeAttackResultModal() {
         if (!els.result) return;
         els.result.hidden = true;
+    }
+
+    // ----------------------------------------------------------------
+    // Barra lateral, ficha flutuante, editor de token, rolagens e turno
+    // ----------------------------------------------------------------
+
+    function setSidebarTab(tab) {
+        state.activeSidebarTab = tab || 'registro';
+        els.sidebarTabs.forEach(btn => btn.classList.toggle('is-active', btn.dataset.tab === state.activeSidebarTab));
+        els.sidebarPanels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.panel === state.activeSidebarTab));
+        if (state.activeSidebarTab === 'personagens') ensureSidebarFichas();
+        if (state.activeSidebarTab === 'bestiario') ensureSidebarBestiary();
+        if (state.activeSidebarTab === 'tokens') renderSidebarTokens();
+        if (state.activeSidebarTab === 'iniciativa') renderTurnList();
+        saveState();
+    }
+
+    async function ensureSidebarFichas(force = false) {
+        if (!els.sidebarFichas) return;
+        if (state.fichasLoaded && !force) {
+            renderSidebarFichas();
+            return;
+        }
+        els.sidebarFichas.innerHTML = '<p class="cb-sidebar-empty">Carregando fichas...</p>';
+        try {
+            const resp = await fetch('listar-fichas.php', { credentials: 'same-origin', cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            state.fichas = Array.isArray(data) ? data : [];
+            state.fichasLoaded = true;
+            renderSidebarFichas();
+        } catch (_) {
+            els.sidebarFichas.innerHTML = '<p class="cb-sidebar-empty">Não foi possível carregar fichas.</p>';
+        }
+    }
+
+    async function ensureSidebarBestiary(force = false) {
+        if (!els.sidebarBestiary) return;
+        if (state.bestiarioLoaded && !force) {
+            renderSidebarBestiary();
+            return;
+        }
+        els.sidebarBestiary.innerHTML = '<p class="cb-sidebar-empty">Carregando bestiário...</p>';
+        try {
+            const resp = await fetch('data/bestiario.json', { credentials: 'same-origin', cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            loadBestiaryData(data);
+            state.bestiarioLoaded = true;
+            renderSidebarBestiary();
+        } catch (_) {
+            els.sidebarBestiary.innerHTML = '<p class="cb-sidebar-empty">Não foi possível carregar o bestiário.</p>';
+        }
+    }
+
+    function renderSidebarFichas() {
+        if (!els.sidebarFichas) return;
+        const q = normalizeText(els.sidebarFichaSearch?.value || '');
+        const items = state.fichas.filter(f => !q || normalizeText([f.personagem, f.participante, f.classe, f.nivel].filter(Boolean).join(' ')).includes(q));
+        els.sidebarFichas.innerHTML = '';
+        if (!items.length) {
+            els.sidebarFichas.innerHTML = '<p class="cb-sidebar-empty">Nenhuma ficha encontrada.</p>';
+            return;
+        }
+        const frag = document.createDocumentFragment();
+        for (const ficha of items.slice(0, 80)) {
+            frag.appendChild(buildSidebarEntityRow({
+                name: ficha.personagem || 'Sem nome',
+                meta: [ficha.classe, ficha.nivel ? `Nv ${ficha.nivel}` : '', ficha.participante].filter(Boolean).join(' • '),
+                image: ficha.personagem_token_imagem || ficha.personagem_imagem,
+                onOpen: () => openSheetWindow(ficha.id, ficha.personagem || 'Ficha'),
+                onAdd: () => onFichaPicked(ficha)
+            }));
+        }
+        els.sidebarFichas.appendChild(frag);
+    }
+
+    function renderSidebarBestiary() {
+        if (!els.sidebarBestiary) return;
+        const q = normalizeText(els.sidebarBestiarySearch?.value || '');
+        const items = state.bestiario.filter(criatura => {
+            const token = montarTokenCriatura(criatura);
+            const hay = normalizeText([criatura.nome, criatura.nomeAlternativo, token.tipo, token.tamanho, token.bioma, token.papelTatico].filter(Boolean).join(' '));
+            return !q || hay.includes(q);
+        });
+        els.sidebarBestiary.innerHTML = '';
+        if (!items.length) {
+            els.sidebarBestiary.innerHTML = '<p class="cb-sidebar-empty">Nenhuma criatura encontrada.</p>';
+            return;
+        }
+        const frag = document.createDocumentFragment();
+        for (const criatura of items.slice(0, 80)) {
+            const token = montarTokenCriatura(criatura);
+            frag.appendChild(buildSidebarEntityRow({
+                name: criatura.nome || 'Criatura',
+                meta: [`ND ${token.nd ?? '—'}`, token.tipo, token.tamanho].filter(Boolean).join(' • '),
+                image: token.imagem,
+                onOpen: () => openBestiarySheetWindow(criatura),
+                onAdd: () => onBestiaryPicked(criatura)
+            }));
+        }
+        els.sidebarBestiary.appendChild(frag);
+    }
+
+    function buildSidebarEntityRow({ name, meta, image, onOpen, onAdd }) {
+        const row = document.createElement('article');
+        row.className = 'cb-sidebar-row';
+        const thumb = document.createElement('div');
+        thumb.className = 'cb-sidebar-thumb';
+        if (image) {
+            const img = document.createElement('img');
+            img.src = resolveImage(image);
+            img.alt = name;
+            img.loading = 'lazy';
+            img.onerror = () => { img.remove(); thumb.textContent = getTokenInitials(name); };
+            thumb.appendChild(img);
+        } else {
+            thumb.textContent = getTokenInitials(name);
+        }
+        row.appendChild(thumb);
+        const info = document.createElement('button');
+        info.type = 'button';
+        info.className = 'cb-sidebar-row-info';
+        info.innerHTML = `<strong>${escapeHtml(name)}</strong><span>${escapeHtml(meta || '')}</span>`;
+        info.addEventListener('click', onOpen);
+        row.appendChild(info);
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'cb-sidebar-add';
+        add.textContent = 'Adicionar';
+        add.addEventListener('click', onAdd);
+        row.appendChild(add);
+        return row;
+    }
+
+    function renderSidebarTokens() {
+        if (!els.sidebarTokens) return;
+        els.sidebarTokens.innerHTML = '';
+        if (!state.tokens.length) {
+            els.sidebarTokens.innerHTML = '<p class="cb-sidebar-empty">Nenhum token no mapa.</p>';
+            return;
+        }
+        const frag = document.createDocumentFragment();
+        for (const token of state.tokens) {
+            const row = buildSidebarEntityRow({
+                name: token.name || 'Token',
+                meta: [`${tokenWidthCells(token)}x${tokenHeightCells(token)}`, layerLabel(token.layer), resourceSummary(token)].filter(Boolean).join(' • '),
+                image: resolveTokenImageSrc(token),
+                onOpen: () => {
+                    selectToken(token.id);
+                    openLinkedSheetOrEditor(token);
+                },
+                onAdd: () => duplicateToken(token.id)
+            });
+            row.classList.toggle('is-selected', token.id === state.selectedId);
+            frag.appendChild(row);
+        }
+        els.sidebarTokens.appendChild(frag);
+    }
+
+    function renderSelectedTokenTools() {
+        if (!els.selectedTokenTools) return;
+        const token = state.tokens.find(t => t.id === state.selectedId);
+        if (!token) {
+            els.selectedTokenTools.innerHTML = '<p class="cb-sidebar-empty">Selecione um token para ver ações rápidas.</p>';
+            if (els.editSelectedToken) els.editSelectedToken.disabled = true;
+            return;
+        }
+        if (els.editSelectedToken) els.editSelectedToken.disabled = false;
+        els.selectedTokenTools.innerHTML = '';
+        const actions = [
+            ['Abrir ficha', () => openLinkedSheetOrEditor(token)],
+            ['Editar token', () => openTokenEditor(token.id)],
+            ['Duplicar', () => duplicateToken(token.id)],
+            ['Iniciativa', () => addSelectedTokenToTurns()],
+            ['Camada mestre', () => moveTokenToLayer(token.id, 'mestre')],
+            ['Camada tokens', () => moveTokenToLayer(token.id, 'tokens')],
+            ['Remover', () => removeSelectedToken()]
+        ];
+        for (const [label, handler] of actions) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.addEventListener('click', handler);
+            els.selectedTokenTools.appendChild(btn);
+        }
+    }
+
+    function resourceSummary(token) {
+        const parts = [];
+        if (numberOrNull(token.pvMax)) parts.push(`PV ${clampResource(token.pvAtual, token.pvMax)}/${token.pvMax}`);
+        if (numberOrNull(token.pmMax)) parts.push(`PM ${clampResource(token.pmAtual, token.pmMax)}/${token.pmMax}`);
+        return parts.join(' ');
+    }
+
+    function layerLabel(layer) {
+        return ({ mapa: 'Mapa', tokens: 'Tokens', mestre: 'Mestre' })[layer || 'tokens'] || 'Tokens';
+    }
+
+    function duplicateToken(id) {
+        const token = state.tokens.find(t => t.id === id);
+        if (!token) return;
+        const copy = migrateLegacyTokenFields(JSON.parse(JSON.stringify(token)));
+        copy.id = genId();
+        copy.name = `${token.name || 'Token'} cópia`;
+        copy.col = clamp((token.col || 0) + 1, 0, state.cols - tokenWidthCells(copy));
+        copy.row = clamp((token.row || 0) + 1, 0, state.rows - tokenHeightCells(copy));
+        state.tokens.push(copy);
+        state.selectedId = copy.id;
+        renderTokens();
+        saveState();
+    }
+
+    function moveTokenToLayer(id, layer) {
+        const token = state.tokens.find(t => t.id === id);
+        if (!token) return;
+        token.layer = ['mapa', 'tokens', 'mestre'].includes(layer) ? layer : 'tokens';
+        renderTokens();
+        saveState();
+    }
+
+    async function openLinkedSheetOrEditor(token) {
+        if (token.source === 'bestiario') {
+            await ensureSidebarBestiary();
+            const criatura = state.bestiario.find(c => c.id === token.fichaId);
+            if (criatura) {
+                openBestiarySheetWindow(criatura);
+                return;
+            }
+        }
+        if (token.fichaId) {
+            openSheetWindow(token.fichaId, token.name || 'Ficha');
+            return;
+        }
+        openTokenEditor(token.id);
+    }
+
+    function openSheetWindow(id, title) {
+        if (!els.sheetWindow || !id) return;
+        els.sheetWindowTitle.textContent = title || 'Ficha';
+        els.sheetFrame.src = 'ficha.php?id=' + encodeURIComponent(id);
+        els.sheetWindow.hidden = false;
+    }
+
+    function openBestiarySheetWindow(criatura) {
+        if (!els.sheetWindow || !criatura) return;
+        els.sheetWindowTitle.textContent = criatura.nome || 'Criatura';
+        const doc = `
+            <!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+            <link rel="stylesheet" href="assets/css/ficha.css">
+            <link rel="stylesheet" href="assets/css/bestiario.css">
+            <style>body{padding:18px;background:#fff;color:var(--purple-dark);} .mini{display:grid;gap:12px} img{max-width:180px;border-radius:12px;border:3px solid var(--line)} pre{white-space:pre-wrap;font:inherit;line-height:1.45}</style>
+            </head><body><main class="mini">
+            ${criatura.imagem ? `<img src="${escapeHtml(criatura.imagem)}" alt="">` : ''}
+            <h1>${escapeHtml(criatura.nome || 'Criatura')}</h1>
+            <p>${escapeHtml([`ND ${criatura.nd ?? '—'}`, criatura.tipo, criatura.tamanho, criatura.bioma].filter(Boolean).join(' • '))}</p>
+            <pre>${escapeHtml(criatura.fichaCompleta || criatura.descricao || 'Sem ficha completa cadastrada.')}</pre>
+            </main></body></html>`;
+        els.sheetFrame.srcdoc = doc;
+        els.sheetWindow.hidden = false;
+    }
+
+    function closeSheetWindow() {
+        if (!els.sheetWindow) return;
+        els.sheetWindow.hidden = true;
+        els.sheetFrame.removeAttribute('src');
+        els.sheetFrame.removeAttribute('srcdoc');
+    }
+
+    function bindSheetWindowDrag() {
+        if (!els.sheetWindow || !els.sheetWindowHeader) return;
+        let drag = null;
+        els.sheetWindowHeader.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('button')) return;
+            const rect = els.sheetWindow.getBoundingClientRect();
+            drag = {
+                dx: event.clientX - rect.left,
+                dy: event.clientY - rect.top
+            };
+            els.sheetWindowHeader.setPointerCapture?.(event.pointerId);
+        });
+        els.sheetWindowHeader.addEventListener('pointermove', (event) => {
+            if (!drag) return;
+            const width = els.sheetWindow.offsetWidth;
+            const height = els.sheetWindow.offsetHeight;
+            const left = clamp(event.clientX - drag.dx, 8, window.innerWidth - width - 8);
+            const top = clamp(event.clientY - drag.dy, 8, window.innerHeight - height - 8);
+            els.sheetWindow.style.left = `${left}px`;
+            els.sheetWindow.style.top = `${top}px`;
+            els.sheetWindow.style.right = 'auto';
+            els.sheetWindow.style.bottom = 'auto';
+        });
+        const finish = () => { drag = null; };
+        els.sheetWindowHeader.addEventListener('pointerup', finish);
+        els.sheetWindowHeader.addEventListener('pointercancel', finish);
+    }
+
+    async function openTokenEditor(id) {
+        const token = state.tokens.find(t => t.id === id);
+        if (!token || !els.tokenEditorModal) return;
+        state.tokenEditorId = id;
+        await ensureTokenSheetOptions();
+        els.tokenName.value = token.name || '';
+        els.tokenImage.value = resolveTokenImageSrc(token) || '';
+        els.tokenType.value = token.type || inferTokenType(token);
+        els.tokenLayer.value = token.layer || 'tokens';
+        els.tokenSheetLink.value = token.source === 'bestiario' ? `bestiario:${token.fichaId || ''}` : (token.fichaId ? `ficha:${token.fichaId}` : '');
+        els.tokenWidthCells.value = String(tokenWidthCells(token));
+        els.tokenHeightCells.value = String(tokenHeightCells(token));
+        els.tokenPvAtual.value = numberOrNull(token.pvAtual) ?? '';
+        els.tokenPvMax.value = numberOrNull(token.pvMax) ?? '';
+        els.tokenPmAtual.value = numberOrNull(token.pmAtual) ?? '';
+        els.tokenPmMax.value = numberOrNull(token.pmMax) ?? '';
+        els.tokenConditions.value = (token.conditions || []).join(', ');
+        els.tokenEditorModal.hidden = false;
+    }
+
+    async function ensureTokenSheetOptions() {
+        if (!els.tokenSheetLink) return;
+        if (!state.fichasLoaded) await ensureSidebarFichas(true);
+        if (!state.bestiarioLoaded) await ensureSidebarBestiary(true);
+        els.tokenSheetLink.innerHTML = '<option value="">Sem vínculo</option>';
+        for (const ficha of state.fichas) {
+            const opt = document.createElement('option');
+            opt.value = `ficha:${ficha.id}`;
+            opt.textContent = `Ficha: ${ficha.personagem || 'Sem nome'}`;
+            els.tokenSheetLink.appendChild(opt);
+        }
+        for (const criatura of state.bestiario) {
+            const opt = document.createElement('option');
+            opt.value = `bestiario:${criatura.id}`;
+            opt.textContent = `Bestiário: ${criatura.nome || 'Criatura'}`;
+            els.tokenSheetLink.appendChild(opt);
+        }
+    }
+
+    async function saveTokenEditor() {
+        const token = state.tokens.find(t => t.id === state.tokenEditorId);
+        if (!token) return;
+        const link = els.tokenSheetLink.value || '';
+        if (link.startsWith('ficha:') && String(token.fichaId || '') !== link.slice(6)) {
+            const ficha = await buscarFichaCompleta(link.slice(6));
+            if (ficha) {
+                const keep = { id: token.id, col: token.col, row: token.row, rotation: token.rotation };
+                const beforeLen = state.tokens.length;
+                addTokenFromFicha({ ...ficha, id: ficha.id, personagem: ficha.personagem });
+                const fresh = state.tokens.pop();
+                state.tokens.length = beforeLen;
+                Object.assign(token, fresh, keep, { fichaId: ficha.id, source: 'ficha' });
+            }
+        } else if (link.startsWith('bestiario:') && (token.source !== 'bestiario' || String(token.fichaId || '') !== link.slice(10))) {
+            await ensureSidebarBestiary();
+            const criatura = state.bestiario.find(c => c.id === link.slice(10));
+            if (criatura) {
+                const fresh = montarTokenCriatura(criatura);
+                token.fichaId = criatura.id;
+                token.source = 'bestiario';
+                token.name = fresh.nome || token.name;
+                token.tokenImage = resolveImage(fresh.tokenImagem || fresh.imagem);
+                token.fotoImage = token.tokenImage;
+                token.pvAtual = fresh.pvAtual;
+                token.pvMax = fresh.pvMax;
+                token.pmAtual = fresh.pmAtual;
+                token.pmMax = fresh.pmMax;
+                token.defesa = fresh.defesa;
+                token.actions = buildActionsFromBestiaryToken(fresh);
+            }
+        } else if (!link) {
+            token.fichaId = null;
+            token.source = 'manual';
+        }
+        token.name = els.tokenName.value.trim() || token.name || 'Token';
+        token.tokenImage = els.tokenImage.value.trim() || token.tokenImage || null;
+        token.type = els.tokenType.value || token.type || 'generico';
+        token.layer = els.tokenLayer.value || 'tokens';
+        token.widthCells = clamp(Math.round(Number(els.tokenWidthCells.value) || 1), 1, 6);
+        token.heightCells = clamp(Math.round(Number(els.tokenHeightCells.value) || token.widthCells), 1, 6);
+        token.sizeCells = Math.max(token.widthCells, token.heightCells);
+        token.pvAtual = parseResource(els.tokenPvAtual.value);
+        token.pvMax = parseResource(els.tokenPvMax.value);
+        token.pmAtual = parseResource(els.tokenPmAtual.value);
+        token.pmMax = parseResource(els.tokenPmMax.value);
+        token.conditions = els.tokenConditions.value.split(',').map(s => s.trim()).filter(Boolean);
+        state.selectedId = token.id;
+        closeTokenEditor();
+        renderTokens();
+        saveState();
+    }
+
+    function closeTokenEditor() {
+        state.tokenEditorId = null;
+        if (els.tokenEditorModal) els.tokenEditorModal.hidden = true;
+    }
+
+    function rollFormula(formula) {
+        const raw = String(formula || '').trim();
+        const match = raw.match(/^(\d*)d(\d+)(?:\s*([+-])\s*(\d+))?$/i);
+        if (!match) return null;
+        const count = clamp(Number(match[1] || 1), 1, 100);
+        const sides = clamp(Number(match[2]), 2, 1000);
+        const mod = match[3] ? Number(match[4]) * (match[3] === '-' ? -1 : 1) : 0;
+        const rolls = Array.from({ length: count }, () => rollDie(sides));
+        const total = rolls.reduce((sum, value) => sum + value, 0) + mod;
+        return { formula: raw, rolls, mod, total };
+    }
+
+    function addLog(entry) {
+        state.rollLog.unshift({
+            id: 'log_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36),
+            at: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            ...entry
+        });
+        state.rollLog = state.rollLog.slice(0, 80);
+        renderLog();
+        saveState();
+    }
+
+    function renderLog() {
+        if (!els.logList) return;
+        els.logList.innerHTML = '';
+        if (!state.rollLog.length) {
+            els.logList.innerHTML = '<p class="cb-sidebar-empty">As rolagens aparecerão aqui.</p>';
+            return;
+        }
+        const frag = document.createDocumentFragment();
+        for (const item of state.rollLog) {
+            const row = document.createElement('article');
+            row.className = 'cb-log-row';
+            row.innerHTML = `<span>${escapeHtml(item.at || '')}</span><strong>${escapeHtml(item.title || 'Rolagem')}</strong><p>${escapeHtml(item.detail || '')}</p>`;
+            frag.appendChild(row);
+        }
+        els.logList.appendChild(frag);
+    }
+
+    function addSelectedTokenToTurns() {
+        const token = state.tokens.find(t => t.id === state.selectedId);
+        if (!token) return;
+        const bonus = parseSignedNumber(token.iniciativa) ?? 0;
+        const d20 = rollDie(20);
+        const total = d20 + bonus;
+        const existing = state.turns.find(turn => turn.tokenId === token.id);
+        if (existing) {
+            existing.initiative = total;
+        } else {
+            state.turns.push(normalizeTurn({ tokenId: token.id, initiative: total }));
+        }
+        addLog({
+            title: 'Iniciativa',
+            detail: `${token.name || 'Token'}: d20 ${d20}${formatSignedBonus(bonus)} = ${total}`
+        });
+        sortTurns();
+    }
+
+    function renderTurnList() {
+        if (!els.turnList) return;
+        state.currentTurnIndex = Math.min(state.currentTurnIndex, Math.max(0, state.turns.length - 1));
+        els.turnList.innerHTML = '';
+        if (!state.turns.length) {
+            els.turnList.innerHTML = '<p class="cb-sidebar-empty">Adicione tokens para criar a ordem de turno.</p>';
+            return;
+        }
+        const frag = document.createDocumentFragment();
+        state.turns.forEach((turn, idx) => {
+            const token = state.tokens.find(t => t.id === turn.tokenId);
+            const row = document.createElement('article');
+            row.className = 'cb-turn-row' + (idx === state.currentTurnIndex ? ' is-current' : '');
+            row.innerHTML = `<button type="button" class="cb-turn-name">${escapeHtml(token?.name || 'Token removido')}</button>`;
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = String(turn.initiative);
+            input.addEventListener('change', () => {
+                turn.initiative = Number(input.value) || 0;
+                saveState();
+            });
+            row.appendChild(input);
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = 'Remover';
+            remove.addEventListener('click', () => {
+                state.turns.splice(idx, 1);
+                state.currentTurnIndex = Math.min(state.currentTurnIndex, Math.max(0, state.turns.length - 1));
+                renderTurnList();
+                renderTokens();
+                saveState();
+            });
+            row.appendChild(remove);
+            row.querySelector('.cb-turn-name').addEventListener('click', () => {
+                if (token) selectToken(token.id);
+            });
+            frag.appendChild(row);
+        });
+        els.turnList.appendChild(frag);
+    }
+
+    function sortTurns() {
+        state.turns.sort((a, b) => (Number(b.initiative) || 0) - (Number(a.initiative) || 0));
+        state.currentTurnIndex = 0;
+        renderTurnList();
+        renderTokens();
+        saveState();
+    }
+
+    function nextTurn() {
+        if (!state.turns.length) return;
+        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turns.length;
+        renderTurnList();
+        renderTokens();
+        saveState();
+    }
+
+    function isCurrentTurnToken(tokenId) {
+        const turn = state.turns[state.currentTurnIndex];
+        return !!turn && turn.tokenId === tokenId;
+    }
+
+    function parseSignedNumber(value) {
+        const match = String(value ?? '').match(/[+-]?\d+/);
+        return match ? Number(match[0]) : null;
     }
 
     function normalizeText(value) {
@@ -4379,6 +5691,16 @@
             e.stopPropagation();
             adjustTokenResource(tokenEl.dataset.tokenId, resourceBar.dataset.resource);
         });
+        els.tokensLayer.addEventListener('dblclick', (e) => {
+            const tokenEl = e.target.closest('.cb-token');
+            if (!tokenEl) return;
+            const token = state.tokens.find(t => t.id === tokenEl.dataset.tokenId);
+            if (!token) return;
+            e.preventDefault();
+            e.stopPropagation();
+            selectToken(token.id);
+            openLinkedSheetOrEditor(token);
+        });
 
         els.addToken.addEventListener('click', openModal);
         els.addBestiaryToken.addEventListener('click', openBestiaryModal);
@@ -4424,7 +5746,13 @@
         if (els.adjustToken) els.adjustToken.addEventListener('click', openAdjustModalForSelected);
         els.clearAll.addEventListener('click', clearAllTokens);
 
-        if (els.addScenery) els.addScenery.addEventListener('click', openSceneryModal);
+        if (els.addScenery) els.addScenery.addEventListener('click', () => openSceneryModal('scenery'));
+        if (els.addNpcImage) els.addNpcImage.addEventListener('click', () => openSceneryModal('npcs'));
+        if (els.saveBattle) els.saveBattle.addEventListener('click', confirmSaveBattle);
+        if (els.imageLayer) {
+            els.imageLayer.value = state.activeImageLayer;
+            els.imageLayer.addEventListener('change', (event) => setActiveImageLayer(event.target.value));
+        }
         if (els.toggleLayers) els.toggleLayers.addEventListener('click', toggleLayersPanel);
         if (els.layersClose) els.layersClose.addEventListener('click', toggleLayersPanel);
         if (els.addPage) els.addPage.addEventListener('click', addPage);
@@ -4460,7 +5788,117 @@
         });
         if (els.adjustReset) els.adjustReset.addEventListener('click', resetAdjustToCenter);
         if (els.adjustUseBestiario) els.adjustUseBestiario.addEventListener('click', loadBestiaryAdjustIntoModal);
+        if (els.adjustSaveSource) els.adjustSaveSource.addEventListener('click', saveAdjustToSource);
         bindAdjustPreviewDrag();
+
+        if (els.imageCropClose) els.imageCropClose.addEventListener('click', closeImageCropModal);
+        if (els.imageCropModal) {
+            els.imageCropModal.addEventListener('click', (event) => {
+                if (event.target === els.imageCropModal) closeImageCropModal();
+            });
+        }
+        [els.imageCropZoom, els.imageCropX, els.imageCropY].filter(Boolean).forEach((input) => {
+            input.addEventListener('input', () => {
+                const crop = readImageCropForm();
+                applyImageCropPreview(crop);
+                commitImageCropToItem();
+            });
+        });
+        if (els.imageCropReset) els.imageCropReset.addEventListener('click', resetImageCropToCenter);
+        bindImageCropPreviewDrag();
+
+        els.sidebarTabs.forEach(btn => {
+            btn.addEventListener('click', () => setSidebarTab(btn.dataset.tab));
+        });
+        if (els.refreshFichas) els.refreshFichas.addEventListener('click', () => ensureSidebarFichas(true));
+        if (els.sidebarFichaSearch) els.sidebarFichaSearch.addEventListener('input', renderSidebarFichas);
+        if (els.refreshBestiary) els.refreshBestiary.addEventListener('click', () => ensureSidebarBestiary(true));
+        if (els.sidebarBestiarySearch) els.sidebarBestiarySearch.addEventListener('input', renderSidebarBestiary);
+        if (els.editSelectedToken) els.editSelectedToken.addEventListener('click', () => {
+            if (state.selectedId) openTokenEditor(state.selectedId);
+        });
+        if (els.clearLog) els.clearLog.addEventListener('click', () => {
+            state.rollLog = [];
+            renderLog();
+            saveState();
+        });
+        if (els.diceForm) {
+            els.diceForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const result = rollFormula(els.diceFormula.value);
+                if (!result) {
+                    addLog({ title: 'Rolagem inválida', detail: 'Use uma fórmula como 1d20+4 ou 2d6-1.' });
+                    return;
+                }
+                addLog({
+                    title: result.formula,
+                    detail: `Rolagens ${result.rolls.join(', ')}${formatSignedBonus(result.mod)} = ${result.total}`
+                });
+            });
+        }
+        if (els.addTurnSelected) els.addTurnSelected.addEventListener('click', addSelectedTokenToTurns);
+        if (els.sortTurns) els.sortTurns.addEventListener('click', sortTurns);
+        if (els.nextTurn) els.nextTurn.addEventListener('click', nextTurn);
+        if (els.tokenEditorClose) els.tokenEditorClose.addEventListener('click', closeTokenEditor);
+        if (els.tokenEditorCancel) els.tokenEditorCancel.addEventListener('click', closeTokenEditor);
+        if (els.tokenEditorSave) els.tokenEditorSave.addEventListener('click', saveTokenEditor);
+        if (els.tokenEditorModal) {
+            els.tokenEditorModal.addEventListener('click', (event) => {
+                if (event.target === els.tokenEditorModal) closeTokenEditor();
+            });
+        }
+        if (els.sheetWindowClose) els.sheetWindowClose.addEventListener('click', closeSheetWindow);
+        bindSheetWindowDrag();
+        if (els.mapImage) {
+            els.mapImage.addEventListener('change', () => {
+                state.mapBackground = els.mapImage.value.trim();
+                renderBoard();
+                saveState();
+            });
+        }
+        if (els.mapFile) {
+            els.mapFile.addEventListener('change', async () => {
+                const file = els.mapFile.files?.[0];
+                if (!file) return;
+                setSaveStatus('Enviando imagem...', '');
+                try {
+                    state.mapBackground = await uploadBattleImage(file);
+                    if (els.mapImage) els.mapImage.value = state.mapBackground;
+                    renderBoard();
+                    saveState();
+                    setSaveStatus('Imagem salva.', 'ok');
+                } catch (error) {
+                    setSaveStatus('Falha no upload.', 'error');
+                    alert(error.message || 'Não foi possível salvar a imagem de fundo.');
+                }
+            });
+        }
+        if (els.gridOpacity) {
+            els.gridOpacity.addEventListener('input', () => {
+                state.gridOpacity = clamp(Number(els.gridOpacity.value) || 0.45, 0.05, 1);
+                renderBoard();
+                saveState();
+            });
+        }
+        if (els.gridSize) {
+            els.gridSize.addEventListener('change', () => {
+                CELL_SIZE = clamp(Math.round(Number(els.gridSize.value) || CELL_SIZE), 36, 96);
+                renderBoard();
+                renderTokens();
+                renderScenery();
+                centerBoard();
+                saveState();
+            });
+        }
+        if (els.clearMapImage) {
+            els.clearMapImage.addEventListener('click', () => {
+                state.mapBackground = '';
+                if (els.mapImage) els.mapImage.value = '';
+                if (els.mapFile) els.mapFile.value = '';
+                renderBoard();
+                saveState();
+            });
+        }
 
         els.zoomIn.addEventListener('click', () => { setScale(state.viewport.scale * 1.2); saveState(); });
         els.zoomOut.addEventListener('click', () => { setScale(state.viewport.scale / 1.2); saveState(); });
@@ -4505,6 +5943,9 @@
                 }
             } else if (e.key === 'Escape') {
                 if (els.sceneryModal && !els.sceneryModal.hidden) closeSceneryModal();
+                else if (els.tokenEditorModal && !els.tokenEditorModal.hidden) closeTokenEditor();
+                else if (els.sheetWindow && !els.sheetWindow.hidden) closeSheetWindow();
+                else if (els.imageCropModal && !els.imageCropModal.hidden) closeImageCropModal();
                 else if (els.adjustModal && !els.adjustModal.hidden) closeAdjustModal();
                 else if (els.confirm && !els.confirm.hidden) closeAttackConfirmation();
                 else if (state.reachPreview) clearReachPreview(true);
@@ -4523,23 +5964,38 @@
             syncFichaTokensFromServer();
             syncBestiaryTokensFromLocal();
         });
+        window.addEventListener('beforeunload', () => {
+            try {
+                pendingServerSave = makeStateSnapshot();
+                flushServerSave(true);
+            } catch (_) {
+                flushServerSave(true);
+            }
+        });
     }
 
     // ----------------------------------------------------------------
     // Bootstrap
     // ----------------------------------------------------------------
 
-    function init() {
-        loadState();
+    async function init() {
+        await loadState();
         window.__cbState = state;
         els.cols.value = state.cols;
         els.rows.value = state.rows;
         els.toggleNumbers.checked = state.showNumbers;
+        if (els.mapImage) els.mapImage.value = state.mapBackground || '';
+        if (els.gridOpacity) els.gridOpacity.value = String(state.gridOpacity);
+        if (els.gridSize) els.gridSize.value = String(CELL_SIZE);
         if (els.snapToGrid) els.snapToGrid.checked = !!state.snapToGrid;
+        if (els.imageLayer) els.imageLayer.value = state.activeImageLayer;
         renderPagesBar();
         renderBoard();
         renderScenery();
         renderTokens();
+        renderLog();
+        renderTurnList();
+        setSidebarTab(state.activeSidebarTab || 'registro');
         consumePendingBestiaryToken();
         syncFichaTokensFromServer();
         syncBestiaryTokensFromLocal();

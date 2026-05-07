@@ -34,6 +34,7 @@
         tokenCarregar: document.getElementById('criaturaTokenCarregar'),
         tokenUsarFicha: document.getElementById('criaturaTokenUsarFicha'),
         tokenResetar: document.getElementById('criaturaTokenResetar'),
+        tokenSalvar: document.getElementById('criaturaTokenSalvar'),
         tokenRemover: document.getElementById('criaturaTokenRemover'),
         tokenZoom: document.getElementById('criaturaTokenZoom'),
         tokenFocoX: document.getElementById('criaturaTokenFocoX'),
@@ -784,6 +785,35 @@
         setTokenAdjustment(defaultTokenAdjustment());
     }
 
+    function salvarTokenAtualNoBestiario() {
+        const criatura = lerForm();
+        if (!criatura.nome) {
+            alert('Informe o nome da criatura antes de salvar o token.');
+            return;
+        }
+        const indice = criaturas.findIndex((item) => item.id === criatura.id);
+        if (indice >= 0) {
+            const anterior = criaturas[indice];
+            criaturas[indice] = {
+                ...anterior,
+                tokenImagem: criatura.tokenImagem,
+                tokenImagemAjuste: criatura.tokenImagemAjuste,
+                token: {
+                    ...(anterior.token || {}),
+                    imagem: criatura.tokenImagem,
+                    tokenImagem: criatura.tokenImagem,
+                    imagemAjuste: criatura.tokenImagemAjuste,
+                    tokenImagemAjuste: criatura.tokenImagemAjuste
+                }
+            };
+        } else {
+            criaturas.push(criatura);
+        }
+        salvarCriaturas();
+        renderizar();
+        alert(`Token salvo para ${criatura.nome}.`);
+    }
+
     function bindTokenPreviewDrag() {
         if (!els.tokenPreview) return;
         const pointers = new Map();
@@ -973,6 +1003,10 @@
 
     if (els.tokenResetar) {
         els.tokenResetar.addEventListener('click', resetarTokenAdjustment);
+    }
+
+    if (els.tokenSalvar) {
+        els.tokenSalvar.addEventListener('click', salvarTokenAtualNoBestiario);
     }
 
     if (els.tokenRemover) {

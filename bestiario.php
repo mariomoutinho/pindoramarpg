@@ -20,7 +20,7 @@ function bestiarioOptions(array $valores): string
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/classes.css?v=20260503j" />
-    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505g" />
+    <link rel="stylesheet" href="assets/css/bestiario.css?v=20260505h" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
@@ -138,6 +138,7 @@ function bestiarioOptions(array $valores): string
                                         <button type="button" id="criaturaTokenCarregar">Carregar imagem</button>
                                         <button type="button" id="criaturaTokenUsarFicha">Usar imagem da ficha</button>
                                         <button type="button" id="criaturaTokenResetar">Centralizar</button>
+                                        <button type="button" id="criaturaTokenSalvar">Salvar token</button>
                                         <button type="button" id="criaturaTokenRemover">Remover token</button>
                                     </div>
                                     <div class="criatura-token-sliders">
@@ -221,6 +222,6 @@ function bestiarioOptions(array $valores): string
     <script>
         window.BESTIARIO_BASE = <?= json_encode($dadosBestiario, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     </script>
-    <script src="assets/js/bestiario.js?v=20260505h"></script>
+    <script src="assets/js/bestiario.js?v=20260505i"></script>
 </body>
 </html>

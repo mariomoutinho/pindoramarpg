@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260505r" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260505w" />
 </head>
 <body class="cb-body">
     <script src="assets/js/transitions.js?v=20260503d"></script>
@@ -40,7 +40,10 @@
                 <button type="button" id="cbRotateToken" disabled>Girar 90°</button>
                 <button type="button" id="cbAdjustToken" disabled>Ajustar token</button>
                 <button type="button" id="cbAddScenery">+ Cenário</button>
+                <button type="button" id="cbAddNpcImage">+ Imagem NPC</button>
                 <button type="button" id="cbToggleLayers">Camadas</button>
+                <button type="button" id="cbSaveBattle" class="cb-save-button">Salvar campo</button>
+                <span id="cbSaveStatus" class="cb-save-status" aria-live="polite"></span>
                 <button type="button" id="cbClearAll">Limpar campo</button>
             </div>
 
@@ -58,7 +61,14 @@
                 </label>
                 <label class="cb-toggle" title="Quando ativado, o cenário se alinha aos quadrados do grid ao mover/redimensionar.">
                     <input type="checkbox" id="cbSnapToGrid" />
-                    <span>Magnetizar cenário</span>
+                    <span>Magnetizar imagens</span>
+                </label>
+                <label class="cb-layer-select">
+                    Camada
+                    <select id="cbImageLayer">
+                        <option value="scenery">Cenário</option>
+                        <option value="npcs">NPCs</option>
+                    </select>
                 </label>
             </div>
 
@@ -80,20 +90,107 @@
             <button type="button" id="cbAddPage" class="cb-pages-add" title="Nova página">+</button>
         </section>
 
-        <section class="cb-stage" id="cbStage">
-            <div class="cb-viewport" id="cbViewport">
-                <div class="cb-scenery-layer" id="cbSceneryLayer"></div>
-                <div class="cb-board" id="cbBoard"></div>
-                <div class="cb-guides-layer" id="cbGuidesLayer"></div>
-                <div class="cb-tokens-layer" id="cbTokensLayer"></div>
-            </div>
-            <div class="cb-help" id="cbHelp">
-                <strong>Controles:</strong>
-                <span>Cada quadrado representa 1,5m × 1,5m</span>
-                <span>Arraste o tabuleiro com 1 dedo / botão direito do mouse</span>
-                <span>Pinch ou roda do mouse para zoom</span>
-                <span>Toque/clique no token para selecionar</span>
-            </div>
+        <section class="cb-battle-shell">
+            <section class="cb-stage" id="cbStage">
+                <div class="cb-viewport" id="cbViewport">
+                    <div class="cb-map-background" id="cbMapBackground"></div>
+                    <div class="cb-scenery-layer" id="cbSceneryLayer"></div>
+                    <div class="cb-board" id="cbBoard"></div>
+                    <div class="cb-npc-layer" id="cbNpcLayer"></div>
+                    <div class="cb-guides-layer" id="cbGuidesLayer"></div>
+                    <div class="cb-tokens-layer" id="cbTokensLayer"></div>
+                </div>
+                <div class="cb-help" id="cbHelp">
+                    <strong>Controles:</strong>
+                    <span>Cada quadrado representa 1,5m × 1,5m</span>
+                    <span>Arraste o tabuleiro pelo vazio; tokens e imagens têm seleção própria</span>
+                    <span>Pinch ou roda do mouse para zoom</span>
+                    <span>Duplo clique no token abre a ficha vinculada</span>
+                </div>
+            </section>
+
+            <aside class="cb-sidebar" aria-label="Painel do campo de batalha">
+                <div class="cb-sidebar-tabs" role="tablist" aria-label="Seções">
+                    <button type="button" class="is-active" data-tab="registro">Registro</button>
+                    <button type="button" data-tab="personagens">Personagens</button>
+                    <button type="button" data-tab="bestiario">Bestiário</button>
+                    <button type="button" data-tab="tokens">Tokens</button>
+                    <button type="button" data-tab="iniciativa">Iniciativa</button>
+                    <button type="button" data-tab="cena">Cena</button>
+                </div>
+
+                <div class="cb-sidebar-panel is-active" data-panel="registro">
+                    <header class="cb-sidebar-header">
+                        <h2>Registro</h2>
+                        <button type="button" id="cbClearLog">Limpar</button>
+                    </header>
+                    <form class="cb-dice-roller" id="cbDiceForm">
+                        <input id="cbDiceFormula" type="text" value="1d20" aria-label="Fórmula de rolagem" />
+                        <button type="submit">Rolar</button>
+                    </form>
+                    <div class="cb-log-list" id="cbLogList"></div>
+                </div>
+
+                <div class="cb-sidebar-panel" data-panel="personagens">
+                    <header class="cb-sidebar-header">
+                        <h2>Personagens</h2>
+                        <button type="button" id="cbRefreshFichas">Atualizar</button>
+                    </header>
+                    <input class="cb-sidebar-search" id="cbSidebarFichaSearch" type="search" placeholder="Buscar ficha" />
+                    <div class="cb-sidebar-list" id="cbSidebarFichas"></div>
+                </div>
+
+                <div class="cb-sidebar-panel" data-panel="bestiario">
+                    <header class="cb-sidebar-header">
+                        <h2>Bestiário</h2>
+                        <button type="button" id="cbRefreshBestiary">Atualizar</button>
+                    </header>
+                    <input class="cb-sidebar-search" id="cbSidebarBestiarySearch" type="search" placeholder="Buscar criatura" />
+                    <div class="cb-sidebar-list" id="cbSidebarBestiary"></div>
+                </div>
+
+                <div class="cb-sidebar-panel" data-panel="tokens">
+                    <header class="cb-sidebar-header">
+                        <h2>Tokens</h2>
+                        <button type="button" id="cbEditSelectedToken">Editar seleção</button>
+                    </header>
+                    <div class="cb-token-tools" id="cbSelectedTokenTools"></div>
+                    <div class="cb-sidebar-list" id="cbSidebarTokens"></div>
+                </div>
+
+                <div class="cb-sidebar-panel" data-panel="iniciativa">
+                    <header class="cb-sidebar-header">
+                        <h2>Iniciativa</h2>
+                        <button type="button" id="cbNextTurn">Próximo</button>
+                    </header>
+                    <div class="cb-initiative-actions">
+                        <button type="button" id="cbAddTurnSelected">Rolar seleção</button>
+                        <button type="button" id="cbSortTurns">Ordenar</button>
+                    </div>
+                    <div class="cb-turn-list" id="cbTurnList"></div>
+                </div>
+
+                <div class="cb-sidebar-panel" data-panel="cena">
+                    <header class="cb-sidebar-header">
+                        <h2>Cena</h2>
+                    </header>
+                    <div class="cb-scene-settings">
+                        <label>Imagem de fundo
+                            <input id="cbMapImage" type="text" placeholder="URL, caminho ou data:image" />
+                        </label>
+                        <label>Carregar mapa
+                            <input id="cbMapFile" type="file" accept="image/*" />
+                        </label>
+                        <label>Opacidade do grid
+                            <input id="cbGridOpacity" type="range" min="0.05" max="1" step="0.05" value="0.45" />
+                        </label>
+                        <label>Tamanho visual do grid
+                            <input id="cbGridSize" type="number" min="36" max="96" value="56" />
+                        </label>
+                        <button type="button" id="cbClearMapImage">Remover fundo</button>
+                    </div>
+                </div>
+            </aside>
         </section>
 
         <aside class="cb-layers-panel" id="cbLayersPanel" hidden>
@@ -112,6 +209,7 @@
                     <button type="button" id="cbSceneryClose" aria-label="Fechar">×</button>
                 </header>
                 <div class="cb-scenery-body">
+                    <input id="cbSceneryLayerTarget" type="hidden" value="scenery" />
                     <label class="cb-scenery-field">
                         Nome
                         <input id="cbSceneryName" type="text" placeholder="ex.: Tapete, Pedra, Mesa" />
@@ -170,6 +268,106 @@
 
         <div class="cb-tooltip" id="cbTooltip" hidden></div>
 
+        <div class="cb-modal-backdrop" id="cbTokenEditorModal" hidden>
+            <div class="cb-modal cb-token-editor-modal" role="dialog" aria-modal="true" aria-labelledby="cbTokenEditorTitle">
+                <header class="cb-modal-header">
+                    <h2 id="cbTokenEditorTitle">Editar token</h2>
+                    <button type="button" id="cbTokenEditorClose" aria-label="Fechar">×</button>
+                </header>
+                <div class="cb-token-editor-body">
+                    <label>Nome
+                        <input id="cbTokenName" type="text" />
+                    </label>
+                    <label>Imagem
+                        <input id="cbTokenImage" type="text" placeholder="URL ou caminho da imagem" />
+                    </label>
+                    <label>Tipo
+                        <select id="cbTokenType">
+                            <option value="personagem">Personagem</option>
+                            <option value="npc">NPC</option>
+                            <option value="criatura">Criatura</option>
+                            <option value="objeto">Objeto</option>
+                            <option value="generico">Genérico</option>
+                        </select>
+                    </label>
+                    <label>Representa ficha
+                        <select id="cbTokenSheetLink"></select>
+                    </label>
+                    <label>Camada
+                        <select id="cbTokenLayer">
+                            <option value="tokens">Objetos/tokens</option>
+                            <option value="mapa">Mapa/fundo</option>
+                            <option value="mestre">Mestre</option>
+                        </select>
+                    </label>
+                    <div class="cb-editor-grid">
+                        <label>Largura
+                            <input id="cbTokenWidthCells" type="number" min="1" max="6" />
+                        </label>
+                        <label>Altura
+                            <input id="cbTokenHeightCells" type="number" min="1" max="6" />
+                        </label>
+                    </div>
+                    <div class="cb-editor-grid">
+                        <label>PV atual
+                            <input id="cbTokenPvAtual" type="number" min="0" />
+                        </label>
+                        <label>PV máximo
+                            <input id="cbTokenPvMax" type="number" min="0" />
+                        </label>
+                    </div>
+                    <div class="cb-editor-grid">
+                        <label>PM atual
+                            <input id="cbTokenPmAtual" type="number" min="0" />
+                        </label>
+                        <label>PM máximo
+                            <input id="cbTokenPmMax" type="number" min="0" />
+                        </label>
+                    </div>
+                    <label>Condições
+                        <input id="cbTokenConditions" type="text" placeholder="caído, envenenado, sangrando" />
+                    </label>
+                </div>
+                <footer class="cb-modal-footer">
+                    <button type="button" id="cbTokenEditorCancel">Cancelar</button>
+                    <button type="button" id="cbTokenEditorSave" class="cb-primary">Salvar token</button>
+                </footer>
+            </div>
+        </div>
+
+        <div class="cb-sheet-window" id="cbSheetWindow" hidden>
+            <header class="cb-sheet-window-header" id="cbSheetWindowHeader">
+                <h2 id="cbSheetWindowTitle">Ficha</h2>
+                <button type="button" id="cbSheetWindowClose" aria-label="Fechar ficha">×</button>
+            </header>
+            <iframe id="cbSheetFrame" title="Ficha vinculada"></iframe>
+        </div>
+
+        <div class="cb-modal-backdrop" id="cbImageCropModal" hidden>
+            <div class="cb-modal cb-adjust-modal" role="dialog" aria-modal="true" aria-labelledby="cbImageCropTitle">
+                <header class="cb-modal-header">
+                    <h2 id="cbImageCropTitle">Cortar imagem</h2>
+                    <button type="button" id="cbImageCropClose" aria-label="Fechar">×</button>
+                </header>
+                <div class="cb-adjust-body">
+                    <div class="cb-adjust-preview" id="cbImageCropPreview" aria-label="Prévia do corte">
+                        <div class="cb-adjust-frame">
+                            <img id="cbImageCropPreviewImg" src="" alt="" />
+                            <span>Sem imagem</span>
+                        </div>
+                    </div>
+                    <div class="cb-adjust-fields">
+                        <label>Zoom <input id="cbImageCropZoom" type="range" min="0.2" max="6" step="0.05" value="1" /></label>
+                        <label>Foco horizontal <input id="cbImageCropX" type="range" min="-220" max="220" step="1" value="0" /></label>
+                        <label>Foco vertical <input id="cbImageCropY" type="range" min="-220" max="220" step="1" value="0" /></label>
+                        <div class="cb-adjust-actions">
+                            <button type="button" id="cbImageCropReset">Centralizar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="cb-modal-backdrop" id="cbAdjustModal" hidden>
             <div class="cb-modal cb-adjust-modal" role="dialog" aria-modal="true" aria-labelledby="cbAdjustTitle">
                 <header class="cb-modal-header">
@@ -190,6 +388,7 @@
                         <div class="cb-adjust-actions">
                             <button type="button" id="cbAdjustReset">Centralizar</button>
                             <button type="button" id="cbAdjustUseBestiario">Usar ajuste do bestiário</button>
+                            <button type="button" id="cbAdjustSaveSource" class="cb-primary">Salvar na origem</button>
                         </div>
                     </div>
                 </div>
@@ -243,6 +442,6 @@
 
     </main>
 
-    <script src="assets/js/campo-batalha.js?v=20260505v"></script>
+    <script src="assets/js/campo-batalha.js?v=20260505ab"></script>
 </body>
 </html>
