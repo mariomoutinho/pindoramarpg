@@ -175,6 +175,25 @@
                         <h2>Cena</h2>
                     </header>
                     <div class="cb-scene-settings">
+                        <label>Tipo de cena
+                            <select id="cbSceneType">
+                                <option value="">— não especificado —</option>
+                                <option value="combate">Combate</option>
+                                <option value="cidade">Cidade</option>
+                                <option value="taverna">Taverna</option>
+                                <option value="estalagem">Estalagem</option>
+                                <option value="castelo">Castelo</option>
+                                <option value="cripta">Cripta</option>
+                                <option value="aldeia">Aldeia</option>
+                                <option value="floresta">Floresta</option>
+                                <option value="masmorra">Masmorra</option>
+                                <option value="mapa-narrativo">Mapa narrativo</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </label>
+                        <label>Notas do narrador
+                            <textarea id="cbSceneNotes" rows="4" placeholder="Escala, regras especiais, observações de terreno..."></textarea>
+                        </label>
                         <label>Imagem de fundo
                             <input id="cbMapImage" type="text" placeholder="URL, caminho ou data:image" />
                         </label>
@@ -443,6 +462,6 @@
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260505ab"></script>
+    <script src="assets/js/campo-batalha.js?v=20260507ac"></script>
 </body>
 </html>

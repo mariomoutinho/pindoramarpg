@@ -54,6 +54,8 @@
         rollLog: [],
         turns: [],
         currentTurnIndex: 0,
+        tipo: '',                  // tipo da cena ativa: combate/cidade/taverna/...
+        notasNarrador: '',         // anotações livres do narrador para a cena ativa
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
         bestiario: [],             // cache da lista de criaturas do bestiário
@@ -188,6 +190,8 @@
         gridOpacity: document.getElementById('cbGridOpacity'),
         gridSize: document.getElementById('cbGridSize'),
         clearMapImage: document.getElementById('cbClearMapImage'),
+        sceneType: document.getElementById('cbSceneType'),
+        sceneNotes: document.getElementById('cbSceneNotes'),
         tokenEditorModal: document.getElementById('cbTokenEditorModal'),
         tokenEditorClose: document.getElementById('cbTokenEditorClose'),
         tokenEditorCancel: document.getElementById('cbTokenEditorCancel'),
@@ -502,7 +506,9 @@
             mapBackground: '',
             rollLog: [],
             turns: [],
-            currentTurnIndex: 0
+            currentTurnIndex: 0,
+            tipo: '',
+            notasNarrador: ''
         });
     }
 
@@ -523,7 +529,9 @@
             mapBackground: page.mapBackground || '',
             rollLog: Array.isArray(page.rollLog) ? page.rollLog.slice(0, 80) : [],
             turns: Array.isArray(page.turns) ? page.turns.map(normalizeTurn).filter(Boolean) : [],
-            currentTurnIndex: Math.max(0, Number(page.currentTurnIndex) || 0)
+            currentTurnIndex: Math.max(0, Number(page.currentTurnIndex) || 0),
+            tipo: typeof page.tipo === 'string' ? page.tipo : '',
+            notasNarrador: typeof page.notasNarrador === 'string' ? page.notasNarrador : ''
         };
     }
 
@@ -579,6 +587,8 @@
         page.rollLog = state.rollLog;
         page.turns = state.turns;
         page.currentTurnIndex = state.currentTurnIndex;
+        page.tipo = state.tipo || '';
+        page.notasNarrador = state.notasNarrador || '';
     }
 
     function loadPageIntoLive(page) {
@@ -594,6 +604,8 @@
         state.rollLog = page.rollLog || [];
         state.turns = page.turns || [];
         state.currentTurnIndex = Math.min(page.currentTurnIndex || 0, Math.max(0, state.turns.length - 1));
+        state.tipo = typeof page.tipo === 'string' ? page.tipo : '';
+        state.notasNarrador = typeof page.notasNarrador === 'string' ? page.notasNarrador : '';
         state.selectedId = null;
         state.selectedSceneryId = null;
     }
@@ -1452,12 +1464,18 @@
         if (els.mapImage) els.mapImage.value = state.mapBackground || '';
         if (els.gridOpacity) els.gridOpacity.value = String(state.gridOpacity);
         if (els.gridSize) els.gridSize.value = String(CELL_SIZE);
+        refreshSceneFieldsUI();
         updateActionButtons();
         renderPagesBar();
         renderLayersPanel();
         renderLog();
         renderTurnList();
         saveState();
+    }
+
+    function refreshSceneFieldsUI() {
+        if (els.sceneType) els.sceneType.value = state.tipo || '';
+        if (els.sceneNotes) els.sceneNotes.value = state.notasNarrador || '';
     }
 
     function addPage() {
@@ -1476,6 +1494,7 @@
         els.cols.value = state.cols;
         els.rows.value = state.rows;
         els.toggleNumbers.checked = state.showNumbers;
+        refreshSceneFieldsUI();
         updateActionButtons();
         renderPagesBar();
         renderLayersPanel();
@@ -5969,6 +5988,18 @@
                 saveState();
             });
         }
+        if (els.sceneType) {
+            els.sceneType.addEventListener('change', () => {
+                state.tipo = els.sceneType.value || '';
+                saveState();
+            });
+        }
+        if (els.sceneNotes) {
+            els.sceneNotes.addEventListener('input', () => {
+                state.notasNarrador = els.sceneNotes.value || '';
+                saveState();
+            });
+        }
 
         els.zoomIn.addEventListener('click', () => { setScale(state.viewport.scale * 1.2); saveState(); });
         els.zoomOut.addEventListener('click', () => { setScale(state.viewport.scale / 1.2); saveState(); });
@@ -6059,6 +6090,7 @@
         if (els.gridSize) els.gridSize.value = String(CELL_SIZE);
         if (els.snapToGrid) els.snapToGrid.checked = !!state.snapToGrid;
         if (els.imageLayer) els.imageLayer.value = state.activeImageLayer;
+        refreshSceneFieldsUI();
         renderPagesBar();
         renderBoard();
         renderScenery();
