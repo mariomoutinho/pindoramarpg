@@ -202,6 +202,10 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transform:
+        translate(var(--home-token-x, 0), var(--home-token-y, 0))
+        scale(var(--home-token-scale, 1));
+    transform-origin: center;
 }
 
 .home-card-info {
