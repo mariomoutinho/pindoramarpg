@@ -6,7 +6,7 @@
     <title>Jogando — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260507c" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
 </head>
 <body>
@@ -952,6 +952,11 @@
                         ocorrer. Caso alguma parte da área da habilidade ultrapasse o alcance, essa área é afetada
                         normalmente.
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: comparação visual dos alcances — Toque (alvo adjacente), Curto (6 quadrados / 9 m),
+                        Médio (20 quadrados / 30 m), Longo (60 quadrados / 90 m). Faixas concêntricas em um mesmo grid.
+                    </figure>
                     <ul>
                         <li><strong>Pessoal.</strong> Afeta apenas o próprio personagem e/ou objetos que ele carregue.</li>
                         <li><strong>Toque.</strong> O personagem precisa tocar o alvo em seu alcance, sem a necessidade de ação adicional.</li>
@@ -978,6 +983,11 @@
                         deseja afetar, ou para qualquer espaço onde se pretende criar um efeito. Qualquer barreira sólida,
                         visível ou não, anula a linha de efeito.
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: dois exemplos lado a lado — esquerda, conjurador com linha tracejada chegando ao
+                        alvo (linha de efeito válida); direita, parede ou pilar interrompendo a mesma linha (anulada).
+                    </figure>
                     <p>
                         <strong>Alvo.</strong> A habilidade afeta um ou mais alvos, que podem ser criaturas ou objetos. A
                         habilidade deve ser usada nos alvos, sendo essencial que o usuário possa percebê-los. Se uma
@@ -1022,9 +1032,24 @@
                         padrão.
                     </p>
 
-                    <figure class="image-placeholder">
-                        Imagem futura: diagrama de áreas de efeito (cone, cubo, esfera, linha, raio) sobre grid de batalha.
-                    </figure>
+                    <div class="areas-figuras-grid">
+                        <figure class="image-placeholder">
+                            Imagem futura: <strong>Cone</strong> — surge adjacente ao conjurador e se expande na direção
+                            apontada (padrão Pindorama 1 → 3 → 3 → 5 → 5…).
+                        </figure>
+                        <figure class="image-placeholder">
+                            Imagem futura: <strong>Linha</strong> — 1 quadrado de largura saindo do conjurador em linha
+                            reta até o fim do alcance.
+                        </figure>
+                        <figure class="image-placeholder">
+                            Imagem futura: <strong>Raio / Esfera</strong> — área circular ao redor de um ponto central,
+                            no padrão "diamante" do livro.
+                        </figure>
+                        <figure class="image-placeholder">
+                            Imagem futura: <strong>Quadrado / Cubo</strong> — célula(s) escolhida(s) afetando o piso
+                            (cubo afeta também a altura).
+                        </figure>
+                    </div>
                 </section>
 
                 <section id="acumulando-efeitos" class="content-section">
@@ -1787,6 +1812,13 @@
                         <strong>Diagonais.</strong> Em um mapa, mover-se na diagonal custa o dobro. Ou seja, andar 1,5m
                         (1 quadrado) na diagonal conta como 3m (2 quadrados).
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: lado a lado — esquerda, token andando 4 quadrados em linha reta = 4 quadrados / 6 m;
+                        direita, mesmo token andando 4 passos diagonais = 8 quadrados / 12 m. Mostra a regra do "dobro na
+                        diagonal".
+                    </figure>
+
                     <p>
                         <strong>Outros Tipos de Movimento.</strong> Além de andar, você pode gastar uma ação de movimento
                         para se mover de outras maneiras. Consulte as perícias Acrobacia e Atletismo.
@@ -1802,6 +1834,17 @@
                         difícil. Mover-se em terreno difícil custa o dobro. Ou seja, você se move metade do deslocamento
                         normal — ou gasta 3m de deslocamento por quadrado, em vez de 1,5m.
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: grid com células sombreadas marcando terreno difícil (raízes, escombros).
+                        Token atravessando: ortogonal em difícil = 2 quadrados; diagonal em difícil = 4 quadrados.
+                    </figure>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: criatura grande ocupando 2×2 quadrados (3 m × 3 m) sobre o grid; ao lado, token
+                        Médio (1×1) mostrando a comparação de footprint. Setas indicando que a criatura ainda se desloca
+                        1 quadrado por vez como qualquer outra.
+                    </figure>
                 </section>
 
                 <section id="situacoes-especiais" class="content-section">
@@ -1838,6 +1881,13 @@
                         Você recebe <em>cobertura total</em> quando seus inimigos não podem alcançá-lo — por exemplo, se
                         estiver atrás de uma parede. Cobertura total impede que você seja atacado.
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: regra de cobertura via cantos do quadrado — atacante e alvo escolhem cantos;
+                        linha reta passando por uma muralha ou pela borda de uma carroça concede cobertura leve (+5 Defesa);
+                        linha totalmente bloqueada por uma parede = cobertura total (alvo não pode ser atacado).
+                    </figure>
+
                     <p>
                         <strong>Flanquear.</strong> Quando você luta corpo a corpo contra um oponente e um aliado faz o
                         mesmo no lado oposto — ou seja, o inimigo está entre vocês — vocês estão flanqueando o alvo.
@@ -1845,6 +1895,12 @@
                         distância ou com ataques desarmados (a menos que você possua as habilidades Briga ou Estilo
                         Desarmado).
                     </p>
+
+                    <figure class="image-placeholder">
+                        Imagem futura: alvo no centro com dois aliados em lados diametralmente opostos (ex.: norte e sul).
+                        Setas indicando o bônus +2 nos ataques corpo a corpo. Ao lado, contraexemplo com aliados em lados
+                        adjacentes (sem flanquear).
+                    </figure>
 
                     <div class="regras-table-wrap">
                         <table class="regras-table">

@@ -59,6 +59,22 @@
     color: var(--muted, #6f5876);
 }
 
+/* Grid 2×2 para placeholders das 4 áreas (cone/linha/raio/cubo). */
+.areas-figuras-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 18px 0;
+}
+.areas-figuras-grid .image-placeholder {
+    margin: 0;
+}
+@media (max-width: 600px) {
+    .areas-figuras-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* =====================================================
    TABELAS DE REGRAS (responsivas)
 ===================================================== */
