@@ -25,11 +25,21 @@ if (!array_key_exists('pages', $state) || !is_array($state['pages'])) {
 }
 
 $dataDir = __DIR__ . '/data';
-if (!is_dir($dataDir) && !mkdir($dataDir, 0775, true)) {
+if (!is_dir($dataDir) && !mkdir($dataDir, 0777, true)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Não foi possível criar a pasta de dados.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+@chmod($dataDir, 0777);
+
+if (!is_writable($dataDir)) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'A pasta data não tem permissão de gravação para o servidor.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -104,7 +114,11 @@ function salvarDataUrlImagem(string $valor): ?string
     }
 
     $uploadDir = __DIR__ . '/uploads/campo-batalha/';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
+        return null;
+    }
+    @chmod($uploadDir, 0777);
+    if (!is_writable($uploadDir)) {
         return null;
     }
 

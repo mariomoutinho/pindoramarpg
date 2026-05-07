@@ -15,7 +15,7 @@
     const SERVER_STATE_URL = 'carregar-campo-batalha.php';
     const SERVER_SAVE_URL = 'salvar-campo-batalha.php';
     const SERVER_IMAGE_UPLOAD_URL = 'salvar-imagem-campo-batalha.php';
-    const CLIENT_UPLOAD_TARGET_BYTES = 1800 * 1024;
+    const CLIENT_UPLOAD_TARGET_BYTES = 4700 * 1024;
     const BESTIARIO_STORAGE_KEY = 'pindorama.bestiario.criaturas';
     const BESTIARIO_TOKEN_KEY = 'pindorama.campoBatalha.tokenPendente';
     let CELL_SIZE = 56;            // tamanho base da célula em pixels, persistido por cena

@@ -58,11 +58,21 @@ if (!in_array($mime, $mimesPermitidos, true)) {
 }
 
 $uploadDir = __DIR__ . '/uploads/campo-batalha/';
-if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
+if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Não foi possível criar a pasta de imagens do Campo de Batalha.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+@chmod($uploadDir, 0777);
+
+if (!is_writable($uploadDir)) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'A pasta uploads/campo-batalha não tem permissão de gravação para o servidor.',
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
