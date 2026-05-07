@@ -419,6 +419,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Botão de recolher/expandir do painel Atributos
+    const atributosRecolherBtn = document.getElementById("atributosRecolherBtn");
+    const atributosPanel = document.getElementById("atributosPanel");
+    if (atributosRecolherBtn && atributosPanel) {
+        atributosRecolherBtn.addEventListener("click", () => {
+            const recolhido = atributosPanel.classList.toggle("attributes-panel-recolhido");
+            atributosRecolherBtn.setAttribute("aria-expanded", String(!recolhido));
+            atributosRecolherBtn.setAttribute("aria-label", recolhido ? "Expandir seção" : "Recolher seção");
+        });
+    }
+
     const carregarFichaBtn = document.getElementById("carregarFichaBtn");
     if (carregarFichaBtn) {
         carregarFichaBtn.addEventListener("click", carregarFichaSelecionada);

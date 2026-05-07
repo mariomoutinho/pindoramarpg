@@ -15,8 +15,8 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260504tk4" />
-    <link rel="stylesheet" href="assets/css/poderes.css?v=20260501b" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260507a" />
+    <link rel="stylesheet" href="assets/css/poderes.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
     <link rel="stylesheet" href="assets/css/divindades.css?v=20260430j" />
@@ -226,54 +226,63 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
                 <div class="left-column">
 
-                    <section class="attributes-section">
-                        <div class="attributes-row">
-                            <div class="attribute-card">
-                                <label>For</label>
-                                <input type="number" name="forca" value="0" />
-                            </div>
-
-                            <div class="attribute-card">
-                                <label>Des</label>
-                                <input type="number" name="destreza" value="0" />
-                            </div>
-
-                            <div class="attribute-card">
-                                <label>Con</label>
-                                <input type="number" name="constituicao" value="0" />
-                            </div>
-
-                            <div class="attribute-card">
-                                <label>Int</label>
-                                <input type="number" name="inteligencia" value="0" />
-                            </div>
-
-                            <div class="attribute-card">
-                                <label>Sab</label>
-                                <input type="number" name="sabedoria" value="0" />
-                            </div>
-
-                            <div class="attribute-card">
-                                <label>Car</label>
-                                <input type="number" name="carisma" value="0" />
-                            </div>
+                    <section class="panel attributes-panel attributes-panel-recolhido" id="atributosPanel">
+                        <div class="panel-title">
+                            Atributos
+                            <button type="button" class="poderes-ver-todos-btn painel-toggle-seta" id="atributosRecolherBtn" aria-expanded="false" aria-label="Expandir seção" aria-controls="atributosConteudo">
+                                <span class="painel-toggle-seta-icone" aria-hidden="true">&#9662;</span>
+                            </button>
                         </div>
 
-                        <button
-                            type="button"
-                            class="atributos-d20-btn"
-                            id="atributosDistribuirBtn"
-                            aria-label="Distribuir atributos"
-                            title="Clique no dado para distribuir os atributos"
-                        >
-                            <svg class="d20-icon" viewBox="0 0 100 100" aria-hidden="true">
-                                <polygon points="50,5 90,30 90,70 50,95 10,70 10,30" fill="currentColor" stroke="#fff" stroke-width="2"/>
-                                <polygon points="50,5 90,30 50,50 10,30" fill="rgba(255,255,255,0.18)"/>
-                                <polygon points="90,30 90,70 50,50" fill="rgba(0,0,0,0.12)"/>
-                                <text x="50" y="62" text-anchor="middle" font-size="32" font-weight="900" fill="#fff" font-family="serif">20</text>
-                            </svg>
-                            <span class="atributos-d20-legenda">Clique para gerar atributos</span>
-                        </button>
+                        <div class="attributes-section" id="atributosConteudo">
+                            <div class="attributes-row">
+                                <div class="attribute-card">
+                                    <label>For</label>
+                                    <input type="number" name="forca" value="0" />
+                                </div>
+
+                                <div class="attribute-card">
+                                    <label>Des</label>
+                                    <input type="number" name="destreza" value="0" />
+                                </div>
+
+                                <div class="attribute-card">
+                                    <label>Con</label>
+                                    <input type="number" name="constituicao" value="0" />
+                                </div>
+
+                                <div class="attribute-card">
+                                    <label>Int</label>
+                                    <input type="number" name="inteligencia" value="0" />
+                                </div>
+
+                                <div class="attribute-card">
+                                    <label>Sab</label>
+                                    <input type="number" name="sabedoria" value="0" />
+                                </div>
+
+                                <div class="attribute-card">
+                                    <label>Car</label>
+                                    <input type="number" name="carisma" value="0" />
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="atributos-d20-btn"
+                                id="atributosDistribuirBtn"
+                                aria-label="Distribuir atributos"
+                                title="Clique no dado para distribuir os atributos"
+                            >
+                                <svg class="d20-icon" viewBox="0 0 100 100" aria-hidden="true">
+                                    <polygon points="50,5 90,30 90,70 50,95 10,70 10,30" fill="currentColor" stroke="#fff" stroke-width="2"/>
+                                    <polygon points="50,5 90,30 50,50 10,30" fill="rgba(255,255,255,0.18)"/>
+                                    <polygon points="90,30 90,70 50,50" fill="rgba(0,0,0,0.12)"/>
+                                    <text x="50" y="62" text-anchor="middle" font-size="32" font-weight="900" fill="#fff" font-family="serif">20</text>
+                                </svg>
+                                <span class="atributos-d20-legenda">Clique para gerar atributos</span>
+                            </button>
+                        </div>
                     </section>
 
                     <section class="vitals-grid">
@@ -842,7 +851,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
     </main>
 
-    <script src="assets/js/ficha.js?v=20260507b"></script>
+    <script src="assets/js/ficha.js?v=20260507c"></script>
     <script src="assets/js/atributos.js?v=20260501u"></script>
     <script src="assets/js/poderes.js?v=20260430j"></script>
     <script src="assets/js/ancestralidades-ficha.js?v=20260504a"></script>

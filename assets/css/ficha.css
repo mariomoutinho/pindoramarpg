@@ -868,7 +868,6 @@ textarea {
 /* Botão d20 centralizado sobre os atributos */
 .attributes-section {
     position: relative;
-    margin-bottom: 18px;
 }
 .atributos-d20-btn {
     position: absolute;

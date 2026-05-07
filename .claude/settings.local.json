@@ -21,7 +21,8 @@
       "Bash(node --check /home/mario/pindorama-ficha/assets/js/campo-batalha.js)",
       "Bash(php -v)",
       "Bash(php -S 127.0.0.1:8765 -t /home/mario/pindorama-ficha)",
-      "Bash(curl -s -I http://127.0.0.1:8765/bestiario.php)"
+      "Bash(curl -s -I http://127.0.0.1:8765/bestiario.php)",
+      "Bash(grep -n \"^\\\\.panel \\\\|^\\\\.panel{\\\\|^\\\\.panel,\" /home/mario/pindorama-ficha/assets/css/ficha.css)"
     ]
   }
 }

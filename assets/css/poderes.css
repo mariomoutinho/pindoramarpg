@@ -72,6 +72,19 @@
 .magias-ficha-panel.magias-panel-recolhido {
     padding: 18px 18px 8px !important;
 }
+.attributes-panel.attributes-panel-recolhido .attributes-section {
+    display: none !important;
+}
+.attributes-panel.attributes-panel-recolhido {
+    padding: 18px 18px 8px !important;
+}
+.attributes-panel .panel-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
 .magias-panel-actions {
     display: flex;
     align-items: center;
