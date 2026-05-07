@@ -4871,6 +4871,77 @@
         return 10 + Math.floor(n / 2) + a;
     }
 
+    /* Roll oposto puro: dois d20 + bônus, vencedor pela soma. Empate
+       se resolve pelo maior bônus; se ambos iguais, devolve
+       'empate-real' (narrador rola novamente). Conforme regra do
+       livro Pindorama em "Manobras de Combate". */
+    function rollOpposedTest(atkBonus, defBonus) {
+        const atkD20 = rollDie(20);
+        const defD20 = rollDie(20);
+        const atkTotal = atkD20 + atkBonus;
+        const defTotal = defD20 + defBonus;
+        let winner;
+        if (atkTotal > defTotal) winner = 'atacante';
+        else if (defTotal > atkTotal) winner = 'alvo';
+        else if (atkBonus > defBonus) winner = 'atacante';
+        else if (defBonus > atkBonus) winner = 'alvo';
+        else winner = 'empate-real';
+        return {
+            atkD20, atkBonus, atkTotal,
+            defD20, defBonus, defTotal,
+            winner,
+            diferenca: atkTotal - defTotal
+        };
+    }
+
+    /* Lê bônus de uma perícia específica do token, com fallback para
+       o atributo-chave da perícia. Usado em manobras de combate
+       (Luta, Reflexos, Enganação). */
+    function parsePericiaBonus(token, tipo) {
+        if (!token) return 0;
+        const explicitos = ({
+            luta: ['luta', 'lutaBonus'],
+            reflexos: ['reflexos', 'reflexo', 'reflexBonus'],
+            enganacao: ['enganacao', 'enganação', 'enganacaoBonus']
+        })[tipo] || [];
+        for (const k of explicitos) {
+            const v = token[k];
+            if (v != null && v !== '') {
+                const n = Number(String(v).match(/-?\d+/)?.[0]);
+                if (Number.isFinite(n)) return n;
+            }
+        }
+        const fallback = ({
+            luta: 'forca',
+            reflexos: 'destreza',
+            enganacao: 'carisma'
+        })[tipo];
+        if (fallback) {
+            const v = token[fallback];
+            if (v != null && v !== '') {
+                const n = Number(String(v).match(/-?\d+/)?.[0]);
+                if (Number.isFinite(n)) return n;
+            }
+        }
+        return 0;
+    }
+
+    /* Catálogo de manobras com a perícia padrão do atacante e do alvo
+       conforme "Manobras de Combate" do livro Pindorama. Quebrar fica
+       de fora porque usa a Defesa do objeto, não teste oposto. */
+    const COMBAT_MANEUVERS = [
+        { key: 'agarrar',   label: 'Agarrar',   atkSkill: 'luta',       defSkill: 'luta' },
+        { key: 'derrubar',  label: 'Derrubar',  atkSkill: 'luta',       defSkill: 'luta' },
+        { key: 'desarmar',  label: 'Desarmar',  atkSkill: 'luta',       defSkill: 'luta' },
+        { key: 'empurrar',  label: 'Empurrar',  atkSkill: 'luta',       defSkill: 'luta' },
+        { key: 'atropelar', label: 'Atropelar', atkSkill: 'luta',       defSkill: 'luta' },
+        { key: 'fintar',    label: 'Fintar',    atkSkill: 'enganacao',  defSkill: 'reflexos' }
+    ];
+
+    function rotuloPericia(tipo) {
+        return ({ luta: 'Luta', reflexos: 'Reflexos', enganacao: 'Enganação' })[tipo] || tipo;
+    }
+
     function getTokensInActionReach(attacker, action) {
         const reachable = buildActionReachCells(attacker, action);
         return state.tokens.filter(token => {
@@ -5787,6 +5858,157 @@
         els.selectedTokenTools.appendChild(buildTacticalConditionsSection(token));
         els.selectedTokenTools.appendChild(buildSaveTestsSection(token));
         els.selectedTokenTools.appendChild(buildDamageApplicationSection(token));
+        els.selectedTokenTools.appendChild(buildManeuverSection(token));
+    }
+
+    /* Bloco "Manobra de combate" no painel do token selecionado.
+       Implementa a estrutura formal de teste oposto descrita em
+       "Manobras de Combate" do livro Pindorama: atacante e alvo
+       rolam d20 + bônus, vencedor pela maior soma (empate desempata
+       pelo maior bônus; se ainda empatado, narrador rola de novo).
+       NÃO aplica efeito automático — apenas registra o resultado
+       estruturado no log para o narrador decidir consequências. */
+    function buildManeuverSection(attacker) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cb-maneuver-section';
+
+        const title = document.createElement('h3');
+        title.className = 'cb-maneuver-title';
+        title.textContent = 'Manobra de combate (teste oposto)';
+        wrap.appendChild(title);
+
+        const hint = document.createElement('p');
+        hint.className = 'cb-maneuver-hint';
+        hint.textContent = 'Rola d20 + bônus dos dois lados. Maior soma vence; empate desempata pelo bônus. Sem efeito automático — narrador decide a consequência.';
+        wrap.appendChild(hint);
+
+        // Outros tokens da cena (possíveis alvos)
+        const outros = state.tokens.filter(t => t.id !== attacker.id);
+        if (!outros.length) {
+            const empty = document.createElement('p');
+            empty.className = 'cb-maneuver-empty';
+            empty.textContent = 'Adicione outro token na cena para realizar uma manobra.';
+            wrap.appendChild(empty);
+            return wrap;
+        }
+
+        // Linha 1: manobra + alvo
+        const topRow = document.createElement('div');
+        topRow.className = 'cb-maneuver-top';
+
+        const manobraLabel = document.createElement('label');
+        manobraLabel.className = 'cb-maneuver-field';
+        manobraLabel.appendChild(document.createTextNode('Manobra'));
+        const manobraSelect = document.createElement('select');
+        for (const m of COMBAT_MANEUVERS) {
+            const opt = document.createElement('option');
+            opt.value = m.key;
+            opt.textContent = m.label;
+            manobraSelect.appendChild(opt);
+        }
+        manobraLabel.appendChild(manobraSelect);
+        topRow.appendChild(manobraLabel);
+
+        const alvoLabel = document.createElement('label');
+        alvoLabel.className = 'cb-maneuver-field';
+        alvoLabel.appendChild(document.createTextNode('Alvo'));
+        const alvoSelect = document.createElement('select');
+        for (const t of outros) {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name || ('Token #' + t.id.slice(-4));
+            alvoSelect.appendChild(opt);
+        }
+        alvoLabel.appendChild(alvoSelect);
+        topRow.appendChild(alvoLabel);
+        wrap.appendChild(topRow);
+
+        // Linha 2: bônus atacante / alvo (auto-preenchidos, editáveis)
+        const bonusRow = document.createElement('div');
+        bonusRow.className = 'cb-maneuver-bonus-row';
+
+        const atkBonusLabel = document.createElement('label');
+        atkBonusLabel.className = 'cb-maneuver-field';
+        const atkBonusText = document.createElement('span');
+        atkBonusText.className = 'cb-maneuver-bonus-text';
+        atkBonusLabel.appendChild(atkBonusText);
+        const atkBonusInput = document.createElement('input');
+        atkBonusInput.type = 'number';
+        atkBonusLabel.appendChild(atkBonusInput);
+        bonusRow.appendChild(atkBonusLabel);
+
+        const defBonusLabel = document.createElement('label');
+        defBonusLabel.className = 'cb-maneuver-field';
+        const defBonusText = document.createElement('span');
+        defBonusText.className = 'cb-maneuver-bonus-text';
+        defBonusLabel.appendChild(defBonusText);
+        const defBonusInput = document.createElement('input');
+        defBonusInput.type = 'number';
+        defBonusLabel.appendChild(defBonusInput);
+        bonusRow.appendChild(defBonusLabel);
+        wrap.appendChild(bonusRow);
+
+        // Resumo + botão rolar
+        const result = document.createElement('p');
+        result.className = 'cb-maneuver-result';
+        result.setAttribute('aria-live', 'polite');
+
+        const rollBtn = document.createElement('button');
+        rollBtn.type = 'button';
+        rollBtn.className = 'cb-maneuver-roll-btn';
+        rollBtn.textContent = 'Rolar teste oposto';
+        wrap.appendChild(rollBtn);
+        wrap.appendChild(result);
+
+        // Atualiza bônus default quando manobra ou alvo mudam
+        function refreshDefaults() {
+            const manobra = COMBAT_MANEUVERS.find(m => m.key === manobraSelect.value);
+            if (!manobra) return;
+            const alvo = state.tokens.find(t => t.id === alvoSelect.value);
+            const atkBonus = parsePericiaBonus(attacker, manobra.atkSkill);
+            const defBonus = alvo ? parsePericiaBonus(alvo, manobra.defSkill) : 0;
+            atkBonusText.textContent = (attacker.name || 'Atacante') + ' (' + rotuloPericia(manobra.atkSkill) + ')';
+            defBonusText.textContent = (alvo?.name || 'Alvo') + ' (' + rotuloPericia(manobra.defSkill) + ')';
+            atkBonusInput.value = String(atkBonus);
+            defBonusInput.value = String(defBonus);
+        }
+
+        manobraSelect.addEventListener('change', refreshDefaults);
+        alvoSelect.addEventListener('change', refreshDefaults);
+        refreshDefaults();
+
+        rollBtn.addEventListener('click', () => {
+            const manobra = COMBAT_MANEUVERS.find(m => m.key === manobraSelect.value);
+            const alvo = state.tokens.find(t => t.id === alvoSelect.value);
+            if (!manobra || !alvo) return;
+            const atkBonus = Number(atkBonusInput.value) || 0;
+            const defBonus = Number(defBonusInput.value) || 0;
+            const r = rollOpposedTest(atkBonus, defBonus);
+
+            const sinalAtk = r.atkBonus >= 0 ? '+' + r.atkBonus : String(r.atkBonus);
+            const sinalDef = r.defBonus >= 0 ? '+' + r.defBonus : String(r.defBonus);
+            const linhaAtk = (attacker.name || 'Atacante') + ': d20 ' + r.atkD20 + ' ' + sinalAtk + ' = ' + r.atkTotal;
+            const linhaDef = (alvo.name || 'Alvo') + ': d20 ' + r.defD20 + ' ' + sinalDef + ' = ' + r.defTotal;
+
+            let veredito;
+            if (r.winner === 'atacante') {
+                veredito = (attacker.name || 'Atacante') + ' VENCE por ' + Math.abs(r.diferenca);
+            } else if (r.winner === 'alvo') {
+                veredito = (alvo.name || 'Alvo') + ' VENCE por ' + Math.abs(r.diferenca);
+            } else {
+                veredito = 'EMPATE — narrador rola novamente entre eles.';
+            }
+
+            const detalheLog = manobra.label + ' · ' + linhaAtk + ' · ' + linhaDef + ' → ' + veredito;
+            addLog({ title: 'Manobra: ' + manobra.label, detail: detalheLog });
+
+            result.classList.toggle('is-pass', r.winner === 'atacante');
+            result.classList.toggle('is-fail', r.winner === 'alvo');
+            result.classList.toggle('is-tie', r.winner === 'empate-real');
+            result.textContent = '↳ ' + veredito;
+        });
+
+        return wrap;
     }
 
     /* Heurística para ler a RD (Redução de Dano) do token a partir de
