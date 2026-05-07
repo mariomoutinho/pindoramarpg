@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Referência — Pindorama RPG</title>
+    <title>Acervo — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/home.css?v=20260507b" />
@@ -16,7 +16,7 @@
 
         <header class="home-hero home-hero-compact">
             <a href="index.php" class="home-back" aria-label="Voltar ao menu">&larr;</a>
-            <h1 class="home-title">Referéncia</h1>
+            <h1 class="home-title">ACERVO</h1>
             <p class="home-subtitle">Catálogos e regras do sistema</p>
         </header>
 

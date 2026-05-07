@@ -34,7 +34,7 @@ function bestiarioOptions(array $valores): string
             </div>
             <div class="actions">
                 <a class="system-link-btn" href="index.php">Menu</a>
-                <a class="system-link-btn" href="referencia.php">Referências</a>
+                <a class="system-link-btn" href="referencia.php">Acervo</a>
                 <a class="system-link-btn" href="campo-batalha.php">Campo de Batalha</a>
             </div>
         </header>

@@ -40,7 +40,7 @@ function imagemAncestralidade(string $id): ?string {
 
             <div class="actions">
                 <a class="system-link-btn" href="index.php">Menu</a>
-                <a class="system-link-btn" href="referencia.php">Referências</a>
+                <a class="system-link-btn" href="referencia.php">Acervo</a>
             </div>
         </header>
 

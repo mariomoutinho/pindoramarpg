@@ -28,7 +28,7 @@ $introducaoPoderes = $dadosPoderes['introducao'] ?? [];
 
             <div class="actions">
                 <a href="index.php" class="system-link-btn">Menu</a>
-                <a class="system-link-btn" href="referencia.php">Referências</a>
+                <a class="system-link-btn" href="referencia.php">Acervo</a>
             </div>
         </header>
 

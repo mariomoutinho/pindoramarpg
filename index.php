@@ -34,7 +34,7 @@
                 <span>Mesa virtual e tokens.</span>
             </a>
             <a class="home-card-ref" href="referencia.php">
-                <strong>Referência</strong>
+                <strong>Acervo</strong>
                 <span>Catálogos e regras do sistema.</span>
             </a>
         </nav>
