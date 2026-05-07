@@ -771,6 +771,50 @@ textarea {
     gap: 6px;
     justify-content: center;
 }
+
+.attack-nome-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.attack-nome-cell input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.attack-toggle {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1.5px solid var(--purple-light);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--purple-dark);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s ease;
+}
+.attack-toggle:hover {
+    background: var(--purple);
+    color: #fff;
+    border-color: var(--purple-dark);
+}
+
+.attack-row.attack-row-recolhido {
+    grid-template-columns: 1fr 48px !important;
+    margin-bottom: 6px;
+}
+.attack-row.attack-row-recolhido > [data-attack="teste"],
+.attack-row.attack-row-recolhido > [data-attack="dano"],
+.attack-row.attack-row-recolhido > [data-attack="critico"],
+.attack-row.attack-row-recolhido > [data-attack="alcance"],
+.attack-row.attack-row-recolhido > [data-attack="tipo"],
+.attack-row.attack-row-recolhido > .attack-actions {
+    display: none;
+}
 .attack-dice-btn {
     width: 32px;
     height: 32px;

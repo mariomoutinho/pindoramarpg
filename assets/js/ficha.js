@@ -1184,7 +1184,12 @@ function adicionarAtaque(ataque = {}, fonte = null) {
     row.className = "attack-row";
 
     row.innerHTML = `
-        <input type="text" data-attack="nome" placeholder="Ataque" autocomplete="off" value="${ataque.nome ?? ""}">
+        <div class="attack-nome-cell">
+            <button type="button" class="attack-toggle painel-toggle-seta" data-attack-action="toggle" aria-expanded="true" aria-label="Recolher ataque">
+                <span class="painel-toggle-seta-icone" aria-hidden="true">&#9662;</span>
+            </button>
+            <input type="text" data-attack="nome" placeholder="Ataque" autocomplete="off" value="${ataque.nome ?? ""}">
+        </div>
         <input type="text" data-attack="teste" placeholder="Teste" value="${ataque.teste ?? ""}">
         <input type="text" data-attack="dano" placeholder="Dano" value="${ataque.dano ?? ""}">
         <input type="text" data-attack="critico" placeholder="Crítico" value="${ataque.critico ?? ""}">
@@ -1200,6 +1205,15 @@ function adicionarAtaque(ataque = {}, fonte = null) {
     const removeBtn = row.querySelector(".remove-btn");
     if (removeBtn) {
         removeBtn.addEventListener("click", () => row.remove());
+    }
+
+    const toggleBtn = row.querySelector('[data-attack-action="toggle"]');
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+            const recolhido = row.classList.toggle("attack-row-recolhido");
+            toggleBtn.setAttribute("aria-expanded", String(!recolhido));
+            toggleBtn.setAttribute("aria-label", recolhido ? "Expandir ataque" : "Recolher ataque");
+        });
     }
 
     const inputNome = row.querySelector('[data-attack="nome"]');
