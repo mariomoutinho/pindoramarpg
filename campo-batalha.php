@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260507b" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260507c" />
 </head>
 <body class="cb-body">
     <script src="assets/js/transitions.js?v=20260503d"></script>
@@ -96,6 +96,7 @@
                     <div class="cb-map-background" id="cbMapBackground"></div>
                     <div class="cb-scenery-layer" id="cbSceneryLayer"></div>
                     <div class="cb-board" id="cbBoard"></div>
+                    <div class="cb-terrain-layer" id="cbTerrainLayer" aria-hidden="true"></div>
                     <div class="cb-npc-layer" id="cbNpcLayer"></div>
                     <div class="cb-guides-layer" id="cbGuidesLayer"></div>
                     <div class="cb-tokens-layer" id="cbTokensLayer"></div>
@@ -207,6 +208,18 @@
                             <input id="cbGridSize" type="number" min="36" max="96" value="56" />
                         </label>
                         <button type="button" id="cbClearMapImage">Remover fundo</button>
+
+                        <div class="cb-terrain-controls">
+                            <header class="cb-terrain-controls-head">
+                                <strong>Terreno difícil</strong>
+                                <small id="cbTerrainCount">0 células marcadas</small>
+                            </header>
+                            <button type="button" id="cbToggleTerrainMode" class="cb-terrain-toggle" aria-pressed="false">
+                                Marcar terreno difícil
+                            </button>
+                            <button type="button" id="cbClearTerrain" class="cb-terrain-clear">Limpar marcações</button>
+                            <p class="cb-terrain-hint">Cada célula marcada custa o dobro de movimento (1 quadrado normal = 2; diagonal = 4).</p>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -462,6 +475,6 @@
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260507ae"></script>
+    <script src="assets/js/campo-batalha.js?v=20260507af"></script>
 </body>
 </html>

@@ -56,6 +56,8 @@
         currentTurnIndex: 0,
         tipo: '',                  // tipo da cena ativa: combate/cidade/taverna/...
         notasNarrador: '',         // anotações livres do narrador para a cena ativa
+        terrainDifficult: new Set(), // células de terreno difícil ("col,row")
+        terrainMarkingMode: false,   // toggle UI: clicar no board adiciona/remove marca
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
         bestiario: [],             // cache da lista de criaturas do bestiário
@@ -192,6 +194,10 @@
         clearMapImage: document.getElementById('cbClearMapImage'),
         sceneType: document.getElementById('cbSceneType'),
         sceneNotes: document.getElementById('cbSceneNotes'),
+        terrainLayer: document.getElementById('cbTerrainLayer'),
+        toggleTerrainMode: document.getElementById('cbToggleTerrainMode'),
+        clearTerrain: document.getElementById('cbClearTerrain'),
+        terrainCount: document.getElementById('cbTerrainCount'),
         tokenEditorModal: document.getElementById('cbTokenEditorModal'),
         tokenEditorClose: document.getElementById('cbTokenEditorClose'),
         tokenEditorCancel: document.getElementById('cbTokenEditorCancel'),
@@ -570,7 +576,8 @@
             turns: [],
             currentTurnIndex: 0,
             tipo: '',
-            notasNarrador: ''
+            notasNarrador: '',
+            terrainDifficult: []
         });
     }
 
@@ -593,7 +600,10 @@
             turns: Array.isArray(page.turns) ? page.turns.map(normalizeTurn).filter(Boolean) : [],
             currentTurnIndex: Math.max(0, Number(page.currentTurnIndex) || 0),
             tipo: typeof page.tipo === 'string' ? page.tipo : '',
-            notasNarrador: typeof page.notasNarrador === 'string' ? page.notasNarrador : ''
+            notasNarrador: typeof page.notasNarrador === 'string' ? page.notasNarrador : '',
+            terrainDifficult: Array.isArray(page.terrainDifficult)
+                ? page.terrainDifficult.filter(s => typeof s === 'string' && /^\d+,\d+$/.test(s))
+                : []
         };
     }
 
@@ -651,6 +661,9 @@
         page.currentTurnIndex = state.currentTurnIndex;
         page.tipo = state.tipo || '';
         page.notasNarrador = state.notasNarrador || '';
+        page.terrainDifficult = state.terrainDifficult instanceof Set
+            ? Array.from(state.terrainDifficult)
+            : [];
     }
 
     function loadPageIntoLive(page) {
@@ -668,6 +681,9 @@
         state.currentTurnIndex = Math.min(page.currentTurnIndex || 0, Math.max(0, state.turns.length - 1));
         state.tipo = typeof page.tipo === 'string' ? page.tipo : '';
         state.notasNarrador = typeof page.notasNarrador === 'string' ? page.notasNarrador : '';
+        state.terrainDifficult = new Set(Array.isArray(page.terrainDifficult) ? page.terrainDifficult : []);
+        // Sai do modo de marcação ao trocar de cena (segurança UX)
+        state.terrainMarkingMode = false;
         state.selectedId = null;
         state.selectedSceneryId = null;
     }
@@ -745,6 +761,11 @@
             els.guidesLayer.style.width = els.board.style.width;
             els.guidesLayer.style.height = els.board.style.height;
         }
+        if (els.terrainLayer) {
+            els.terrainLayer.style.width = els.board.style.width;
+            els.terrainLayer.style.height = els.board.style.height;
+        }
+        renderTerrainOverlay();
 
         els.board.classList.toggle('show-numbers', state.showNumbers);
         els.board.innerHTML = '';
@@ -1012,6 +1033,21 @@
     let interaction = null;     // descreve a interação ativa
 
     function onStagePointerDown(ev) {
+        // Modo de marcação de terreno difícil: intercepta antes de tudo.
+        // Click em uma célula do board (alvo dentro da viewport, não em
+        // sidebar etc.) toggla aquela célula como terreno difícil.
+        if (state.terrainMarkingMode) {
+            // Só processa cliques principais (botão esquerdo/touch primário)
+            if (ev.button != null && ev.button !== 0) return;
+            // Garante que o clique está sobre o tabuleiro/viewport
+            if (!ev.target.closest('#cbStage')) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            const cell = screenToCell(ev.clientX, ev.clientY);
+            toggleTerrainCellAt(cell.col, cell.row);
+            return;
+        }
+
         // Cenário (imagens livres) — verifica antes dos tokens, com prioridade nos handles
         const sceneryHandle = ev.target.closest('.cb-scenery-handle');
         const sceneryEl = ev.target.closest('.cb-scenery');
@@ -1299,6 +1335,26 @@
         if (moveBadgeEl) moveBadgeEl.classList.remove('is-active');
     }
 
+    /* Gera a sequência de passos do origem (c0,r0) ao destino (c1,r1)
+       seguindo a regra "Chebyshev simplificado": diagonal enquanto ambos
+       eixos diferem, ortogonal no resto. Cada passo carrega { col, row,
+       kind: 'orto' | 'diag' } — usado para somar custo de movimento e
+       aplicar dobra em terreno difícil. */
+    function chebyshevPath(c0, r0, c1, r1) {
+        const passos = [];
+        let c = c0, r = r0;
+        let safety = 0;
+        while ((c !== c1 || r !== r1) && safety++ < 1000) {
+            const dc = Math.sign(c1 - c);
+            const dr = Math.sign(r1 - r);
+            const kind = (dc !== 0 && dr !== 0) ? 'diag' : 'orto';
+            c += dc;
+            r += dr;
+            passos.push({ col: c, row: r, kind });
+        }
+        return passos;
+    }
+
     function handleTokenDragMove(ev) {
         const token = state.tokens.find(t => t.id === interaction.tokenId);
         if (!token) return;
@@ -1319,18 +1375,31 @@
         interaction.tempCol = rawCol;
         interaction.tempRow = rawRow;
 
-        // Feedback de custo de movimento (regra ortogonal=1, diagonal=2).
-        // Usa a posição arredondada para refletir o snap final.
+        // Feedback de custo de movimento (regra ortog=1, diag=2;
+        // terreno difícil dobra cada passo correspondente).
+        // Traça caminho Chebyshev passo-a-passo da origem ao destino
+        // arredondado, classifica cada passo (orto/diag, normal/difícil)
+        // e delega o cálculo final ao helper PindoramaRegras.
         if (window.PindoramaRegras && interaction.originCol != null) {
             const intCol = Math.round(rawCol);
             const intRow = Math.round(rawRow);
-            const dx = Math.abs(intCol - interaction.originCol);
-            const dy = Math.abs(intRow - interaction.originRow);
-            const diagonais = Math.min(dx, dy);
-            const ortogonais = Math.max(dx, dy) - diagonais;
+            const passos = chebyshevPath(
+                interaction.originCol, interaction.originRow,
+                intCol, intRow
+            );
+            let ortogonais = 0, diagonais = 0,
+                ortogonaisDificeis = 0, diagonaisDificeis = 0;
+            for (const p of passos) {
+                const dificil = isTerrainDifficult(p.col, p.row);
+                if (p.kind === 'diag') {
+                    if (dificil) diagonaisDificeis++; else diagonais++;
+                } else {
+                    if (dificil) ortogonaisDificeis++; else ortogonais++;
+                }
+            }
             const custo = window.PindoramaRegras.custoMovimento({
-                ortogonais: ortogonais,
-                diagonais: diagonais
+                ortogonais, diagonais,
+                ortogonaisDificeis, diagonaisDificeis
             });
             if (custo.quadrados > 0) {
                 updateMoveBadge(ev.clientX, ev.clientY, custo);
@@ -1606,6 +1675,85 @@
     function refreshSceneFieldsUI() {
         if (els.sceneType) els.sceneType.value = state.tipo || '';
         if (els.sceneNotes) els.sceneNotes.value = state.notasNarrador || '';
+        refreshTerrainUI();
+    }
+
+    function terrainCellKey(col, row) { return col + ',' + row; }
+    function isTerrainDifficult(col, row) {
+        return state.terrainDifficult instanceof Set
+            && state.terrainDifficult.has(terrainCellKey(col, row));
+    }
+
+    function renderTerrainOverlay() {
+        if (!els.terrainLayer) return;
+        // Remove tudo e re-popula. Volume típico (poucas dezenas de células)
+        // torna isso barato; para mapas grandes podemos otimizar depois.
+        els.terrainLayer.innerHTML = '';
+        if (!(state.terrainDifficult instanceof Set) || !state.terrainDifficult.size) return;
+        const frag = document.createDocumentFragment();
+        for (const key of state.terrainDifficult) {
+            const m = /^(\d+),(\d+)$/.exec(key);
+            if (!m) continue;
+            const col = Number(m[1]);
+            const row = Number(m[2]);
+            if (col < 0 || row < 0 || col >= state.cols || row >= state.rows) continue;
+            const cell = document.createElement('div');
+            cell.className = 'cb-terrain-cell';
+            cell.style.left = (col * CELL_SIZE) + 'px';
+            cell.style.top = (row * CELL_SIZE) + 'px';
+            cell.style.width = CELL_SIZE + 'px';
+            cell.style.height = CELL_SIZE + 'px';
+            frag.appendChild(cell);
+        }
+        els.terrainLayer.appendChild(frag);
+    }
+
+    function refreshTerrainUI() {
+        const count = state.terrainDifficult instanceof Set ? state.terrainDifficult.size : 0;
+        if (els.terrainCount) {
+            els.terrainCount.textContent = count === 1
+                ? '1 célula marcada'
+                : (count + ' células marcadas');
+        }
+        if (els.toggleTerrainMode) {
+            els.toggleTerrainMode.setAttribute('aria-pressed', state.terrainMarkingMode ? 'true' : 'false');
+            els.toggleTerrainMode.textContent = state.terrainMarkingMode
+                ? 'Sair do modo de marcação'
+                : 'Marcar terreno difícil';
+        }
+        if (els.stage) {
+            els.stage.classList.toggle('is-marking-terrain', !!state.terrainMarkingMode);
+        }
+    }
+
+    function setTerrainMarkingMode(active) {
+        state.terrainMarkingMode = !!active;
+        // Limpa seleções para evitar UI confusa
+        if (state.terrainMarkingMode) {
+            selectToken(null);
+            if (state.selectedSceneryId) selectScenery(null);
+        }
+        refreshTerrainUI();
+    }
+
+    function toggleTerrainCellAt(col, row) {
+        const key = terrainCellKey(col, row);
+        if (!(state.terrainDifficult instanceof Set)) state.terrainDifficult = new Set();
+        if (state.terrainDifficult.has(key)) state.terrainDifficult.delete(key);
+        else state.terrainDifficult.add(key);
+        renderTerrainOverlay();
+        refreshTerrainUI();
+        saveState();
+    }
+
+    function clearAllTerrain() {
+        const count = state.terrainDifficult instanceof Set ? state.terrainDifficult.size : 0;
+        if (!count) return;
+        if (!confirm('Remover todas as ' + count + ' marcações de terreno difícil desta cena?')) return;
+        state.terrainDifficult = new Set();
+        renderTerrainOverlay();
+        refreshTerrainUI();
+        saveState();
     }
 
     function addPage() {
@@ -6189,6 +6337,20 @@
                 saveState();
             });
         }
+        if (els.toggleTerrainMode) {
+            els.toggleTerrainMode.addEventListener('click', () => {
+                setTerrainMarkingMode(!state.terrainMarkingMode);
+            });
+        }
+        if (els.clearTerrain) {
+            els.clearTerrain.addEventListener('click', clearAllTerrain);
+        }
+        // Tecla Esc sai do modo de marcação rapidamente
+        document.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Escape' && state.terrainMarkingMode) {
+                setTerrainMarkingMode(false);
+            }
+        });
 
         els.zoomIn.addEventListener('click', () => { setScale(state.viewport.scale * 1.2); saveState(); });
         els.zoomOut.addEventListener('click', () => { setScale(state.viewport.scale / 1.2); saveState(); });
