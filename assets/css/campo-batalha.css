@@ -1645,6 +1645,60 @@
     background: var(--purple-dark);
 }
 
+/* ---------- Toggle Editar / Jogar cena ---------- */
+.cb-mode-switch {
+    display: inline-flex;
+    align-items: stretch;
+    border: 2px solid var(--purple);
+    border-radius: 999px;
+    background: rgba(255, 253, 253, 0.85);
+    overflow: hidden;
+    margin: 0 8px;
+}
+.cb-mode-btn {
+    border: 0;
+    background: transparent;
+    color: var(--purple-dark);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+.cb-mode-btn.is-active {
+    background: var(--purple-dark);
+    color: #fff;
+}
+.cb-mode-btn:not(.is-active):hover {
+    background: var(--purple-light);
+}
+
+/* No modo Jogar, esconde controles de edição (estruturais).
+   O Facilitador volta tudo clicando em "Editar cena". */
+body.cb-body[data-mode="play"] .cb-edit-only {
+    display: none !important;
+}
+
+/* Indicador discreto do bioma da cena no modo Jogar. */
+.cb-scene-biome-tag {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(118, 84, 124, 0.18);
+    color: var(--purple-dark);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+}
+body.cb-body[data-mode="play"] .cb-scene-biome-tag {
+    display: inline-flex;
+}
+
 /* ---------- Modal ---------- */
 
 .cb-modal-backdrop {
@@ -2940,6 +2994,69 @@ body[data-papel="participante"] #cbRotateToken {
 
 /* Indicação de modo "barreira" (cursor diferente para feedback). */
 .cb-stage.is-marking-barrier { cursor: not-allowed; }
+.cb-stage.is-marking-special { cursor: copy; }
+
+/* Terreno especial — overlay azul-petróleo translúcido com borda
+   tracejada para diferenciar dos outros tipos. O subtipo (bioma)
+   aparece como title e pode ser estilizado por data-biome no futuro. */
+.cb-terrain-cell--special {
+    background: rgba(40, 110, 130, 0.32);
+    border: 2px dashed rgba(20, 70, 90, 0.7);
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.18);
+}
+.cb-terrain-cell--special[data-biome="agua"] {
+    background: rgba(60, 140, 200, 0.4);
+    border-color: rgba(20, 80, 140, 0.8);
+}
+.cb-terrain-cell--special[data-biome="lama"] {
+    background: rgba(110, 80, 50, 0.4);
+    border-color: rgba(70, 50, 30, 0.8);
+}
+.cb-terrain-cell--special[data-biome="rocha"] {
+    background: rgba(120, 110, 100, 0.45);
+    border-color: rgba(60, 55, 50, 0.8);
+}
+
+/* Pílula radio do tipo especial. */
+.cb-terrain-type--special:has(input:checked) {
+    background: linear-gradient(135deg, #2c6a7a, #185464);
+    border-color: #185464;
+}
+.cb-terrain-special-biome {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--purple-dark);
+}
+.cb-terrain-special-biome[hidden] { display: none; }
+.cb-terrain-special-biome select {
+    border: 1.5px solid rgba(118, 84, 124, 0.4);
+    border-radius: 8px;
+    padding: 5px 8px;
+    background: #fff;
+}
+
+/* Sugestão de bônus de terreno no painel do token (Parte 10 stub). */
+.cb-terrain-bonus-suggestion {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1.5px dashed rgba(40, 110, 130, 0.55);
+    background: rgba(40, 110, 130, 0.08);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--purple-dark);
+}
+.cb-terrain-bonus-suggestion strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #185464;
+    font-size: 0.82rem;
+    letter-spacing: 0.3px;
+}
+.cb-terrain-bonus-suggestion p { margin: 4px 0; line-height: 1.35; }
+.cb-terrain-bonus-suggestion em { color: #185464; font-style: italic; }
 
 /* Diferenciação no painel: alvo bloqueado por barreira aparece em
    vermelho translúcido em vez do verde de alcance livre. */

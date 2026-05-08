@@ -14,17 +14,26 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508k" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508m" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508n" />
 </head>
 <body class="cb-body" data-papel="<?= htmlspecialchars($papelUsuarioCB) ?>">
     <script>window.PINDORAMA_PAPEL = <?= json_encode($papelUsuarioCB) ?>;</script>
-    <script src="assets/js/transitions.js?v=20260508k"></script>
+    <script src="assets/js/transitions.js?v=20260508o"></script>
 
     <main class="cb-page">
 
         <header class="cb-topbar cb-topbar--mini">
             <a href="index.php" class="cb-back" title="Voltar ao menu" aria-label="Voltar ao menu">←</a>
             <h1 class="cb-topbar-title">Mesa de Jogo</h1>
+            <div class="cb-mode-switch" role="tablist" aria-label="Modo da mesa">
+                <button type="button" id="cbModeEdit" class="cb-mode-btn is-active"
+                        data-mode="edit" role="tab" aria-selected="true"
+                        title="Editar cena: configurar mapa, terreno, tokens e barreiras">Editar cena</button>
+                <button type="button" id="cbModePlay" class="cb-mode-btn"
+                        data-mode="play" role="tab" aria-selected="false"
+                        title="Jogar cena: focar em iniciativa, ações, ataque e movimento">Jogar cena</button>
+            </div>
+            <span id="cbSceneBiomeTag" class="cb-scene-biome-tag" hidden></span>
             <span id="cbSaveStatus" class="cb-save-status" aria-live="polite"></span>
             <nav class="cb-nav">
                 <a class="cb-link-btn cb-link-btn--mini" href="fichas.php">Fichas</a>
@@ -34,19 +43,19 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
 
         <section class="cb-pages-bar" aria-label="Páginas do campo">
             <div class="cb-pages-tabs" id="cbPagesTabs"></div>
-            <button type="button" id="cbAddPage" class="cb-pages-add" title="Nova página">+</button>
+            <button type="button" id="cbAddPage" class="cb-pages-add cb-edit-only" title="Nova página">+</button>
         </section>
 
         <section class="cb-battle-shell">
             <aside class="cb-toolbar-left" aria-label="Ferramentas da Mesa de Jogo">
-                <div class="cb-tl-group">
+                <div class="cb-tl-group cb-edit-only">
                     <button type="button" id="cbAddToken" class="cb-tl-btn cb-tl-btn--accent" title="Adicionar personagem">Pj</button>
                     <button type="button" id="cbAddBestiaryToken" class="cb-tl-btn cb-tl-btn--accent" title="Adicionar criatura">Cr</button>
                     <button type="button" id="cbAddScenery" class="cb-tl-btn" title="Adicionar cenário">Ce</button>
                     <button type="button" id="cbAddNpcImage" class="cb-tl-btn" title="Adicionar imagem de NPC">NPC</button>
                 </div>
 
-                <div class="cb-tl-group">
+                <div class="cb-tl-group cb-edit-only">
                     <button type="button" id="cbRotateToken" class="cb-tl-btn" title="Girar token 90°" disabled>↻</button>
                     <button type="button" id="cbAdjustToken" class="cb-tl-btn" title="Ajustar token (recorte/zoom)" disabled>⌖</button>
                     <button type="button" id="cbRemoveToken" class="cb-tl-btn cb-tl-btn--danger" title="Remover seleção" disabled>✕</button>
@@ -75,12 +84,12 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
                     <button type="button" id="cbZoomReset" class="cb-tl-btn" title="Resetar zoom e posição">⌂</button>
                 </div>
 
-                <div class="cb-tl-group">
+                <div class="cb-tl-group cb-edit-only">
                     <button type="button" id="cbSaveBattle" class="cb-tl-btn cb-tl-btn--save" title="Salvar campo">Sv</button>
                     <button type="button" id="cbClearAll" class="cb-tl-btn cb-tl-btn--danger" title="Limpar campo">Lp</button>
                 </div>
 
-                <div class="cb-tl-group cb-tl-group--config">
+                <div class="cb-tl-group cb-tl-group--config cb-edit-only">
                     <label class="cb-tl-mini" title="Colunas">
                         <span>C</span>
                         <input type="number" id="cbCols" min="5" max="60" value="20" />
@@ -200,6 +209,32 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
                                 <option value="outro">Outro</option>
                             </select>
                         </label>
+                        <label>Bioma / ambiente
+                            <select id="cbSceneBiome">
+                                <option value="">— não especificado —</option>
+                                <option value="amazonia">Amazônia</option>
+                                <option value="cerrado">Cerrado</option>
+                                <option value="caatinga">Caatinga</option>
+                                <option value="pantanal">Pantanal</option>
+                                <option value="mata-atlantica">Mata Atlântica</option>
+                                <option value="pampas">Pampas</option>
+                                <option value="manguezal">Manguezal</option>
+                                <option value="restinga">Restinga</option>
+                                <option value="litoral">Litoral / praia</option>
+                                <option value="campos-rupestres">Campos rupestres</option>
+                                <option value="rios">Rios e alagados</option>
+                                <option value="cavernas">Cavernas / subterrâneo</option>
+                                <option value="ilhas">Ilhas</option>
+                                <option value="urbano-colonial">Urbano colonial</option>
+                                <option value="urbano-tradicional">Urbano tradicional</option>
+                                <option value="taverna">Taverna / interior</option>
+                                <option value="estrada">Estrada / campo aberto</option>
+                                <option value="montanha">Montanha / rochoso</option>
+                                <option value="ruina">Ruína / cripta</option>
+                                <option value="aldeia">Aldeia</option>
+                                <option value="sertao">Sertão</option>
+                            </select>
+                        </label>
                         <label>Notas do Facilitador
                             <textarea id="cbSceneNotes" rows="4" placeholder="Escala, regras especiais, observações de terreno..."></textarea>
                         </label>
@@ -234,7 +269,25 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
                                     <span>Barreira</span>
                                     <small id="cbTerrainCountBarrier">0 células</small>
                                 </label>
+                                <label class="cb-terrain-type cb-terrain-type--special">
+                                    <input type="radio" name="cbTerrainType" value="special" />
+                                    <span>Especial</span>
+                                    <small id="cbTerrainCountSpecial">0 células</small>
+                                </label>
                             </fieldset>
+                            <label class="cb-terrain-special-biome" id="cbTerrainSpecialBiomeLabel" hidden>
+                                Bioma da célula
+                                <select id="cbTerrainSpecialBiome">
+                                    <option value="mangue">Mangue</option>
+                                    <option value="agua">Água</option>
+                                    <option value="lama">Lama</option>
+                                    <option value="floresta-densa">Floresta densa</option>
+                                    <option value="rocha">Rocha</option>
+                                    <option value="ruina">Ruína</option>
+                                    <option value="areia">Areia</option>
+                                    <option value="vegetacao-seca">Vegetação seca</option>
+                                </select>
+                            </label>
 
                             <button type="button" id="cbToggleTerrainMode" class="cb-terrain-toggle" aria-pressed="false">
                                 Marcar terreno
@@ -497,6 +550,6 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260508m"></script>
+    <script src="assets/js/campo-batalha.js?v=20260508n"></script>
 </body>
 </html>

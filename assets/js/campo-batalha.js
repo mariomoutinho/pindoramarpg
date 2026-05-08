@@ -59,8 +59,12 @@
         notasNarrador: '',         // anotações livres do narrador para a cena ativa
         terrainDifficult: new Set(), // células de terreno difícil ("col,row")
         terrainBarriers:  new Set(), // células de barreira (bloqueiam linha de efeito de ataques à distância)
+        terrainSpecial: {},          // {"col,row": "bioma"} — terreno especial com subtipo
         terrainMarkingMode: false,   // toggle UI: clicar no board adiciona/remove marca
-        terrainMarkingType: 'difficult', // 'difficult' | 'barrier' — qual tipo está sendo marcado
+        terrainMarkingType: 'difficult', // 'difficult' | 'barrier' | 'special'
+        terrainSpecialBiome: 'mangue', // bioma escolhido ao marcar 'special'
+        modoCena: 'edit',            // 'edit' | 'play' — modo da Mesa de Jogo
+        sceneBiome: '',              // bioma/ambiente dominante da cena
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
         bestiario: [],             // cache da lista de criaturas do bestiário
@@ -209,6 +213,13 @@
         terrainCountDifficult: document.getElementById('cbTerrainCountDifficult'),
         terrainCountBarrier:  document.getElementById('cbTerrainCountBarrier'),
         terrainTypeRadios: Array.from(document.querySelectorAll('input[name="cbTerrainType"]')),
+        terrainCountSpecial: document.getElementById('cbTerrainCountSpecial'),
+        terrainSpecialBiomeLabel: document.getElementById('cbTerrainSpecialBiomeLabel'),
+        terrainSpecialBiome: document.getElementById('cbTerrainSpecialBiome'),
+        modeEditBtn: document.getElementById('cbModeEdit'),
+        modePlayBtn: document.getElementById('cbModePlay'),
+        sceneBiome:  document.getElementById('cbSceneBiome'),
+        sceneBiomeTag: document.getElementById('cbSceneBiomeTag'),
         tokenEditorModal: document.getElementById('cbTokenEditorModal'),
         tokenEditorClose: document.getElementById('cbTokenEditorClose'),
         tokenEditorCancel: document.getElementById('cbTokenEditorCancel'),
@@ -619,7 +630,11 @@
                 : [],
             terrainBarriers: Array.isArray(page.terrainBarriers)
                 ? page.terrainBarriers.filter(s => typeof s === 'string' && /^\d+,\d+$/.test(s))
-                : []
+                : [],
+            terrainSpecial: (page.terrainSpecial && typeof page.terrainSpecial === 'object')
+                ? page.terrainSpecial : {},
+            modoCena: page.modoCena === 'play' ? 'play' : 'edit',
+            sceneBiome: typeof page.sceneBiome === 'string' ? page.sceneBiome : ''
         };
     }
 
@@ -685,6 +700,10 @@
         page.terrainBarriers = state.terrainBarriers instanceof Set
             ? Array.from(state.terrainBarriers)
             : [];
+        page.terrainSpecial = state.terrainSpecial && typeof state.terrainSpecial === 'object'
+            ? { ...state.terrainSpecial } : {};
+        page.modoCena = state.modoCena === 'play' ? 'play' : 'edit';
+        page.sceneBiome = state.sceneBiome || '';
     }
 
     function loadPageIntoLive(page) {
@@ -705,7 +724,9 @@
         state.notasNarrador = typeof page.notasNarrador === 'string' ? page.notasNarrador : '';
         state.terrainDifficult = new Set(Array.isArray(page.terrainDifficult) ? page.terrainDifficult : []);
         state.terrainBarriers  = new Set(Array.isArray(page.terrainBarriers)  ? page.terrainBarriers  : []);
-        // Sai do modo de marcação ao trocar de cena (segurança UX)
+        state.terrainSpecial   = (page.terrainSpecial && typeof page.terrainSpecial === 'object') ? { ...page.terrainSpecial } : {};
+        state.modoCena = page.modoCena === 'play' ? 'play' : 'edit';
+        state.sceneBiome = typeof page.sceneBiome === 'string' ? page.sceneBiome : '';
         state.terrainMarkingMode = false;
         if (!state.terrainMarkingType) state.terrainMarkingType = 'difficult';
         state.selectedId = null;
@@ -1562,6 +1583,31 @@
                 interaction.originCol, interaction.originRow,
                 snappedCol, snappedRow
             );
+
+            // Barreiras são intransponíveis para o movimento — se algum
+            // passo cruza uma célula de barreira, cancela o movimento e
+            // reverte a posição.
+            const passoEmBarreira = passos.find(p => isTerrainBarrier(p.col, p.row));
+            if (passoEmBarreira) {
+                showCbToast('Movimento bloqueado: barreira no caminho.');
+                addLog({
+                    title: 'Movimento bloqueado',
+                    detail: `${token.name || 'Token'}: barreira em (${passoEmBarreira.col + 1},${passoEmBarreira.row + 1}).`
+                });
+                // Remove o snapshot adicionado especulativamente acima.
+                if (_undoStack.length) _undoStack.pop();
+                refreshUndoButton();
+                // Volta o token para a posição original.
+                token.col = interaction.originCol;
+                token.row = interaction.originRow;
+                const el = els.tokensLayer.querySelector(`[data-token-id="${token.id}"]`);
+                if (el) el.classList.remove('is-dragging');
+                updateTokenElement(token);
+                renderBoard();
+                interaction = null;
+                return;
+            }
+
             if (passos.length) {
                 let ortogonais = 0, diagonais = 0,
                     ortogonaisDificeis = 0, diagonaisDificeis = 0;
@@ -1848,7 +1894,141 @@
     function refreshSceneFieldsUI() {
         if (els.sceneType) els.sceneType.value = state.tipo || '';
         if (els.sceneNotes) els.sceneNotes.value = state.notasNarrador || '';
+        if (els.sceneBiome) els.sceneBiome.value = state.sceneBiome || '';
+        refreshSceneBiomeTag();
         refreshTerrainUI();
+        refreshModeUI();
+    }
+
+    function refreshSceneBiomeTag() {
+        if (!els.sceneBiomeTag) return;
+        const biome = state.sceneBiome || '';
+        if (biome) {
+            els.sceneBiomeTag.textContent = '🌿 ' + biomeLabel(biome);
+            els.sceneBiomeTag.hidden = false;
+        } else {
+            els.sceneBiomeTag.textContent = '';
+        }
+    }
+
+    // ---- Modo da cena (Editar/Jogar) ----
+    function setModoCena(modo) {
+        state.modoCena = (modo === 'play') ? 'play' : 'edit';
+        // Sair do modo de marcação ao entrar em "play" (reduz risco de
+        // edição acidental).
+        if (state.modoCena === 'play' && state.terrainMarkingMode) {
+            setTerrainMarkingMode(false);
+        }
+        refreshModeUI();
+        saveState();
+    }
+
+    function refreshModeUI() {
+        const modo = state.modoCena === 'play' ? 'play' : 'edit';
+        document.body.dataset.mode = modo;
+        if (els.modeEditBtn) {
+            els.modeEditBtn.classList.toggle('is-active', modo === 'edit');
+            els.modeEditBtn.setAttribute('aria-selected', modo === 'edit' ? 'true' : 'false');
+        }
+        if (els.modePlayBtn) {
+            els.modePlayBtn.classList.toggle('is-active', modo === 'play');
+            els.modePlayBtn.setAttribute('aria-selected', modo === 'play' ? 'true' : 'false');
+        }
+    }
+
+    // ---- Biomas / ambientes da cena (Parte 4) ----
+    // Lista canônica usada no select. Mesma usada no bestiário (Pindorama).
+    const SCENE_BIOMES = [
+        'amazonia', 'cerrado', 'caatinga', 'pantanal',
+        'mata-atlantica', 'pampas', 'manguezal', 'restinga',
+        'litoral', 'campos-rupestres', 'rios', 'cavernas',
+        'ilhas', 'urbano-colonial', 'urbano-tradicional',
+        'taverna', 'estrada', 'montanha', 'ruina',
+        'aldeia', 'sertao'
+    ];
+    function biomeLabel(slug) {
+        const map = {
+            'amazonia': 'Amazônia', 'cerrado': 'Cerrado',
+            'caatinga': 'Caatinga', 'pantanal': 'Pantanal',
+            'mata-atlantica': 'Mata Atlântica', 'pampas': 'Pampas',
+            'manguezal': 'Manguezal', 'restinga': 'Restinga',
+            'litoral': 'Litoral', 'campos-rupestres': 'Campos Rupestres',
+            'rios': 'Rios e alagados', 'cavernas': 'Cavernas',
+            'ilhas': 'Ilhas', 'urbano-colonial': 'Urbano colonial',
+            'urbano-tradicional': 'Urbano tradicional',
+            'taverna': 'Taverna/interior', 'estrada': 'Estrada/campo aberto',
+            'montanha': 'Montanha/rochoso', 'ruina': 'Ruína/cripta',
+            'aldeia': 'Aldeia', 'sertao': 'Sertão'
+        };
+        return map[slug] || slug;
+    }
+    function getSceneTerrainType() {
+        return state.sceneBiome || '';
+    }
+
+    /**
+     * Reúne traços disponíveis para o token. Hoje retorna apenas dados
+     * estruturados conhecidos (bioma da criatura, ancestralidade, etc.).
+     * Bônus reais por habilidade exigem normalização de texto livre,
+     * fora do escopo desta iteração.
+     */
+    function getTokenTraits(tokenId) {
+        const token = state.tokens.find(t => t.id === tokenId);
+        if (!token) return null;
+        return {
+            id: token.id,
+            nome: token.name || '',
+            bioma: token.bioma || '',
+            papelTatico: token.papelTatico || '',
+            ancestralidade: token.ancestralidade || '',
+            origem: token.origem || '',
+            classe: token.classe || '',
+            tipo: token.tipo || '' // criatura, personagem, npc...
+        };
+    }
+
+    /**
+     * Sugestões (não numéricas) de bônus de terreno aplicáveis ao token.
+     * Estratégia segura: comparar bioma da cena com `bioma` estruturado
+     * do token (vindo do bestiário). Retorna lista de objetos
+     * { fonte, descricao, sugestaoBonus? }.
+     *
+     * Não inventa bônus numéricos. O Facilitador interpreta as habilidades
+     * específicas do token para decidir.
+     */
+    function getTerrainBonusesForToken(tokenId, terrainType) {
+        const out = [];
+        const t = getTokenTraits(tokenId);
+        if (!t || !terrainType) return out;
+        const norm = (s) => normalizeText(String(s || '').replace(/[-_]/g, ' '));
+        if (t.bioma && norm(t.bioma) === norm(terrainType)) {
+            out.push({
+                fonte: 'Bioma natural (bestiário)',
+                descricao: `Esta criatura habita ${t.bioma}. Habilidades de habitat podem aplicar bônus aqui — ver ficha.`
+            });
+        }
+        return out;
+    }
+
+    function buildTerrainBonusSuggestion(token) {
+        const terrain = getSceneTerrainType();
+        if (!terrain) return null;
+        const sugestoes = getTerrainBonusesForToken(token.id, terrain);
+        if (!sugestoes.length) return null;
+        const wrap = document.createElement('div');
+        wrap.className = 'cb-terrain-bonus-suggestion';
+        const head = document.createElement('strong');
+        head.textContent = '🌿 Bônus de terreno disponível';
+        wrap.appendChild(head);
+        for (const s of sugestoes) {
+            const row = document.createElement('p');
+            const f = document.createElement('em');
+            f.textContent = s.fonte + ' — ';
+            row.appendChild(f);
+            row.appendChild(document.createTextNode(s.descricao));
+            wrap.appendChild(row);
+        }
+        return wrap;
     }
 
     function terrainCellKey(col, row) { return col + ',' + row; }
@@ -1859,6 +2039,12 @@
     function isTerrainBarrier(col, row) {
         return state.terrainBarriers instanceof Set
             && state.terrainBarriers.has(terrainCellKey(col, row));
+    }
+    function isTerrainSpecial(col, row) {
+        return state.terrainSpecial && !!state.terrainSpecial[terrainCellKey(col, row)];
+    }
+    function getTerrainSpecialBiome(col, row) {
+        return (state.terrainSpecial && state.terrainSpecial[terrainCellKey(col, row)]) || '';
     }
     // Alias do nome solicitado no plano da Parte 4.
     function isCellBarrier(col, row) { return isTerrainBarrier(col, row); }
@@ -1960,21 +2146,45 @@
         renderSet(state.terrainDifficult, 'cb-terrain-cell cb-terrain-cell--difficult');
         renderSet(state.terrainBarriers,  'cb-terrain-cell cb-terrain-cell--barrier');
 
+        // Terreno especial: rodar mapa de subtipos.
+        if (state.terrainSpecial && typeof state.terrainSpecial === 'object') {
+            for (const key of Object.keys(state.terrainSpecial)) {
+                const m = /^(\d+),(\d+)$/.exec(key);
+                if (!m) continue;
+                const col = Number(m[1]);
+                const row = Number(m[2]);
+                if (col < 0 || row < 0 || col >= state.cols || row >= state.rows) continue;
+                const cell = document.createElement('div');
+                cell.className = 'cb-terrain-cell cb-terrain-cell--special';
+                cell.dataset.biome = state.terrainSpecial[key] || '';
+                cell.title = 'Terreno especial: ' + (state.terrainSpecial[key] || '?');
+                cell.style.left = (col * CELL_SIZE) + 'px';
+                cell.style.top = (row * CELL_SIZE) + 'px';
+                cell.style.width = CELL_SIZE + 'px';
+                cell.style.height = CELL_SIZE + 'px';
+                frag.appendChild(cell);
+            }
+        }
+
         els.terrainLayer.appendChild(frag);
     }
 
     function refreshTerrainUI() {
         const cDif = state.terrainDifficult instanceof Set ? state.terrainDifficult.size : 0;
         const cBar = state.terrainBarriers  instanceof Set ? state.terrainBarriers.size  : 0;
+        const cSpe = state.terrainSpecial && typeof state.terrainSpecial === 'object'
+            ? Object.keys(state.terrainSpecial).length : 0;
         if (els.terrainCountDifficult) {
             els.terrainCountDifficult.textContent = cDif === 1 ? '1 célula' : (cDif + ' células');
         }
         if (els.terrainCountBarrier) {
             els.terrainCountBarrier.textContent = cBar === 1 ? '1 célula' : (cBar + ' células');
         }
+        if (els.terrainCountSpecial) {
+            els.terrainCountSpecial.textContent = cSpe === 1 ? '1 célula' : (cSpe + ' células');
+        }
         if (els.terrainCount) {
-            // Compat com markup antigo, se ainda existir.
-            els.terrainCount.textContent = (cDif + cBar) + ' células marcadas';
+            els.terrainCount.textContent = (cDif + cBar + cSpe) + ' células marcadas';
         }
         if (els.toggleTerrainMode) {
             els.toggleTerrainMode.setAttribute('aria-pressed', state.terrainMarkingMode ? 'true' : 'false');
@@ -1987,10 +2197,18 @@
                 radio.checked = (radio.value === state.terrainMarkingType);
             });
         }
+        if (els.terrainSpecialBiomeLabel) {
+            els.terrainSpecialBiomeLabel.hidden = state.terrainMarkingType !== 'special';
+        }
+        if (els.terrainSpecialBiome) {
+            els.terrainSpecialBiome.value = state.terrainSpecialBiome || 'mangue';
+        }
         if (els.stage) {
             els.stage.classList.toggle('is-marking-terrain', !!state.terrainMarkingMode);
             els.stage.classList.toggle('is-marking-barrier',
                 !!state.terrainMarkingMode && state.terrainMarkingType === 'barrier');
+            els.stage.classList.toggle('is-marking-special',
+                !!state.terrainMarkingMode && state.terrainMarkingType === 'special');
         }
     }
 
@@ -2004,27 +2222,39 @@
     }
 
     function setTerrainMarkingType(type) {
-        state.terrainMarkingType = (type === 'barrier') ? 'barrier' : 'difficult';
+        if (type === 'barrier' || type === 'special') state.terrainMarkingType = type;
+        else state.terrainMarkingType = 'difficult';
         refreshTerrainUI();
-    }
-
-    function getActiveTerrainSet() {
-        if (state.terrainMarkingType === 'barrier') {
-            if (!(state.terrainBarriers instanceof Set)) state.terrainBarriers = new Set();
-            return state.terrainBarriers;
-        }
-        if (!(state.terrainDifficult instanceof Set)) state.terrainDifficult = new Set();
-        return state.terrainDifficult;
     }
 
     function toggleTerrainCellAt(col, row) {
         const key = terrainCellKey(col, row);
-        const set = getActiveTerrainSet();
-        const tipo = state.terrainMarkingType === 'barrier' ? 'barreira' : 'terreno difícil';
-        const acao = set.has(key) ? 'remove' : 'marca';
-        pushUndo(`${acao} ${tipo} (${col+1},${row+1})`, null);
-        if (set.has(key)) set.delete(key);
-        else set.add(key);
+        const tipoMarc = state.terrainMarkingType;
+        const tipoNome = tipoMarc === 'barrier' ? 'barreira'
+                       : tipoMarc === 'special' ? 'terreno especial'
+                       : 'terreno difícil';
+
+        if (tipoMarc === 'special') {
+            if (!state.terrainSpecial || typeof state.terrainSpecial !== 'object') {
+                state.terrainSpecial = {};
+            }
+            const tem = !!state.terrainSpecial[key];
+            const acao = tem ? 'remove' : 'marca';
+            pushUndo(`${acao} ${tipoNome} (${col+1},${row+1})`, null);
+            if (tem) {
+                delete state.terrainSpecial[key];
+            } else {
+                state.terrainSpecial[key] = state.terrainSpecialBiome || 'mangue';
+            }
+        } else {
+            const set = (tipoMarc === 'barrier')
+                ? (state.terrainBarriers instanceof Set ? state.terrainBarriers : (state.terrainBarriers = new Set()))
+                : (state.terrainDifficult instanceof Set ? state.terrainDifficult : (state.terrainDifficult = new Set()));
+            const acao = set.has(key) ? 'remove' : 'marca';
+            pushUndo(`${acao} ${tipoNome} (${col+1},${row+1})`, null);
+            if (set.has(key)) set.delete(key);
+            else set.add(key);
+        }
         renderTerrainOverlay();
         refreshTerrainUI();
         if (state.reachPreview) renderBoard();
@@ -2034,10 +2264,14 @@
     function clearAllTerrain() {
         const cDif = state.terrainDifficult instanceof Set ? state.terrainDifficult.size : 0;
         const cBar = state.terrainBarriers  instanceof Set ? state.terrainBarriers.size  : 0;
-        if (!cDif && !cBar) return;
-        if (!confirm('Remover todas as ' + (cDif + cBar) + ' marcações de terreno desta cena?')) return;
+        const cSpe = state.terrainSpecial && typeof state.terrainSpecial === 'object'
+            ? Object.keys(state.terrainSpecial).length : 0;
+        const total = cDif + cBar + cSpe;
+        if (!total) return;
+        if (!confirm('Remover todas as ' + total + ' marcações de terreno desta cena?')) return;
         state.terrainDifficult = new Set();
         state.terrainBarriers  = new Set();
+        state.terrainSpecial   = {};
         renderTerrainOverlay();
         refreshTerrainUI();
         if (state.reachPreview) renderBoard();
@@ -6502,6 +6736,8 @@
         }
         els.selectedTokenTools.appendChild(buildTacticalConditionsSection(token));
         els.selectedTokenTools.appendChild(buildSaveTestsSection(token));
+        const terrainBlock = buildTerrainBonusSuggestion(token);
+        if (terrainBlock) els.selectedTokenTools.appendChild(terrainBlock);
         els.selectedTokenTools.appendChild(buildDamageApplicationSection(token));
         els.selectedTokenTools.appendChild(buildManeuverSection(token));
     }
@@ -7925,7 +8161,9 @@
                 action: state.reachPreview.action
             } : null,
             terrainDifficult: state.terrainDifficult instanceof Set ? new Set(state.terrainDifficult) : null,
-            terrainBarriers:  state.terrainBarriers  instanceof Set ? new Set(state.terrainBarriers)  : null
+            terrainBarriers:  state.terrainBarriers  instanceof Set ? new Set(state.terrainBarriers)  : null,
+            terrainSpecial:   state.terrainSpecial && typeof state.terrainSpecial === 'object'
+                              ? { ...state.terrainSpecial } : null
         });
         if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
         refreshUndoButton();
@@ -7972,6 +8210,7 @@
         state.reachPreview = snap.reachPreview || null;
         if (snap.terrainDifficult) state.terrainDifficult = snap.terrainDifficult;
         if (snap.terrainBarriers)  state.terrainBarriers  = snap.terrainBarriers;
+        if (snap.terrainSpecial)   state.terrainSpecial   = snap.terrainSpecial;
         addLog({ title: 'Desfeito', detail: snap.descricao });
         renderTokens();
         renderTurnList();
@@ -8447,6 +8686,21 @@
                 radio.addEventListener('change', () => {
                     if (radio.checked) setTerrainMarkingType(radio.value);
                 });
+            });
+        }
+        if (els.modeEditBtn) els.modeEditBtn.addEventListener('click', () => setModoCena('edit'));
+        if (els.modePlayBtn) els.modePlayBtn.addEventListener('click', () => setModoCena('play'));
+        if (els.terrainSpecialBiome) {
+            els.terrainSpecialBiome.addEventListener('change', () => {
+                state.terrainSpecialBiome = els.terrainSpecialBiome.value || 'mangue';
+            });
+        }
+        if (els.sceneBiome) {
+            els.sceneBiome.addEventListener('change', () => {
+                state.sceneBiome = els.sceneBiome.value || '';
+                refreshSceneBiomeTag();
+                renderTokens(); // p/ atualizar sugestões de bônus visíveis
+                saveState();
             });
         }
         // Tecla Esc sai do modo de marcação rapidamente
