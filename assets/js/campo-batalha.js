@@ -5511,6 +5511,74 @@
      * para alvos/áreas. Hoje as áreas atravessam paredes; implementar
      * checagem de bloqueadores é um item dedicado, não cabe nesta PR.
      */
+    /**
+     * Converte uma string de alcance em quadrados.
+     *
+     * Aceita:
+     *   - número puro de metros: "30", "9.5"
+     *   - número com unidade: "30m", "30 m", "30 metros"
+     *   - alcances nomeados: "toque", "curto", "medio"/"médio", "longo", "ilimitado"
+     *   - termos sinônimos de adjacente: "corpo a corpo", "adjacente", "1"
+     *   - vazio: retorna fallback (1 quadrado, corpo a corpo) com aviso no log.
+     *
+     * Retorno: número de quadrados (Infinity para "ilimitado").
+     */
+    function parseAlcanceAtaque(valor) {
+        const raw = String(valor || '').trim();
+        if (!raw) {
+            console.warn('[Mesa de Jogo] Alcance vazio — usando 1 quadrado (corpo a corpo) como fallback.');
+            return 1;
+        }
+        const norm = normalizeText(raw);
+
+        // Adjacente / corpo a corpo / toque
+        if (norm === '' || norm === '1' || norm === 'toque' || norm === 'adjacente'
+            || norm.includes('corpo a corpo') || norm.includes('adjacent')) {
+            return 1;
+        }
+        if (norm === 'ilimitado' || norm === 'infinito' || norm === 'sem limite') {
+            return Infinity;
+        }
+
+        // Categorias nomeadas — usam a tabela canônica de regras-distancia.js.
+        if (window.PindoramaRegras && window.PindoramaRegras.alcance) {
+            const cat = window.PindoramaRegras.alcance(
+                norm.replace('é', 'e').replace('í', 'i')
+            );
+            if (cat && Number.isFinite(cat.quadrados)) return Math.max(1, cat.quadrados);
+            if (cat && cat.quadrados === Infinity) return Infinity;
+        }
+
+        // Metros explícitos: "30m", "30 m", "30 metros", "30,5 m"
+        const mMetros = norm.match(/(\d+(?:[.,]\d+)?)\s*(m|metros?|mt)\b/);
+        if (mMetros) {
+            const metros = Number(mMetros[1].replace(',', '.'));
+            if (window.PindoramaRegras && window.PindoramaRegras.metrosParaQuadrados) {
+                return Math.max(1, window.PindoramaRegras.metrosParaQuadrados(metros));
+            }
+            return Math.max(1, Math.ceil(metros / 1.5));
+        }
+
+        // Quadrados explícitos: "20 quadrados", "20 qd"
+        const mQd = norm.match(/(\d+)\s*(quadrados?|qd)\b/);
+        if (mQd) return Math.max(1, parseInt(mQd[1], 10));
+
+        // Apenas um número: assume metros (convenção do livro).
+        const mNum = norm.match(/^(\d+(?:[.,]\d+)?)$/);
+        if (mNum) {
+            const metros = Number(mNum[1].replace(',', '.'));
+            return Math.max(1, Math.ceil(metros / 1.5));
+        }
+
+        console.warn('[Mesa de Jogo] Alcance não reconhecido:', valor, '— usando 1 quadrado como fallback.');
+        return 1;
+    }
+
+    /** Helper público — devolve o alcance em quadrados de um ataque/equipamento. */
+    function getAttackRangeSquares(action) {
+        return parseAlcanceAtaque(action && action.alcance);
+    }
+
     function parseAreaShape(alcance) {
         const raw = String(alcance || '');
         const norm = normalizeText(raw);
@@ -5539,9 +5607,8 @@
         if (norm.includes('linha')) {
             return { tipo: 'linha', tamanho: 10 };
         }
-        if (norm.includes('longo') || norm.includes('90') || /\b60\b/.test(norm)) return { tipo: 'simples', tamanho: 60 };
-        if (norm.includes('curto') || norm.includes('9m') || /\b6\s*quadr/.test(norm)) return { tipo: 'simples', tamanho: 6 };
-        return { tipo: 'simples', tamanho: 1 };
+        // Alcance simples (sem forma) — delega para o parser unificado.
+        return { tipo: 'simples', tamanho: parseAlcanceAtaque(raw) };
     }
 
     /* Resolve aliases de forma do livro para o tipo interno (ver doc do
@@ -7270,7 +7337,7 @@
             }
             resetTurnActions(token);
         }
-        _undoMoveSnapshot = null;
+        _undoStack.length = 0;
         refreshUndoButton();
         if (!silent) {
             addLog({
@@ -7503,8 +7570,9 @@
             const incoming = state.tokens.find(t => t.id === turn.tokenId);
             if (incoming) resetTurnActions(incoming);
         }
-        // Snapshot de undo é específico do turno anterior — invalida.
-        _undoMoveSnapshot = null;
+        // Avanço de turno limpa o histórico — desfazer turno é fora de
+        // escopo (restauraria múltiplos tokens; ver Parte 2 do plano).
+        _undoStack.length = 0;
         refreshUndoButton();
         // Sub-fase E: auto-seleciona e foca o token cujo turno começou.
         focusCurrentTurnToken();
@@ -7627,6 +7695,8 @@
     function consumeStandardAction(token, motivo) {
         if (!token) return;
         if (token.acaoPadraoUsada) return;
+        // Snapshot ANTES da mutação para que undo restaure o estado.
+        pushUndo('Ação padrão' + (motivo ? ' — ' + motivo : ''), token.id);
         token.acaoPadraoUsada = true;
         addLog({
             title: 'Ação padrão consumida',
@@ -7643,49 +7713,85 @@
         token.movimentoUsado = 0;
     }
 
-    // ---- Undo do último movimento (Parte 7, escopo leve) ----
-    let _undoMoveSnapshot = null;
+    // ---- Undo: pilha real (Parte 2 v2) ----
+    // Cada snapshot guarda o estado mínimo afetado pela ação para que
+    // possamos restaurá-lo exatamente. Limite de 30 entradas.
+    const UNDO_LIMIT = 30;
+    const _undoStack = [];
 
-    function captureMoveUndo(token) {
-        if (!token) return;
-        _undoMoveSnapshot = {
-            tokenId: token.id,
+    function snapshotToken(token) {
+        if (!token) return null;
+        return {
+            id: token.id,
             col: token.col,
             row: token.row,
             movimentoUsado: token.movimentoUsado,
-            acaoMovimentoUsada: !!token.acaoMovimentoUsada,
             acaoPadraoUsada: !!token.acaoPadraoUsada,
-            dobroMovimento: !!token.dobroMovimento
+            acaoMovimentoUsada: !!token.acaoMovimentoUsada,
+            dobroMovimento: !!token.dobroMovimento,
+            acaoCompletaUsada: !!token.acaoCompletaUsada,
+            pvAtual: token.pvAtual
         };
+    }
+
+    function pushUndo(descricao, tokenId) {
+        const token = tokenId ? state.tokens.find(t => t.id === tokenId) : null;
+        _undoStack.push({
+            descricao,
+            ts: Date.now(),
+            tokenSnap: snapshotToken(token),
+            currentTurnIndex: state.currentTurnIndex,
+            currentRound: state.currentRound,
+            reachPreview: state.reachPreview ? {
+                tokenId: state.reachPreview.tokenId,
+                actionKey: state.reachPreview.actionKey,
+                action: state.reachPreview.action
+            } : null
+        });
+        if (_undoStack.length > UNDO_LIMIT) _undoStack.shift();
         refreshUndoButton();
+    }
+
+    // Compat: nome legado usado em finishTokenDrag.
+    function captureMoveUndo(token) {
+        if (!token) return;
+        pushUndo('Movimento', token.id);
     }
 
     function refreshUndoButton() {
         const btn = document.getElementById('cbUndoMove');
         if (!btn) return;
-        btn.disabled = !_undoMoveSnapshot;
+        btn.disabled = _undoStack.length === 0;
+        btn.title = _undoStack.length
+            ? `Desfazer (Ctrl+Z) — ${_undoStack.length} ${_undoStack.length === 1 ? 'ação' : 'ações'} no histórico`
+            : 'Desfazer (Ctrl+Z)';
     }
 
     function undoLastMove() {
-        if (!_undoMoveSnapshot) {
+        if (!_undoStack.length) {
             showCbToast('Nada para desfazer.');
             return;
         }
-        const snap = _undoMoveSnapshot;
-        const token = state.tokens.find(t => t.id === snap.tokenId);
-        if (!token) {
-            _undoMoveSnapshot = null;
-            refreshUndoButton();
-            return;
+        const snap = _undoStack.pop();
+        if (snap.tokenSnap) {
+            const token = state.tokens.find(t => t.id === snap.tokenSnap.id);
+            if (token) {
+                token.col = snap.tokenSnap.col;
+                token.row = snap.tokenSnap.row;
+                token.movimentoUsado = snap.tokenSnap.movimentoUsado;
+                token.acaoPadraoUsada = snap.tokenSnap.acaoPadraoUsada;
+                token.acaoMovimentoUsada = snap.tokenSnap.acaoMovimentoUsada;
+                token.dobroMovimento = snap.tokenSnap.dobroMovimento;
+                token.acaoCompletaUsada = snap.tokenSnap.acaoCompletaUsada;
+                if (snap.tokenSnap.pvAtual !== undefined) {
+                    token.pvAtual = snap.tokenSnap.pvAtual;
+                }
+            }
         }
-        token.col = snap.col;
-        token.row = snap.row;
-        token.movimentoUsado = snap.movimentoUsado;
-        token.acaoMovimentoUsada = snap.acaoMovimentoUsada;
-        token.acaoPadraoUsada = snap.acaoPadraoUsada;
-        token.dobroMovimento = snap.dobroMovimento;
-        _undoMoveSnapshot = null;
-        addLog({ title: 'Movimento desfeito', detail: `${token.name || 'Token'} voltou à posição anterior.` });
+        state.currentTurnIndex = snap.currentTurnIndex;
+        state.currentRound = snap.currentRound;
+        state.reachPreview = snap.reachPreview || null;
+        addLog({ title: 'Desfeito', detail: snap.descricao });
         renderTokens();
         renderTurnList();
         renderBoard();
@@ -7727,6 +7833,7 @@
                     showCbToast('Já se moveu além do deslocamento padrão; desfaça o movimento antes.');
                     return;
                 }
+                pushUndo('2× movimento desligado', token.id);
                 token.dobroMovimento = false;
                 token.acaoPadraoUsada = false;
                 addLog({ title: '2× movimento desligado', detail: `${token.name || 'Token'} recupera a ação padrão.` });
@@ -7735,6 +7842,7 @@
                     showCbToast('Ação padrão já gasta; não pode virar 2× movimento.');
                     return;
                 }
+                pushUndo('2× movimento', token.id);
                 token.dobroMovimento = true;
                 token.acaoPadraoUsada = true;
                 const base = tokenDeslocamentoQuadrados(token);
@@ -7753,6 +7861,7 @@
         completaBtn.textContent = 'Ação completa';
         completaBtn.title = 'Usar uma única ação completa (consome ação padrão e ação de movimento).';
         completaBtn.addEventListener('click', () => {
+            pushUndo(token.acaoCompletaUsada ? 'Desfaz ação completa' : 'Ação completa', token.id);
             if (token.acaoCompletaUsada) {
                 token.acaoCompletaUsada = false;
                 token.acaoPadraoUsada = false;
@@ -8157,12 +8266,16 @@
             }
         });
 
-        // Ctrl+Z: desfaz o último movimento (Parte 7).
+        // Ctrl+Z / Cmd+Z: desfaz a última ação registrada na pilha de undo.
+        // Não dispara em campos de entrada (input/textarea/select/editable)
+        // pra não atrapalhar a digitação ou o histórico nativo do form.
         document.addEventListener('keydown', (ev) => {
             if (!(ev.ctrlKey || ev.metaKey)) return;
             if (ev.key !== 'z' && ev.key !== 'Z') return;
+            if (ev.shiftKey || ev.altKey) return;
             const tag = (document.activeElement && document.activeElement.tagName) || '';
-            if (tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+                || (document.activeElement && document.activeElement.isContentEditable)) {
                 return;
             }
             ev.preventDefault();

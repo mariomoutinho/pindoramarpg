@@ -98,7 +98,7 @@ $todas = $stmtAll->fetchAll();
             <img src="<?= htmlspecialchars($ficha['personagem_imagem']) ?>"
                  style="transform: translate(<?= $token['x'] ?>%, <?= $token['y'] ?>%) scale(<?= $token['scale'] ?>);">
         </div>
-        <div class="label">--token-img-* (campo-batalha)</div>
+        <div class="label">--token-img-* (Mesa de Jogo)</div>
     </div>
 
     <div class="card">
@@ -107,7 +107,7 @@ $todas = $stmtAll->fetchAll();
             <img src="<?= htmlspecialchars($ficha['personagem_imagem']) ?>"
                  style="transform: translate(<?= $token['x'] ?>%, <?= $token['y'] ?>%) scale(<?= $token['scale'] ?>);">
         </div>
-        <div class="label">--token-img-* (campo-batalha)</div>
+        <div class="label">--token-img-* (Mesa de Jogo)</div>
     </div>
 </div>
 
@@ -123,6 +123,6 @@ $todas = $stmtAll->fetchAll();
     </div>
 </div>
 
-<p><a href="ficha.php?id=<?= $ficha['id'] ?>">→ Abrir ficha.php</a> | <a href="campo-batalha.php">→ Mesa de Jogo</a></p>
+<p><a href="ficha.php?id=<?= $ficha['id'] ?>">→ Abrir ficha.php</a> | <a href="mesa-jogo.php">→ Mesa de Jogo</a></p>
 </body>
 </html>

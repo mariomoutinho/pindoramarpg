@@ -50,7 +50,7 @@ $usuario = usuarioLogado();
                 <strong>Listar Fichas</strong>
                 <span>Veja personagens salvos.</span>
             </a>
-            <a class="home-card-ref home-card-home home-card-campo-batalha" href="campo-batalha.php">
+            <a class="home-card-ref home-card-home home-card-campo-batalha" href="mesa-jogo.php">
                 <strong>Mesa de Jogo</strong>
                 <span>Cenas em grid, mapas e tokens.</span>
             </a>

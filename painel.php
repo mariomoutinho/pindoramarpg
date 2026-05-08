@@ -64,7 +64,7 @@ $ehFacilitador = ehFacilitadorGlobal();
                     <strong>Narrativas</strong>
                     <span>Cenas e descrições preparadas.</span>
                 </a>
-                <a class="home-card-ref" href="campo-batalha.php">
+                <a class="home-card-ref" href="mesa-jogo.php">
                     <strong>Mapas e Cenas</strong>
                     <span>Mesa de Jogo: tabuleiro, tokens e iniciativa.</span>
                 </a>
