@@ -861,6 +861,25 @@
                     if (targetCells.has(occupiedKey(c, r))) {
                         cell.classList.add('cb-cell--target');
                     }
+                } else if (state.movePicker) {
+                    // Modo de seleção de destino — pinta área do Dijkstra
+                    // com 2 níveis (1 ação vs 2 ações) e o caminho atual.
+                    const k = occupiedKey(c, r);
+                    const cost = state.movePicker.dist.has(k) ? state.movePicker.dist.get(k) : null;
+                    if (cost !== null && k !== state.movePicker.startKey) {
+                        if (cost <= state.movePicker.max1) {
+                            cell.classList.add('cb-cell--mov-acao1');
+                        } else {
+                            cell.classList.add('cb-cell--mov-acao2');
+                        }
+                        if (isTerrainDifficult(c, r)) {
+                            cell.classList.add('cb-cell--movimento-dificil');
+                        }
+                    }
+                    if (state.movePicker.path) {
+                        const inPath = state.movePicker.path.some(p => p.col === c && p.row === r);
+                        if (inPath) cell.classList.add('cb-cell--mov-caminho');
+                    }
                 } else if (isMovePreviewCell(c, r)) {
                     cell.classList.add('cb-cell--movimento');
                     if (isTerrainDifficult(c, r)) {
@@ -1117,6 +1136,17 @@
     let interaction = null;     // descreve a interação ativa
 
     function onStagePointerDown(ev) {
+        // Modo "click-to-move": intercepta antes de tudo.
+        if (state.movePicker) {
+            if (ev.button != null && ev.button !== 0) return;
+            if (!ev.target.closest('#cbStage')) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            const cell = screenToCell(ev.clientX, ev.clientY);
+            // Async — não trava a thread.
+            escolherDestinoMover(cell.col, cell.row);
+            return;
+        }
         // Modo de marcação de terreno difícil: intercepta antes de tudo.
         // Click em uma célula do board (alvo dentro da viewport, não em
         // sidebar etc.) toggla aquela célula como terreno difícil.
@@ -1988,16 +2018,21 @@
         document.body.dataset.combate = ativo ? 'ativo' : 'inativo';
     }
 
-    function iniciarCombate() {
+    async function iniciarCombate() {
         const elegiveis = state.tokens.filter(t => !t.layer || t.layer !== 'mapa');
         if (elegiveis.length < 1) {
             showCbToast('Adicione pelo menos um token antes de iniciar o combate.');
             return;
         }
-        const msg = elegiveis.length === 1
-            ? 'Iniciar combate com 1 token?'
-            : `Iniciar combate com ${elegiveis.length} tokens? A iniciativa será rolada automaticamente.`;
-        if (!confirm(msg)) return;
+        const ok = await showMesaConfirm({
+            title: 'Iniciar combate',
+            body: elegiveis.length === 1
+                ? 'Iniciar combate com 1 token?'
+                : `Iniciar combate com ${elegiveis.length} tokens? A iniciativa será rolada automaticamente.`,
+            confirmLabel: 'Iniciar',
+            cancelLabel: 'Cancelar'
+        });
+        if (!ok) return;
 
         // Reusa a rolagem de iniciativa existente (que já reseta movimentos
         // e foca o primeiro). Adiciona apenas a flag de combate ativo.
@@ -2015,9 +2050,16 @@
         saveState();
     }
 
-    function encerrarCombate() {
+    async function encerrarCombate() {
         if (!state.combateAtivo) return;
-        if (!confirm('Encerrar combate? Posições, mapa e cena permanecem.')) return;
+        const ok = await showMesaConfirm({
+            title: 'Encerrar combate',
+            body: 'Encerrar combate? Posições, mapa e cena permanecem.',
+            confirmLabel: 'Encerrar',
+            cancelLabel: 'Cancelar',
+            danger: true
+        });
+        if (!ok) return;
         state.combateAtivo = false;
         clearReachPreview(false);
         addLog({ title: 'Combate encerrado', detail: 'A cena permanece; posições preservadas.' });
@@ -2028,6 +2070,83 @@
         renderBoard();
         saveState();
     }
+
+    /**
+     * Modal de confirmação assíncrono — substituto local de confirm().
+     * Resolve a Promise com `true` se o usuário clicar no botão de
+     * confirmar, `false` em qualquer outro caminho (cancelar, ESC,
+     * clicar fora). Sem alert/confirm nativos.
+     *
+     * Opções: { title, body, confirmLabel, cancelLabel, danger }.
+     */
+    function showMesaConfirm(opts) {
+        return new Promise((resolve) => {
+            const o = opts || {};
+            let backdrop = document.getElementById('cbMesaConfirm');
+            if (!backdrop) {
+                backdrop = document.createElement('div');
+                backdrop.id = 'cbMesaConfirm';
+                backdrop.className = 'cb-mesa-confirm-backdrop';
+                backdrop.innerHTML =
+                    '<div class="cb-mesa-confirm-card" role="alertdialog" aria-modal="true">' +
+                    '  <header><h3 class="cb-mesa-confirm-title"></h3>' +
+                    '    <button type="button" class="cb-mesa-confirm-x" aria-label="Fechar">×</button>' +
+                    '  </header>' +
+                    '  <div class="cb-mesa-confirm-body"></div>' +
+                    '  <footer>' +
+                    '    <button type="button" class="cb-mesa-confirm-cancel"></button>' +
+                    '    <button type="button" class="cb-mesa-confirm-ok cb-primary"></button>' +
+                    '  </footer>' +
+                    '</div>';
+                document.body.appendChild(backdrop);
+            }
+            backdrop.classList.toggle('is-danger', !!o.danger);
+            const titleEl = backdrop.querySelector('.cb-mesa-confirm-title');
+            const bodyEl  = backdrop.querySelector('.cb-mesa-confirm-body');
+            const okBtn   = backdrop.querySelector('.cb-mesa-confirm-ok');
+            const cancelBtn = backdrop.querySelector('.cb-mesa-confirm-cancel');
+            const xBtn    = backdrop.querySelector('.cb-mesa-confirm-x');
+
+            titleEl.textContent = o.title || 'Confirmar';
+            bodyEl.innerHTML = ''; // body pode ser HTML controlado por strings montadas no chamador
+            if (typeof o.body === 'string') {
+                const p = document.createElement('p');
+                p.textContent = o.body;
+                bodyEl.appendChild(p);
+            } else if (o.body instanceof Node) {
+                bodyEl.appendChild(o.body);
+            }
+            okBtn.textContent = o.confirmLabel || 'Confirmar';
+            cancelBtn.textContent = o.cancelLabel || 'Cancelar';
+            backdrop.hidden = false;
+
+            const cleanup = (resultado) => {
+                backdrop.hidden = true;
+                okBtn.removeEventListener('click', onOk);
+                cancelBtn.removeEventListener('click', onCancel);
+                xBtn.removeEventListener('click', onCancel);
+                backdrop.removeEventListener('click', onBackdrop);
+                document.removeEventListener('keydown', onKey, true);
+                resolve(resultado);
+            };
+            const onOk = () => cleanup(true);
+            const onCancel = () => cleanup(false);
+            const onBackdrop = (ev) => { if (ev.target === backdrop) cleanup(false); };
+            const onKey = (ev) => {
+                if (ev.key === 'Escape') { ev.stopPropagation(); cleanup(false); }
+                else if (ev.key === 'Enter') { ev.stopPropagation(); cleanup(true); }
+            };
+
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+            xBtn.addEventListener('click', onCancel);
+            backdrop.addEventListener('click', onBackdrop);
+            document.addEventListener('keydown', onKey, true);
+            // Foco no botão de confirmar para responder rápido por Enter.
+            setTimeout(() => okBtn.focus(), 30);
+        });
+    }
+    window.showMesaConfirm = showMesaConfirm;
 
     // ---- Banner central transiente (Combate iniciado / Nova rodada) ----
     let _combatBannerTimer = null;
@@ -2121,6 +2240,23 @@
         head.appendChild(focusBtn);
 
         wrap.appendChild(head);
+
+        // Botão "Mover" — entra em modo click-to-move.
+        const moverBtn = document.createElement('button');
+        moverBtn.type = 'button';
+        moverBtn.className = 'cb-turno-atual-mover';
+        moverBtn.textContent = '↣ Mover';
+        const movRest = token.acaoCompletaUsada ? 0 : (token.acaoMovimentoUsada ? 0 : 1);
+        const podeDobro = !token.acaoPadraoUsada || token.dobroMovimento;
+        // Habilitado se ainda há mov OU se padrão livre p/ converter em dobro.
+        moverBtn.disabled = (movRest === 0 && !podeDobro) || token.acaoCompletaUsada;
+        moverBtn.title = 'Clique e escolha um destino no grid. ESC cancela.';
+        moverBtn.addEventListener('click', () => {
+            // Garante que o token "selecionado" para o picker é o do turno.
+            if (state.selectedId !== token.id) selectToken(token.id);
+            entrarModoMover();
+        });
+        wrap.appendChild(moverBtn);
 
         const endBtn = document.createElement('button');
         endBtn.type = 'button';
@@ -2447,14 +2583,21 @@
         saveState();
     }
 
-    function clearAllTerrain() {
+    async function clearAllTerrain() {
         const cDif = state.terrainDifficult instanceof Set ? state.terrainDifficult.size : 0;
         const cBar = state.terrainBarriers  instanceof Set ? state.terrainBarriers.size  : 0;
         const cSpe = state.terrainSpecial && typeof state.terrainSpecial === 'object'
             ? Object.keys(state.terrainSpecial).length : 0;
         const total = cDif + cBar + cSpe;
         if (!total) return;
-        if (!confirm('Remover todas as ' + total + ' marcações de terreno desta cena?')) return;
+        const ok = await showMesaConfirm({
+            title: 'Limpar marcações',
+            body: `Remover todas as ${total} marcações de terreno desta cena?`,
+            confirmLabel: 'Limpar tudo',
+            cancelLabel: 'Cancelar',
+            danger: true
+        });
+        if (!ok) return;
         state.terrainDifficult = new Set();
         state.terrainBarriers  = new Set();
         state.terrainSpecial   = {};
@@ -5822,8 +5965,24 @@
     //   preview pode mostrar células que o footprint não cabe ao parar.
     //   A validação de pouso continua nas funções de drag existentes.
     function buildMovementReachCells(token, budget) {
-        const result = new Map();
-        if (!token || !Number.isFinite(budget) || budget <= 0) return result;
+        const out = buildMovementReachWithPath(token, budget);
+        return out.dist;
+    }
+
+    /**
+     * Dijkstra completo com rastreio de pai para reconstruir o caminho.
+     * Considera: terreno difícil (custo 2x), barreiras (intransponíveis),
+     * outros tokens (bloqueiam), limites do grid.
+     *
+     * Retorna { dist: Map<key,cost>, parent: Map<key,prevKey>, startKey }.
+     */
+    function buildMovementReachWithPath(token, budget) {
+        const dist = new Map();
+        const parent = new Map();
+        const startKey = token ? occupiedKey(token.col, token.row) : '';
+        if (!token || !Number.isFinite(budget) || budget <= 0) {
+            return { dist, parent, startKey };
+        }
         const cols = state.cols, rows = state.rows;
 
         // Células ocupadas por OUTROS tokens viram bloqueio.
@@ -5835,10 +5994,7 @@
             }
         }
 
-        const startKey = occupiedKey(token.col, token.row);
-        const dist = new Map();
         dist.set(startKey, 0);
-        // Priority queue ingênua (suficiente para grids até ~60×60).
         const pq = [{ key: startKey, col: token.col, row: token.row, cost: 0 }];
 
         while (pq.length) {
@@ -5847,7 +6003,7 @@
                 if (pq[i].cost < pq[minIdx].cost) minIdx = i;
             }
             const cur = pq.splice(minIdx, 1)[0];
-            if (dist.get(cur.key) !== cur.cost) continue; // entrada obsoleta
+            if (dist.get(cur.key) !== cur.cost) continue;
             for (let dc = -1; dc <= 1; dc++) {
                 for (let dr = -1; dr <= 1; dr++) {
                     if (dc === 0 && dr === 0) continue;
@@ -5856,6 +6012,7 @@
                     if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
                     const nkey = occupiedKey(nc, nr);
                     if (blocked.has(nkey)) continue;
+                    if (isTerrainBarrier(nc, nr)) continue; // barreiras intransponíveis
                     const isDiagonal = (dc !== 0 && dr !== 0);
                     const dificil = isTerrainDifficult(nc, nr);
                     let stepCost = isDiagonal ? 2 : 1;
@@ -5865,14 +6022,199 @@
                     const prev = dist.get(nkey);
                     if (prev === undefined || newCost < prev) {
                         dist.set(nkey, newCost);
+                        parent.set(nkey, cur.key);
                         pq.push({ key: nkey, col: nc, row: nr, cost: newCost });
                     }
                 }
             }
         }
 
-        dist.delete(startKey); // origem não conta como célula alcançada
-        return dist;
+        return { dist, parent, startKey };
+    }
+
+    /** Reconstrói o caminho [{col,row}, ...] de origem ao destino,
+     * incluindo o destino (mas excluindo a origem). Vazio se inexiste. */
+    function reconstruirCaminho(parentMap, startKey, targetKey) {
+        if (!parentMap.has(targetKey) && targetKey !== startKey) return [];
+        const reversa = [];
+        let cur = targetKey;
+        while (cur && cur !== startKey) {
+            const m = /^(\d+),(\d+)$/.exec(cur);
+            if (!m) break;
+            reversa.push({ col: Number(m[1]), row: Number(m[2]) });
+            cur = parentMap.get(cur);
+        }
+        return reversa.reverse();
+    }
+
+    // ---- Click-to-move: estado do "modo seleção de destino" ----
+    // state.movePicker = { tokenId, baseQd, max1, max2, dist, parent, startKey } | null
+    // Quando ativo, o renderBoard pinta a área alcançável dividida em
+    // "1 ação" (até max1) e "2 ações" (acima de max1 até max2).
+
+    function entrarModoMover() {
+        const sel = state.tokens.find(t => t.id === state.selectedId);
+        if (!sel) {
+            showCbToast('Selecione um token para movê-lo.');
+            return;
+        }
+        if (state.combateAtivo && !isCurrentTurnToken(sel.id)) {
+            showCbToast(`${sel.name || 'Token'} não está no turno atual.`);
+            return;
+        }
+        if (state.combateAtivo && sel.acaoCompletaUsada) {
+            showCbToast('Ação completa já gasta neste turno.');
+            return;
+        }
+
+        // Orçamento: ação 1 = base; ação 2 = +base (se padrão livre).
+        const baseQd = tokenDeslocamentoQuadrados(sel);
+        const movimentoUsado = Number(sel.movimentoUsado) || 0;
+        const restante1 = Math.max(0, baseQd - movimentoUsado);
+
+        // Se padrão ainda livre OU dobro já engajado, pode chegar a 2x base.
+        const podeDobro = !sel.acaoPadraoUsada || sel.dobroMovimento;
+        const restante2 = podeDobro ? Math.max(0, (baseQd * 2) - movimentoUsado) : restante1;
+
+        if (restante1 <= 0 && restante2 <= 0) {
+            showCbToast('Sem deslocamento disponível neste turno.');
+            return;
+        }
+
+        // Limpa overlays competidores.
+        clearReachPreview(false);
+
+        // Dijkstra com orçamento total (restante2 cobre os dois casos).
+        const r = buildMovementReachWithPath(sel, restante2);
+        state.movePicker = {
+            tokenId: sel.id,
+            baseQd,
+            movimentoUsado,
+            max1: restante1,
+            max2: restante2,
+            dist: r.dist,
+            parent: r.parent,
+            startKey: r.startKey,
+            path: null
+        };
+        showCbToast('Escolha um destino no grid. ESC cancela.');
+        renderBoard();
+    }
+
+    function sairModoMover() {
+        if (!state.movePicker) return;
+        state.movePicker = null;
+        renderBoard();
+    }
+
+    function previewCaminhoMover(destCol, destRow) {
+        const mp = state.movePicker;
+        if (!mp) return null;
+        const targetKey = occupiedKey(destCol, destRow);
+        if (!mp.dist.has(targetKey)) return null;
+        const path = reconstruirCaminho(mp.parent, mp.startKey, targetKey);
+        const cost = mp.dist.get(targetKey);
+        return { path, cost, targetKey };
+    }
+
+    async function escolherDestinoMover(destCol, destRow) {
+        const mp = state.movePicker;
+        if (!mp) return;
+        const token = state.tokens.find(t => t.id === mp.tokenId);
+        if (!token) { sairModoMover(); return; }
+
+        const targetKey = occupiedKey(destCol, destRow);
+
+        // Destino é a própria origem? Cancela.
+        if (targetKey === mp.startKey) {
+            sairModoMover();
+            return;
+        }
+
+        // Destino é barreira ou inalcançável dentro do orçamento total?
+        if (isTerrainBarrier(destCol, destRow)) {
+            showCbToast('Destino é uma barreira intransponível.');
+            return;
+        }
+        if (!mp.dist.has(targetKey)) {
+            showCbToast('Destino além do deslocamento máximo deste turno.');
+            return;
+        }
+
+        const cost = mp.dist.get(targetKey);
+        const path = reconstruirCaminho(mp.parent, mp.startKey, targetKey);
+        const metros = (cost * 1.5).toFixed(1).replace(/\.0$/, '');
+        const dentroDe1 = cost <= mp.max1;
+        const precisaDoDobro = !dentroDe1;
+
+        if (precisaDoDobro && (token.acaoPadraoUsada || cost > mp.max2)) {
+            showCbToast('Sem ação padrão disponível para 2ª ação de movimento.');
+            return;
+        }
+
+        // Mostra o caminho durante a confirmação.
+        mp.path = path;
+        renderBoard();
+
+        let confirmado;
+        if (dentroDe1) {
+            confirmado = await showMesaConfirm({
+                title: 'Mover token',
+                body: `${token.name || 'Token'} se moverá ${cost} qd / ${metros}m.\nIsso usará 1 ação de movimento.`,
+                confirmLabel: 'Mover',
+                cancelLabel: 'Cancelar'
+            });
+        } else {
+            confirmado = await showMesaConfirm({
+                title: 'Usar 2 ações de movimento?',
+                body: `${token.name || 'Token'} precisa percorrer ${cost} qd / ${metros}m, ` +
+                      `o que excede a ação de movimento padrão. ` +
+                      `Deseja usar a SEGUNDA ação de movimento e ficar SEM ação padrão neste turno?`,
+                confirmLabel: 'Usar 2 movimentos',
+                cancelLabel: 'Cancelar'
+            });
+        }
+
+        if (!confirmado) {
+            // Mantém o picker ativo para o usuário escolher outro destino.
+            mp.path = null;
+            renderBoard();
+            return;
+        }
+
+        aplicarMovimentoTatico(token, path, cost, precisaDoDobro);
+    }
+
+    function aplicarMovimentoTatico(token, path, cost, usaDobro) {
+        if (!path || !path.length) return;
+        // Snapshot para Ctrl+Z.
+        pushUndo(usaDobro ? 'Movimento (2 ações)' : 'Movimento', token.id);
+
+        // Aplica.
+        const dest = path[path.length - 1];
+        token.col = dest.col;
+        token.row = dest.row;
+        token.movimentoUsado = (Number(token.movimentoUsado) || 0) + cost;
+        token.acaoMovimentoUsada = true;
+        if (usaDobro) {
+            token.dobroMovimento = true;
+            token.acaoPadraoUsada = true;
+        }
+
+        const total = token.dobroMovimento ? tokenDeslocamentoQuadrados(token) * 2 : tokenDeslocamentoQuadrados(token);
+        const restante = Math.max(0, total - token.movimentoUsado);
+        const metros = (cost * 1.5).toFixed(1).replace(/\.0$/, '');
+        addLog({
+            title: usaDobro ? 'Movimento (2 ações)' : 'Movimento',
+            detail: `${token.name || 'Token'}: +${cost} qd / ${metros}m (acumulado ${token.movimentoUsado}/${total}, ${restante} restante${restante === 1 ? '' : 's'}).`
+        });
+
+        sairModoMover();
+        renderTokens();
+        renderTurnList();
+        renderBoard();
+        if (state.selectedId === token.id) renderSelectedTokenTools();
+        saveState();
     }
 
     // Cache do preview de movimento por render — evita recomputar dentro
@@ -8950,9 +9292,15 @@
                 saveState();
             });
         }
-        // Tecla Esc sai do modo de marcação rapidamente
+        // Tecla Esc sai do modo de marcação ou do click-to-move.
         document.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Escape' && state.terrainMarkingMode) {
+            if (ev.key !== 'Escape') return;
+            if (state.movePicker) {
+                ev.preventDefault();
+                sairModoMover();
+                return;
+            }
+            if (state.terrainMarkingMode) {
                 setTerrainMarkingMode(false);
             }
         });

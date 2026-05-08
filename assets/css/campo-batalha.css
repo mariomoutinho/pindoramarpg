@@ -1897,6 +1897,56 @@ body.cb-body[data-mode="play"] .cb-edit-only {
 }
 .cb-turno-atual-end:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 4px 12px rgba(70,30,0,0.35); }
 
+.cb-turno-atual-mover {
+    width: 100%;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 2px solid var(--purple);
+    background: #fff;
+    color: var(--purple-dark);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+.cb-turno-atual-mover:hover:not(:disabled) {
+    background: var(--purple-light);
+    transform: translateY(-1px);
+}
+.cb-turno-atual-mover:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------- Click-to-move: visualização da área e do caminho ---------- */
+/* Área alcançável dentro de uma ação de movimento. */
+.cb-cell--mov-acao1 {
+    background:
+        repeating-linear-gradient(45deg,
+            rgba(80, 200, 100, 0.22) 0,
+            rgba(80, 200, 100, 0.22) 8px,
+            rgba(80, 200, 100, 0.10) 8px,
+            rgba(80, 200, 100, 0.10) 16px);
+    box-shadow: inset 0 0 0 1px rgba(40, 120, 60, 0.45);
+}
+/* Área alcançável APENAS com 2 ações de movimento (consome ação padrão). */
+.cb-cell--mov-acao2 {
+    background:
+        repeating-linear-gradient(45deg,
+            rgba(220, 160, 40, 0.22) 0,
+            rgba(220, 160, 40, 0.22) 8px,
+            rgba(220, 160, 40, 0.10) 8px,
+            rgba(220, 160, 40, 0.10) 16px);
+    box-shadow: inset 0 0 0 1px rgba(170, 110, 20, 0.50);
+}
+/* Caminho atual sendo confirmado — mais saturado, sobrepõe a área. */
+.cb-cell--mov-caminho {
+    background: rgba(118, 84, 124, 0.55) !important;
+    box-shadow: inset 0 0 0 2px rgba(43, 18, 50, 0.7);
+}
+
 /* Indicador discreto do bioma da cena no modo Jogar. */
 .cb-scene-biome-tag {
     display: none;
@@ -1913,6 +1963,104 @@ body.cb-body[data-mode="play"] .cb-edit-only {
 }
 body.cb-body[data-mode="play"] .cb-scene-biome-tag {
     display: inline-flex;
+}
+
+/* ---------- Modal de confirmação async (showMesaConfirm) ---------- */
+.cb-mesa-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(43, 18, 50, 0.55);
+    backdrop-filter: blur(2px);
+}
+.cb-mesa-confirm-backdrop[hidden] { display: none; }
+.cb-mesa-confirm-card {
+    background: rgba(255, 253, 253, 0.98);
+    border: 3px solid var(--line);
+    border-radius: 16px;
+    padding: 0;
+    box-shadow: 0 18px 44px rgba(43, 18, 50, 0.45);
+    max-width: min(440px, 100%);
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: cbConfirmEnter 180ms ease-out;
+}
+@keyframes cbConfirmEnter {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.cb-mesa-confirm-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(233,216,241,0.55));
+    border-bottom: 2px solid rgba(118, 84, 124, 0.22);
+}
+.cb-mesa-confirm-title {
+    margin: 0;
+    color: var(--purple-dark);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+.cb-mesa-confirm-x {
+    width: 36px; height: 36px;
+    border: 2px solid var(--purple);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--purple-dark);
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    line-height: 1;
+}
+.cb-mesa-confirm-x:hover { background: var(--purple-light); }
+.cb-mesa-confirm-body {
+    padding: 16px;
+    color: var(--purple-dark);
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+.cb-mesa-confirm-body p { margin: 0; }
+.cb-mesa-confirm-body p + p { margin-top: 8px; }
+.cb-mesa-confirm-card footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 16px 14px;
+    border-top: 1px solid rgba(118, 84, 124, 0.18);
+}
+.cb-mesa-confirm-card footer button {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid var(--purple);
+    background: #fff;
+    color: var(--purple-dark);
+    transition: 0.15s ease;
+}
+.cb-mesa-confirm-card footer button:hover { background: var(--purple-light); }
+.cb-mesa-confirm-card footer .cb-mesa-confirm-ok {
+    background: var(--purple-dark);
+    color: #fff;
+    border-color: var(--purple-dark);
+}
+.cb-mesa-confirm-card footer .cb-mesa-confirm-ok:hover { filter: brightness(1.15); }
+.cb-mesa-confirm-backdrop.is-danger .cb-mesa-confirm-ok {
+    background: #9b254d;
+    border-color: #7a153a;
 }
 
 /* ---------- Modal ---------- */
