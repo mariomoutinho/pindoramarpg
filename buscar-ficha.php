@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
 
 require_once 'config.php';
+require_once __DIR__ . '/includes/permissions.php';
 
 header('Content-Type: application/json');
 
@@ -26,6 +27,16 @@ if (!$ficha) {
     echo json_encode([
         'success' => false,
         'message' => 'Ficha não encontrada.'
+    ]);
+    exit;
+}
+
+// Autorização: Facilitador vê todas; Participante só a própria ficha.
+if (!canViewFicha((int) $ficha['id'])) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Você não tem permissão para visualizar esta ficha.'
     ]);
     exit;
 }

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
+require_once __DIR__ . '/includes/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -17,6 +18,17 @@ try {
     $ajuste = normalizarTokenAjuste($payload['ajuste'] ?? []);
     if ($id <= 0) {
         throw new RuntimeException('Ficha inválida.');
+    }
+
+    // Autorização: ajuste de token segue a regra de edição da ficha
+    // (Facilitador sempre, Participante só na própria).
+    if (!canEditFicha($id)) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Você não tem permissão para ajustar o token desta ficha.',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 
     $stmt = $pdo->prepare('SELECT personagem_imagem_ajuste, personagem_token_imagem FROM fichas WHERE id = :id');

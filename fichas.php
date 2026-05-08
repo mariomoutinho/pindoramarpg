@@ -3,20 +3,38 @@ require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
 
 require_once 'config.php';
+require_once __DIR__ . '/includes/permissions.php';
 
-// Nota técnica: por enquanto a listagem é global (todas as fichas).
-// Quando o vínculo ficha↔usuário for adicionado, filtrar por
-// fichas do próprio usuário (Participante) ou da mesa do Facilitador.
+// Facilitador vê todas as fichas; Participante vê apenas as próprias.
+// O filtro depende da migration 007 (`fichas.usuario_id`); se a coluna
+// ainda não existir, o Participante recebe lista vazia (mais seguro
+// que vazar todas).
+$temColunaUsuarioIdFichas = false;
+try {
+    $check = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'usuario_id'");
+    $temColunaUsuarioIdFichas = $check && $check->fetch() ? true : false;
+} catch (Throwable $e) {
+    $temColunaUsuarioIdFichas = false;
+}
 
-$stmt = $pdo->query("
-    SELECT id, participante, personagem, ancestralidade, classe, nivel,
-           personagem_imagem, personagem_imagem_ajuste,
-           personagem_token_imagem, personagem_token_imagem_ajuste,
-           updated_at
-    FROM fichas
-    ORDER BY updated_at DESC
-");
-$fichas = $stmt->fetchAll();
+$colunasFichas = "id, participante, personagem, ancestralidade, classe, nivel,
+       personagem_imagem, personagem_imagem_ajuste,
+       personagem_token_imagem, personagem_token_imagem_ajuste,
+       updated_at";
+
+if (isFacilitador()) {
+    $stmt = $pdo->query("SELECT $colunasFichas FROM fichas ORDER BY updated_at DESC");
+    $fichas = $stmt->fetchAll();
+} elseif ($temColunaUsuarioIdFichas) {
+    $u = usuarioLogado();
+    $stmt = $pdo->prepare(
+        "SELECT $colunasFichas FROM fichas WHERE usuario_id = :uid ORDER BY updated_at DESC"
+    );
+    $stmt->execute(['uid' => (int) $u['id']]);
+    $fichas = $stmt->fetchAll();
+} else {
+    $fichas = [];
+}
 
 function normalizarAjusteAvatarFicha($valor): array
 {

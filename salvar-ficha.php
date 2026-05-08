@@ -4,12 +4,37 @@ require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
 
 require_once 'config.php';
+require_once __DIR__ . '/includes/permissions.php';
 
 header('Content-Type: application/json');
 
 $id = $_POST['id'] ?? null;
 garantirColunaAjusteImagem($pdo);
 garantirColunasTokenImagem($pdo);
+
+// Autorização: edição só pelo dono ou Facilitador. Criação é livre p/
+// qualquer logado (Participantes criam a própria ficha; Facilitador
+// pode criar para outros e atribuir depois).
+if ($id !== null && $id !== '') {
+    if (!canEditFicha((int) $id)) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Você não tem permissão para editar esta ficha.'
+        ]);
+        exit;
+    }
+}
+
+// Detecta se o vínculo `usuario_id` já existe na tabela (migration 007).
+// Mantemos o código tolerante a banco antigo.
+$temColunaUsuarioId = false;
+try {
+    $check = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'usuario_id'");
+    $temColunaUsuarioId = $check && $check->fetch() ? true : false;
+} catch (Throwable $e) {
+    $temColunaUsuarioId = false;
+}
 
 $campos = [
     'participante',
@@ -226,11 +251,19 @@ try {
         $stmt->execute($dados);
         $fichaId = $id;
     } else {
-        $colunas = implode(", ", $campos);
-        $placeholders = ":" . implode(", :", $campos);
+        $camposInsert = $campos;
+        $dadosInsert = $dados;
+        // Vincula a ficha ao usuário atual quando o schema permite.
+        if ($temColunaUsuarioId) {
+            $usuario = usuarioLogado();
+            $camposInsert[] = 'usuario_id';
+            $dadosInsert['usuario_id'] = $usuario ? (int) $usuario['id'] : null;
+        }
+        $colunas = implode(", ", $camposInsert);
+        $placeholders = ":" . implode(", :", $camposInsert);
         $sql = "INSERT INTO fichas ($colunas) VALUES ($placeholders)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($dados);
+        $stmt->execute($dadosInsert);
         $fichaId = (int) $pdo->lastInsertId();
     }
 

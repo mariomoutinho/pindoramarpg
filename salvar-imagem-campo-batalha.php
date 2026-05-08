@@ -3,8 +3,19 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
+require_once __DIR__ . '/includes/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+// Apenas o Facilitador pode subir/alterar imagens da Mesa de Jogo.
+if (!isFacilitador()) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Apenas o Facilitador pode salvar imagens da Mesa.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

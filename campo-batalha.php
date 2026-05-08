@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
+require_once __DIR__ . '/includes/permissions.php';
+
+$papelUsuarioCB = papelGlobal() ?: 'participante';
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -11,9 +14,10 @@ exigirLogin();
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508e" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508g" />
 </head>
-<body class="cb-body">
+<body class="cb-body" data-papel="<?= htmlspecialchars($papelUsuarioCB) ?>">
+    <script>window.PINDORAMA_PAPEL = <?= json_encode($papelUsuarioCB) ?>;</script>
     <script src="assets/js/transitions.js?v=20260503d"></script>
 
     <main class="cb-page">
@@ -203,7 +207,7 @@ exigirLogin();
                                 <option value="outro">Outro</option>
                             </select>
                         </label>
-                        <label>Notas do narrador
+                        <label>Notas do Facilitador
                             <textarea id="cbSceneNotes" rows="4" placeholder="Escala, regras especiais, observações de terreno..."></textarea>
                         </label>
                         <label>Imagem de fundo
@@ -340,7 +344,7 @@ exigirLogin();
                         <select id="cbTokenLayer">
                             <option value="tokens">Objetos/tokens</option>
                             <option value="mapa">Mapa/fundo</option>
-                            <option value="mestre">Mestre</option>
+                            <option value="mestre">Facilitador</option>
                         </select>
                     </label>
                     <div class="cb-editor-grid">

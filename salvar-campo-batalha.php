@@ -3,8 +3,19 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
 exigirLogin();
+require_once __DIR__ . '/includes/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+// Apenas o Facilitador pode editar/salvar a cena da Mesa de Jogo.
+if (!isFacilitador()) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Apenas o Facilitador pode salvar a cena.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
 
 $raw = file_get_contents('php://input');
 $state = json_decode($raw ?: '', true);

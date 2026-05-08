@@ -1,6 +1,12 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/permissions.php';
+iniciarSessao();
+
 $dadosBestiario = json_decode(file_get_contents(__DIR__ . '/data/bestiario.json'), true);
 $filtrosBestiario = $dadosBestiario['filtros'] ?? [];
+
+$bestiarioPodeEditar = isFacilitador();
 
 function bestiarioOptions(array $valores): string
 {
@@ -92,6 +98,7 @@ function bestiarioOptions(array $valores): string
 
                 <section class="bestiario-lista" id="bestiarioLista" aria-live="polite"></section>
 
+                <?php if ($bestiarioPodeEditar): ?>
                 <details class="panel bestiario-form-panel" id="bestiarioFormPanel">
                     <summary>
                         <span id="bestiarioFormTitulo">Adicionar criatura</span>
@@ -190,7 +197,7 @@ function bestiarioOptions(array $valores): string
                                 <label>Imunidades <textarea id="criaturaImunidades" placeholder="Uma por linha"></textarea></label>
                                 <label>Tesouro mecânico <textarea id="criaturaTesouroMecanico"></textarea></label>
                                 <label>Ficha completa em texto livre <textarea id="criaturaFichaCompleta"></textarea></label>
-                                <label>Notas do Mestre <textarea id="criaturaNotasMestre"></textarea></label>
+                                <label>Notas do Facilitador <textarea id="criaturaNotasMestre"></textarea></label>
                             </div>
                         </details>
 
@@ -208,6 +215,7 @@ function bestiarioOptions(array $valores): string
                         </div>
                     </form>
                 </details>
+                <?php endif; // $bestiarioPodeEditar ?>
             </article>
         </section>
     </main>

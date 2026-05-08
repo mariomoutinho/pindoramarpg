@@ -2319,6 +2319,30 @@
     border: 1px solid rgba(255, 255, 255, 0.20);
 }
 
+/* ---------- Controles administrativos ocultos para Participante ---------- */
+/* Estes botões causam mutação de cena/mapa e são restritos ao Facilitador.
+   O servidor já bloqueia via 403; aqui escondemos para limpar a UI. */
+body[data-papel="participante"] #cbAddPage,
+body[data-papel="participante"] #cbAddToken,
+body[data-papel="participante"] #cbAddBestiaryToken,
+body[data-papel="participante"] #cbAddScenery,
+body[data-papel="participante"] #cbAddNpcImage,
+body[data-papel="participante"] #cbRemoveToken,
+body[data-papel="participante"] #cbSaveBattle,
+body[data-papel="participante"] #cbClearAll,
+body[data-papel="participante"] #cbApplySize,
+body[data-papel="participante"] #cbResetMovimentos,
+body[data-papel="participante"] #cbRollSceneInitiative,
+body[data-papel="participante"] #cbAddTurnSelected,
+body[data-papel="participante"] #cbSortTurns,
+body[data-papel="participante"] #cbRoundIncrement,
+body[data-papel="participante"] #cbRoundReset,
+body[data-papel="participante"] #cbNextTurn,
+body[data-papel="participante"] #cbAdjustToken,
+body[data-papel="participante"] #cbRotateToken {
+    display: none !important;
+}
+
 .cb-action-card h4 {
     margin: 0;
     font-size: 1rem;
