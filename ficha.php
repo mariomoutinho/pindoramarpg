@@ -24,10 +24,10 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
     <link rel="stylesheet" href="assets/css/divindades.css?v=20260430j" />
     <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260503c" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508h" />
 </head>
 <body>
-    <script src="assets/js/transitions.js?v=20260503d"></script>
+    <script src="assets/js/transitions.js?v=20260508h"></script>
 
     <main class="page-wrapper">
 

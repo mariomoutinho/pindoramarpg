@@ -5801,7 +5801,28 @@
 
     function closeTokenActionPanel() {
         els.actionPanel.hidden = true;
+        hideActionPreview();
     }
+
+    /**
+     * Fecha incondicionalmente qualquer overlay/modal/painel da Mesa de
+     * Jogo. Defensivo contra estado preso (bfcache, JS travou no meio
+     * de uma abertura, etc.). Chamado no init e disponível para uso
+     * manual via console (window.closeAllMesaOverlays).
+     */
+    function closeAllMesaOverlays() {
+        const overlays = [
+            'sceneryModal', 'tokenEditorModal', 'sheetWindow',
+            'imageCropModal', 'adjustModal', 'confirm', 'result',
+            'modal', 'actionPanel'
+        ];
+        for (const key of overlays) {
+            if (els[key] && !els[key].hidden) els[key].hidden = true;
+        }
+        hideActionPreview();
+        if (state.reachPreview) clearReachPreview(false);
+    }
+    window.closeAllMesaOverlays = closeAllMesaOverlays;
 
     // ----------------------------------------------------------------
     // Modal de confirmação de ação direcionada
@@ -8227,6 +8248,10 @@
     // ----------------------------------------------------------------
 
     async function init() {
+        // Defensivo: garante que nenhum overlay sobreviveu de uma sessão
+        // anterior (bfcache, JS travado, navegação interrompida).
+        closeAllMesaOverlays();
+
         await loadState();
         window.__cbState = state;
         els.cols.value = state.cols;

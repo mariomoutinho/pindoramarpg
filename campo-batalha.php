@@ -13,12 +13,12 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     <title>Mesa de Jogo — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508h" />
     <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508g" />
 </head>
 <body class="cb-body" data-papel="<?= htmlspecialchars($papelUsuarioCB) ?>">
     <script>window.PINDORAMA_PAPEL = <?= json_encode($papelUsuarioCB) ?>;</script>
-    <script src="assets/js/transitions.js?v=20260503d"></script>
+    <script src="assets/js/transitions.js?v=20260508h"></script>
 
     <main class="cb-page">
 
@@ -490,6 +490,6 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260508f"></script>
+    <script src="assets/js/campo-batalha.js?v=20260508h"></script>
 </body>
 </html>

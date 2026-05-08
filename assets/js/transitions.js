@@ -80,4 +80,10 @@
     // (alguns browsers não setam e.persisted=true mas reusam a página).
     window.addEventListener('pageshow', limparPageLeaving);
     window.addEventListener('popstate', limparPageLeaving);
+
+    // Extra: quando a aba volta a ser visível (ex.: usuário trocou de
+    // aba durante uma navegação que travou), também tira a classe.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') limparPageLeaving();
+    });
 })();

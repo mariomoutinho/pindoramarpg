@@ -7,11 +7,11 @@
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508h" />
 </head>
 
 <body>
-    <script src="assets/js/transitions.js?v=20260503d"></script>
+    <script src="assets/js/transitions.js?v=20260508h"></script>
     <main class="page-wrapper classes-page">
 
         <header class="top-actions classes-topbar">

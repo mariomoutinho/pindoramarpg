@@ -44,10 +44,10 @@ $csrf = tokenCsrf();
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/home.css?v=20260507d" />
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508h" />
 </head>
 <body class="home-body">
-    <script src="assets/js/transitions.js?v=20260503d"></script>
+    <script src="assets/js/transitions.js?v=20260508h"></script>
 
     <main class="home-shell auth-shell">
         <header class="home-hero home-hero-compact">

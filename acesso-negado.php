@@ -17,7 +17,7 @@ $papel = papelGlobal();
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Acesso negado — Pindorama RPG</title>
     <link rel="stylesheet" href="assets/css/home.css?v=20260507d" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260503d" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508h" />
     <style>
         .acesso-negado-wrap {
             display: grid;

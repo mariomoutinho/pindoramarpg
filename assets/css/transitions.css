@@ -18,8 +18,22 @@ body > main {
    pelo histórico do navegador). A animação de fade-out já é breve
    o suficiente para que cliques duplos não causem problema. */
 
+/* IMPORTANTE: NUNCA usar `forwards` aqui. Se a classe `page-leaving`
+   ficar presa (bfcache, navegação interrompida, JS travou), `forwards`
+   deixaria a página permanentemente em opacity:0 + blur, parecendo um
+   modal/overlay travado. Sem fill-mode, a animação roda e volta ao
+   estado natural — a navegação para a nova URL acontece dentro do
+   tempo da animação, então o usuário não percebe diferença visual. */
 body.page-leaving > main {
-    animation: pageLeave 220ms ease-in forwards;
+    animation: pageLeave 220ms ease-in;
+}
+
+/* Cinto + suspensório: mesmo se o keyframe ficar parado em algum
+   estado intermediário, garantimos que main nunca fique invisível
+   ou bloqueando interação por blur quando NÃO há `page-leaving`. */
+body:not(.page-leaving) > main {
+    opacity: 1 !important;
+    filter: none !important;
 }
 
 /* Importante: as keyframes finais usam `transform: none` e `filter: none`,
