@@ -43,11 +43,25 @@
     function closeAllOverlays() {
         for (const cls of STUCK_BODY_CLASSES) {
             document.body.classList.remove(cls);
+            document.documentElement.classList.remove(cls);
         }
         document.querySelectorAll('a.is-leaving').forEach(a => a.classList.remove('is-leaving'));
         if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
         if (document.body.style.opacity) document.body.style.opacity = '';
         if (document.body.style.filter)  document.body.style.filter  = '';
+        if (document.documentElement.style.overflow === 'hidden') document.documentElement.style.overflow = '';
+        if (document.documentElement.style.filter) document.documentElement.style.filter = '';
+
+        // Tira estado "aberto" de qualquer backdrop conhecido.
+        const SELS = '.modal-backdrop, .overlay, .backdrop, .action-overlay, ' +
+                     '.battle-backdrop, .mesa-backdrop, .anc-picker-backdrop, ' +
+                     '.poder-modal-backdrop, .sheet-modal-backdrop, ' +
+                     '.cb-modal-backdrop, .dice-overlay';
+        document.querySelectorAll(SELS).forEach(el => {
+            el.classList.remove('is-open', 'show', 'active', 'is-active', 'is-visible');
+            el.setAttribute('aria-hidden', 'true');
+            el.style.pointerEvents = 'none';
+        });
     }
 
     function limparSeNaoHaModal() {
@@ -75,6 +89,63 @@
         if (temAlgumModalAberto()) return;
         closeAllOverlays();
     });
+})();
+
+/* =====================================================================
+   1b) DIAGNÓSTICO ON-DEMAND — abra a página com ?debug=overlay para
+       imprimir no console o que está cobrindo a tela. Útil para
+       investigar o bug "tela escurecida/travada" quando ele aparece.
+   ===================================================================== */
+(function () {
+    'use strict';
+    try {
+        if (!new URLSearchParams(location.search).has('debug')) return;
+        if (new URLSearchParams(location.search).get('debug') !== 'overlay') return;
+    } catch (_) { return; }
+
+    function dump() {
+        const W = window.innerWidth, H = window.innerHeight;
+        const center = document.elementFromPoint(W/2, H/2);
+        const stack  = document.elementsFromPoint(W/2, H/2);
+
+        const suspects = [...document.querySelectorAll('body *')]
+            .map(el => {
+                const s = getComputedStyle(el);
+                const r = el.getBoundingClientRect();
+                return { el, tag: el.tagName, id: el.id,
+                         cls: String(el.className).slice(0, 80),
+                         pos: s.position, z: s.zIndex,
+                         pe: s.pointerEvents, op: s.opacity,
+                         disp: s.display, vis: s.visibility,
+                         bg: s.backgroundColor, filter: s.filter,
+                         backdropFilter: s.backdropFilter,
+                         w: Math.round(r.width), h: Math.round(r.height),
+                         t: Math.round(r.top), l: Math.round(r.left) };
+            })
+            .filter(x => (
+                (x.pos === 'fixed' || x.pos === 'absolute') &&
+                x.w >= W * 0.7 && x.h >= H * 0.7
+            ));
+
+        console.group('%c[Pindorama overlay-debug]', 'background:#76547c;color:#fff;padding:2px 6px;border-radius:4px');
+        console.log('center el:', center);
+        console.log('stack at center:', stack);
+        console.log('html.className:', document.documentElement.className);
+        console.log('body.className :', document.body.className);
+        console.log('body::before   :', getComputedStyle(document.body, '::before').cssText);
+        console.log('body::after    :', getComputedStyle(document.body, '::after').cssText);
+        console.log('html::before   :', getComputedStyle(document.documentElement, '::before').cssText);
+        console.log('html::after    :', getComputedStyle(document.documentElement, '::after').cssText);
+        console.table(suspects.map(({el, ...r}) => r));
+        console.log('suspect elements:', suspects.map(s => s.el));
+        console.groupEnd();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(dump, 200));
+    } else {
+        setTimeout(dump, 200);
+    }
 })();
 
 /* =====================================================================

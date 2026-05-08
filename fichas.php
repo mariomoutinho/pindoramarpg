@@ -87,10 +87,10 @@ function avatarFichaSalva(array $ficha): array
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
     <link rel="stylesheet" href="assets/css/home.css?v=20260507f" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508j" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508k" />
 </head>
 <body class="home-body">
-    <script src="assets/js/transitions.js?v=20260508j"></script>
+    <script src="assets/js/transitions.js?v=20260508k"></script>
 
     <main class="home-shell home-shell-list">
 

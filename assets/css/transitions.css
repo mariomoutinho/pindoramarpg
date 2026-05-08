@@ -22,6 +22,33 @@ body > main {
     transform: none !important;
 }
 
+/* ====================================================================
+   Salvaguarda nuclear contra overlays globais.
+
+   Nenhum arquivo do projeto usa body::before / body::after / html::before
+   / html::after hoje (auditado). Esta regra desabilita preventivamente
+   qualquer pseudo-elemento desse tipo que venha a ser introduzido
+   acidentalmente, e zera filter/backdrop-filter no body/html que pudessem
+   escurecer/borrar a página inteira.
+
+   Se algum dia for legítimo usar um desses pseudo-elementos, escopar com
+   um seletor mais específico (ex.: body.com-modal-real-aberto::before).
+   ==================================================================== */
+html::before,
+html::after,
+body::before,
+body::after {
+    display: none !important;
+    content: none !important;
+    pointer-events: none !important;
+}
+
+html,
+body {
+    filter: none !important;
+    backdrop-filter: none !important;
+}
+
 /* Fade-out no clique de link interno (transitions.js adiciona a
    classe). NUNCA usar `forwards` — sem fill-mode, qualquer estado
    residual da animação volta naturalmente ao normal. */
