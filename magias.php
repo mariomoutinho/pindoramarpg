@@ -24,10 +24,10 @@ function magiaOptions(array $valores): string
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
     <link rel="stylesheet" href="assets/css/magias.css?v=20260503a" />
-    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508i" />
+    <link rel="stylesheet" href="assets/css/transitions.css?v=20260508j" />
 </head>
 <body>
-    <script src="assets/js/transitions.js?v=20260508i"></script>
+    <script src="assets/js/transitions.js?v=20260508j"></script>
     <main class="page-wrapper magias-page">
 
         <header class="top-actions classes-topbar">

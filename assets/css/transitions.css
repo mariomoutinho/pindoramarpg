@@ -1,63 +1,32 @@
 /* ====================================================================
-   Transições suaves de página (fade-in ao chegar, fade-out ao sair).
-   Inclua junto com transitions.js nas páginas alvo.
+   Transições de página — versão minimalista e segura.
 
-   Importante:
-   A animação é aplicada em `body > main`, NÃO em `body`. Isso
-   evita que `transform` / `filter` no body criem um "containing
-   block" novo que quebraria a posição de elementos `position: fixed`
-   (ex.: backdrop dos pickers — eles são anexados a body).
+   Histórico:
+   Versões anteriores aplicavam `animation: pageEnter 380ms ... both`
+   em `body > main`, com FROM-state = opacity:0 + blur(2px). Em todo
+   cenário onde a animação não rodava por algum motivo (reduced-motion
+   alternado em runtime, motor de animação pausado por bfcache, sleep
+   da aba, frame intermediário capturado no print), a página ficava
+   parecendo um overlay escuro/borrado travado.
+
+   Decisão: descartar o fade-in completo. A página agora aparece
+   instantaneamente. Mantemos o fade-out leve no clique de link
+   (sem `forwards`!) só como feedback discreto.
    ==================================================================== */
 
+/* Sem fade-in. Garante visibilidade total mesmo se algum estado
+   residual de animação tente aplicar opacity/filter/transform. */
 body > main {
-    animation: pageEnter 380ms ease-out both;
-}
-
-/* Removido `pointer-events: none` em body.page-leaving — causava
-   bloqueio total da página caso a classe persistisse (ex.: ao voltar
-   pelo histórico do navegador). A animação de fade-out já é breve
-   o suficiente para que cliques duplos não causem problema. */
-
-/* IMPORTANTE: NUNCA usar `forwards` aqui. Se a classe `page-leaving`
-   ficar presa (bfcache, navegação interrompida, JS travou), `forwards`
-   deixaria a página permanentemente em opacity:0 + blur, parecendo um
-   modal/overlay travado. Sem fill-mode, a animação roda e volta ao
-   estado natural — a navegação para a nova URL acontece dentro do
-   tempo da animação, então o usuário não percebe diferença visual. */
-body.page-leaving > main {
-    animation: pageLeave 220ms ease-in;
-}
-
-/* Cinto + suspensório: mesmo se o keyframe ficar parado em algum
-   estado intermediário, garantimos que main nunca fique invisível
-   ou bloqueando interação por blur quando NÃO há `page-leaving`. */
-body:not(.page-leaving) > main {
     opacity: 1 !important;
     filter: none !important;
     transform: none !important;
 }
 
-/* Reforço: se por algum motivo o navegador ainda tentar aplicar opacity
-   <1 ou blur via animação interrompida, transitions.js (IIFE de guard)
-   limpa as classes residuais do body em todo `pageshow/visibilitychange`. */
-
-/* Importante: as keyframes finais usam `transform: none` e `filter: none`,
-   não `translateY(0)`/`blur(0)`. Isso é deliberado: valores como
-   `translateY(0)` ou `blur(0)` ainda contam como transform/filter aplicados
-   (ainda criam containing block para descendentes `position: fixed`).
-   `none` resolve para identidade limpa, sem efeito colateral. */
-
-@keyframes pageEnter {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-        filter: blur(2px);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-        filter: none;
-    }
+/* Fade-out no clique de link interno (transitions.js adiciona a
+   classe). NUNCA usar `forwards` — sem fill-mode, qualquer estado
+   residual da animação volta naturalmente ao normal. */
+body.page-leaving > main {
+    animation: pageLeave 220ms ease-in;
 }
 
 @keyframes pageLeave {
@@ -73,7 +42,7 @@ body:not(.page-leaving) > main {
     }
 }
 
-/* Liga o link no momento da transição com um leve glow */
+/* Glow no link clicado durante a transição (cosmético, não bloqueia). */
 a.is-leaving {
     animation: linkFlash 220ms ease-in forwards;
 }
@@ -84,9 +53,8 @@ a.is-leaving {
     to   { box-shadow: 0 0 0 12px rgba(105, 67, 111, 0); }
 }
 
-/* Acessibilidade — quem pediu menos movimento, recebe transição instantânea */
+/* Acessibilidade — sem animação se o usuário pedir reduced-motion. */
 @media (prefers-reduced-motion: reduce) {
-    body > main,
     body.page-leaving > main,
     a.is-leaving {
         animation: none;
