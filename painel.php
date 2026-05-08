@@ -32,21 +32,49 @@ $ehFacilitador = ehFacilitadorGlobal();
 
         <?php if ($ehFacilitador): ?>
             <nav class="home-grid-ref" aria-label="Ações do Facilitador">
-                <a class="home-card-ref" href="campo-batalha.php">
-                    <strong>Mesa de Jogo</strong>
-                    <span>Cenas, mapas, tokens e NPCs.</span>
+                <a class="home-card-ref" href="mesas.php">
+                    <strong>Minhas Mesas</strong>
+                    <span>Crie e administre suas campanhas.</span>
+                </a>
+                <a class="home-card-ref" href="mesas.php?focus=participantes">
+                    <strong>Participantes</strong>
+                    <span>Adicione e vincule jogadores às mesas.</span>
                 </a>
                 <a class="home-card-ref" href="fichas.php">
-                    <strong>Fichas</strong>
-                    <span>Personagens dos participantes.</span>
+                    <strong>Fichas dos Participantes</strong>
+                    <span>Personagens criados pelos jogadores.</span>
+                </a>
+                <a class="home-card-ref" href="mesa-conteudos.php?tipo=npc">
+                    <strong>NPCs</strong>
+                    <span>Personagens controlados pela mesa.</span>
                 </a>
                 <a class="home-card-ref" href="bestiario.php">
                     <strong>Bestiário</strong>
                     <span>Criaturas e ameaças.</span>
                 </a>
+                <a class="home-card-ref" href="mesa-conteudos.php?tipo=magia">
+                    <strong>Magias e Poderes</strong>
+                    <span>Conteúdos customizados da mesa.</span>
+                </a>
+                <a class="home-card-ref" href="mesa-conteudos.php?tipo=aventura">
+                    <strong>Aventuras</strong>
+                    <span>Estrutura geral das tramas.</span>
+                </a>
+                <a class="home-card-ref" href="mesa-conteudos.php?tipo=narrativa">
+                    <strong>Narrativas</strong>
+                    <span>Cenas e descrições preparadas.</span>
+                </a>
+                <a class="home-card-ref" href="campo-batalha.php">
+                    <strong>Mapas e Cenas</strong>
+                    <span>Mesa de Jogo: tabuleiro, tokens e iniciativa.</span>
+                </a>
+                <a class="home-card-ref" href="mesa-conteudos.php?visibilidade=participantes">
+                    <strong>Conteúdos Liberados</strong>
+                    <span>O que os Participantes já podem ver.</span>
+                </a>
                 <a class="home-card-ref" href="referencia.php">
                     <strong>Acervo</strong>
-                    <span>Catálogos e regras.</span>
+                    <span>Catálogos e regras do sistema.</span>
                 </a>
             </nav>
         <?php else: ?>

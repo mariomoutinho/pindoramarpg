@@ -1,0 +1,248 @@
+/* ======================================================================
+   painel-facilitador.css — estilos das páginas do Painel do Facilitador
+   (mesas.php, mesa-conteudos.php). Reaproveita o vocabulário visual de
+   home.css/auth.css; usa apenas a paleta roxa/lilás existente.
+   ====================================================================== */
+
+.painel-shell {
+    max-width: 1100px;
+}
+
+.painel-flash {
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin: 0 auto 16px;
+    text-align: center;
+    font-weight: 700;
+    max-width: 720px;
+}
+.painel-flash--success {
+    background: rgba(70, 140, 90, 0.12);
+    color: #1f6b39;
+    border: 1.5px solid rgba(70, 140, 90, 0.4);
+}
+.painel-flash--error {
+    background: rgba(155, 37, 77, 0.10);
+    color: #7a153a;
+    border: 1.5px solid rgba(155, 37, 77, 0.4);
+}
+.painel-flash--info {
+    background: rgba(118, 84, 124, 0.10);
+    color: var(--purple-dark, #2b1232);
+    border: 1.5px solid rgba(118, 84, 124, 0.36);
+}
+
+.painel-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    align-items: start;
+}
+
+.painel-card {
+    background: rgba(255, 253, 253, 0.97);
+    border: 3px solid var(--line, #76547c);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 8px 22px rgba(43, 18, 50, 0.16);
+}
+
+.painel-card--wide {
+    grid-column: 1 / -1;
+}
+
+.painel-card h2 {
+    margin: 0 0 12px;
+    color: var(--purple-dark, #2b1232);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.15rem;
+}
+.painel-card h3 {
+    margin: 16px 0 8px;
+    color: var(--purple-dark, #2b1232);
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.painel-empty {
+    color: var(--muted, #76547c);
+    margin: 4px 0 0;
+}
+
+.painel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.painel-item {
+    border: 1.5px solid rgba(118, 84, 124, 0.22);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #fff, rgba(245, 235, 250, 0.5));
+}
+.painel-item.is-active {
+    border-color: var(--purple, #76547c);
+    box-shadow: 0 4px 10px rgba(43, 18, 50, 0.14);
+}
+.painel-item a {
+    text-decoration: none;
+    color: var(--purple-dark, #2b1232);
+    display: grid;
+    gap: 2px;
+}
+.painel-item strong { font-family: Georgia, "Times New Roman", serif; }
+.painel-item-meta { font-size: 0.78rem; color: var(--muted, #76547c); }
+.painel-item-desc {
+    margin: 6px 0 0;
+    color: var(--purple-dark, #2b1232);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.painel-item--row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.painel-item--row > div:first-child { flex: 1; min-width: 0; }
+
+.painel-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.painel-form {
+    display: grid;
+    gap: 10px;
+}
+.painel-form label {
+    display: grid;
+    gap: 4px;
+    font-size: 0.82rem;
+    color: var(--purple-dark, #2b1232);
+    font-weight: 700;
+}
+.painel-form input,
+.painel-form select,
+.painel-form textarea {
+    border: 1.5px solid rgba(118, 84, 124, 0.36);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font: inherit;
+    background: #fff;
+    color: var(--purple-dark, #2b1232);
+}
+.painel-form textarea { resize: vertical; min-height: 70px; }
+
+.painel-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.painel-form-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin: 6px 0 0;
+}
+.painel-form-row input,
+.painel-form-row select {
+    flex: 1 1 180px;
+    border: 1.5px solid rgba(118, 84, 124, 0.36);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font: inherit;
+    background: #fff;
+    color: var(--purple-dark, #2b1232);
+}
+
+.painel-form-mini { margin-top: 16px; }
+
+.painel-inline-form { display: inline-block; margin: 0; }
+
+.painel-mini-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border: 1.5px solid var(--purple, #76547c);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--purple-dark, #2b1232);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.4;
+}
+.painel-mini-btn:hover { background: var(--purple-light, #f5d6e8); }
+.painel-mini-btn--danger {
+    border-color: #9b254d;
+    color: #7a153a;
+}
+.painel-mini-btn--danger:hover { background: rgba(155, 37, 77, 0.10); }
+
+.home-btn-danger {
+    border-color: #9b254d;
+    color: #7a153a;
+    background: #fff;
+}
+.home-btn-danger:hover { background: rgba(155, 37, 77, 0.10); }
+
+.painel-tipo-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 auto 16px;
+    justify-content: center;
+}
+.painel-tipo-tabs a {
+    padding: 6px 14px;
+    border: 1.5px solid rgba(118, 84, 124, 0.36);
+    border-radius: 999px;
+    color: var(--purple-dark, #2b1232);
+    text-decoration: none;
+    font-weight: 700;
+    background: #fff;
+    font-size: 0.85rem;
+}
+.painel-tipo-tabs a.is-active {
+    background: var(--purple-dark, #2b1232);
+    color: #fff;
+    border-color: var(--purple-dark, #2b1232);
+}
+.painel-tipo-tabs a:hover:not(.is-active) {
+    background: var(--purple-light, #f5d6e8);
+}
+
+.painel-vis {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.painel-vis--privado {
+    background: rgba(155, 37, 77, 0.14);
+    color: #7a153a;
+}
+.painel-vis--participantes {
+    background: rgba(70, 140, 90, 0.14);
+    color: #1f6b39;
+}
+.painel-vis--publico {
+    background: rgba(118, 84, 124, 0.18);
+    color: var(--purple-dark, #2b1232);
+}
