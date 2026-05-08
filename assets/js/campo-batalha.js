@@ -9460,6 +9460,11 @@
         const tag = '[Mesa de Jogo init]';
         console.info(tag, 'Iniciando Mesa de Jogo...');
 
+        // Remove banner "JS NÃO INICIADO" — comprova ao usuário que o
+        // arquivo JS foi carregado e parseado sem erros.
+        const aliveBanner = document.getElementById('cbJsAlive');
+        if (aliveBanner) aliveBanner.remove();
+
         // Defensivo: garante que nenhum overlay sobreviveu de uma sessão
         // anterior (bfcache, JS travado, navegação interrompida).
         try { closeAllMesaOverlays(); } catch (e) { console.error(tag, 'closeAllMesaOverlays falhou:', e); }

@@ -17,6 +17,11 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508w" />
 </head>
 <body class="cb-body mesa-jogo-page" data-papel="<?= htmlspecialchars($papelUsuarioCB) ?>">
+    <!-- Banner de diagnóstico: aparece se o JS NUNCA rodar.
+         É removido pelo init() do campo-batalha.js. -->
+    <div id="cbJsAlive" style="position:fixed;top:8px;left:8px;z-index:9999;background:#9b254d;color:#fff;padding:6px 12px;border-radius:8px;font-family:sans-serif;font-size:13px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.3)">
+        ⚠ JS NÃO INICIADO — abra DevTools (F12) e veja Console
+    </div>
     <script>window.PINDORAMA_PAPEL = <?= json_encode($papelUsuarioCB) ?>;</script>
     <script src="assets/js/transitions.js?v=20260508u"></script>
 
@@ -552,6 +557,6 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260508w"></script>
+    <script src="assets/js/campo-batalha.js?v=20260508x"></script>
 </body>
 </html>
