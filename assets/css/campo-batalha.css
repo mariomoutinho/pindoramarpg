@@ -1965,6 +1965,40 @@ body.cb-body[data-mode="play"] .cb-scene-biome-tag {
     display: inline-flex;
 }
 
+/* ---------- Banner de diagnóstico (falha de carregamento) ---------- */
+.cb-diag-banner {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 260;
+    max-width: min(720px, calc(100vw - 24px));
+    padding: 10px 16px;
+    background: #fff5e6;
+    color: #7a3b00;
+    border: 2px solid #d8a632;
+    border-radius: 12px;
+    box-shadow: 0 8px 22px rgba(120, 70, 0, 0.28);
+    font-size: 0.88rem;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cb-diag-banner strong { color: #5a2b00; }
+.cb-diag-banner span { flex: 1; }
+.cb-diag-banner button {
+    background: transparent;
+    border: 1.5px solid #b07a30;
+    color: #5a2b00;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+}
+.cb-diag-banner button:hover { background: rgba(180, 122, 48, 0.18); }
+
 /* ---------- Modal de confirmação async (showMesaConfirm) ---------- */
 .cb-mesa-confirm-backdrop {
     position: fixed;

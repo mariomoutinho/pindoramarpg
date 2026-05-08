@@ -505,6 +505,7 @@
 
     async function loadState() {
         const tag = '[Mesa de Jogo]';
+        let diagnostico = null; // texto a mostrar no banner se algo falhar
         try {
             console.info(tag, 'Carregando estado de', SERVER_STATE_URL);
             const resp = await fetch(SERVER_STATE_URL, {
@@ -513,24 +514,41 @@
             });
             console.info(tag, 'HTTP', resp.status, resp.statusText);
             if (resp.ok) {
-                const data = await resp.json();
-                if (data.success && data.state) {
-                    const numPages = Array.isArray(data.state.pages) ? data.state.pages.length : 0;
-                    console.info(tag, `Estado recebido com ${numPages} cena${numPages === 1 ? '' : 's'}.`);
-                    if (applyStateSnapshot(data.state)) {
-                        console.info(tag, 'Estado aplicado. Cena ativa:', state.activePageId);
-                        return;
+                let data;
+                try {
+                    data = await resp.json();
+                } catch (eParse) {
+                    diagnostico = 'Servidor respondeu, mas o JSON é inválido. Veja o console.';
+                    console.warn(tag, 'JSON inválido na resposta:', eParse);
+                }
+                if (data) {
+                    if (data.success && data.state) {
+                        const numPages = Array.isArray(data.state.pages) ? data.state.pages.length : 0;
+                        console.info(tag, `Estado recebido com ${numPages} cena${numPages === 1 ? '' : 's'}.`);
+                        try {
+                            if (applyStateSnapshot(data.state)) {
+                                console.info(tag, 'Estado aplicado. Cena ativa:', state.activePageId);
+                                return;
+                            }
+                            diagnostico = 'Servidor retornou ' + numPages + ' cena(s), mas applyStateSnapshot falhou.';
+                            console.warn(tag, 'applyStateSnapshot retornou false — usando fallback.');
+                        } catch (eApply) {
+                            diagnostico = 'Erro ao processar as ' + numPages + ' cena(s) recebidas: ' + (eApply && eApply.message ? eApply.message : eApply);
+                            console.error(tag, 'applyStateSnapshot lançou:', eApply);
+                        }
+                    } else if (data.success && !data.state) {
+                        console.info(tag, 'Servidor retornou estado vazio — vai criar cena padrão.');
+                    } else {
+                        diagnostico = 'Servidor sem sucesso: ' + (data.message || 'sem mensagem');
+                        console.warn(tag, 'Resposta sem sucesso:', data);
                     }
-                    console.warn(tag, 'applyStateSnapshot falhou — usando fallback.');
-                } else if (data.success && !data.state) {
-                    console.info(tag, 'Servidor retornou estado vazio — vai criar cena padrão.');
-                } else {
-                    console.warn(tag, 'Resposta sem sucesso:', data);
                 }
             } else {
-                console.warn(tag, 'Falha HTTP ao carregar estado.');
+                diagnostico = 'Falha HTTP ' + resp.status + ' ao carregar estado.';
+                console.warn(tag, diagnostico);
             }
         } catch (e) {
+            diagnostico = 'Erro de rede ao carregar estado: ' + (e && e.message ? e.message : e);
             console.warn(tag, 'Erro na requisição de carregar estado:', e);
         }
 
@@ -539,15 +557,36 @@
             if (!raw) {
                 console.info(tag, 'Sem fallback no localStorage. Criando cena padrão.');
                 ensureInitialPage();
-                return;
+            } else {
+                const snap = JSON.parse(raw);
+                console.info(tag, 'Recuperando estado do localStorage.');
+                applyStateSnapshot(snap);
             }
-            const snap = JSON.parse(raw);
-            console.info(tag, 'Recuperando estado do localStorage.');
-            applyStateSnapshot(snap);
         } catch (e) {
             console.warn(tag, 'Erro no fallback do localStorage:', e);
             ensureInitialPage();
         }
+
+        if (diagnostico) {
+            mostrarBannerDiagnostico(diagnostico);
+        }
+    }
+
+    /** Banner visível na cena quando há falha no carregamento. */
+    function mostrarBannerDiagnostico(msg) {
+        try {
+            let banner = document.getElementById('cbDiagBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'cbDiagBanner';
+                banner.className = 'cb-diag-banner';
+                banner.innerHTML = '<strong>Atenção:</strong> <span></span> ' +
+                    '<button type="button" aria-label="Fechar">×</button>';
+                banner.querySelector('button').addEventListener('click', () => banner.remove());
+                document.body.appendChild(banner);
+            }
+            banner.querySelector('span').textContent = msg;
+        } catch (_) { /* nunca trava */ }
     }
 
     function applyStateSnapshot(snap) {
@@ -9418,38 +9457,72 @@
     // ----------------------------------------------------------------
 
     async function init() {
+        const tag = '[Mesa de Jogo init]';
+        console.info(tag, 'Iniciando Mesa de Jogo...');
+
         // Defensivo: garante que nenhum overlay sobreviveu de uma sessão
         // anterior (bfcache, JS travado, navegação interrompida).
-        closeAllMesaOverlays();
+        try { closeAllMesaOverlays(); } catch (e) { console.error(tag, 'closeAllMesaOverlays falhou:', e); }
 
-        await loadState();
-        window.__cbState = state;
-        els.cols.value = state.cols;
-        els.rows.value = state.rows;
-        els.toggleNumbers.checked = state.showNumbers;
-        if (els.mapImage) els.mapImage.value = state.mapBackground || '';
-        if (els.gridOpacity) els.gridOpacity.value = String(state.gridOpacity);
-        if (els.gridSize) els.gridSize.value = String(CELL_SIZE);
-        if (els.snapToGrid) els.snapToGrid.checked = !!state.snapToGrid;
-        if (els.imageLayer) els.imageLayer.value = state.activeImageLayer;
-        refreshSceneFieldsUI();
-        renderPagesBar();
-        renderBoard();
-        renderScenery();
-        renderTokens();
-        renderLog();
-        renderTurnList();
-        setSidebarTab(state.activeSidebarTab || 'registro');
-        consumePendingBestiaryToken();
-        syncFichaTokensFromServer();
-        syncBestiaryTokensFromLocal();
-        if (state.viewport.scale === 1 && state.viewport.x === 0 && state.viewport.y === 0) {
-            centerBoard();
-        } else {
-            applyViewport();
+        // Carregamento de estado: se algo falhar aqui, ainda assim
+        // criamos uma cena vazia para que o usuário consiga editar.
+        try {
+            await loadState();
+        } catch (e) {
+            console.error(tag, 'loadState lançou; criando cena vazia segura:', e);
+            try { ensureInitialPage(); } catch (e2) { console.error(tag, 'ensureInitialPage falhou:', e2); }
         }
-        bindEvents();
-        bindTooltip();
+        // Pós-condição: pelo menos 1 cena ATIVA. Se nem isso, força.
+        if (!Array.isArray(state.pages) || state.pages.length === 0) {
+            console.warn(tag, 'state.pages vazio após loadState — criando Cena 1.');
+            try { ensureInitialPage(); } catch (e) { console.error(tag, e); }
+        }
+        if (!state.activePageId && state.pages.length) {
+            state.activePageId = state.pages[0].id;
+            try { loadPageIntoLive(state.pages[0]); } catch (e) { console.error(tag, e); }
+        }
+        console.info(tag, `Cenas: ${state.pages.length}. Ativa: ${state.activePageId}`);
+
+        window.__cbState = state;
+
+        // Cada bloco de inicialização é envolvido em try/catch para que
+        // um erro em uma fase NÃO impeça o resto da página de funcionar.
+        // Em particular, queremos que bindEvents rode sempre (botões).
+        const fase = (nome, fn) => {
+            try { fn(); } catch (e) { console.error(tag, nome, 'falhou:', e); }
+        };
+
+        fase('els.cols', () => { if (els.cols) els.cols.value = state.cols; });
+        fase('els.rows', () => { if (els.rows) els.rows.value = state.rows; });
+        fase('toggleNumbers', () => { if (els.toggleNumbers) els.toggleNumbers.checked = state.showNumbers; });
+        fase('mapImage',     () => { if (els.mapImage) els.mapImage.value = state.mapBackground || ''; });
+        fase('gridOpacity',  () => { if (els.gridOpacity) els.gridOpacity.value = String(state.gridOpacity); });
+        fase('gridSize',     () => { if (els.gridSize) els.gridSize.value = String(CELL_SIZE); });
+        fase('snapToGrid',   () => { if (els.snapToGrid) els.snapToGrid.checked = !!state.snapToGrid; });
+        fase('imageLayer',   () => { if (els.imageLayer) els.imageLayer.value = state.activeImageLayer; });
+        fase('refreshSceneFieldsUI', refreshSceneFieldsUI);
+        fase('renderPagesBar', renderPagesBar);
+        fase('renderBoard',    renderBoard);
+        fase('renderScenery',  renderScenery);
+        fase('renderTokens',   renderTokens);
+        fase('renderLog',      renderLog);
+        fase('renderTurnList', renderTurnList);
+        fase('setSidebarTab',  () => setSidebarTab(state.activeSidebarTab || 'registro'));
+        fase('consumePendingBestiaryToken', consumePendingBestiaryToken);
+        fase('syncFichaTokensFromServer',   syncFichaTokensFromServer);
+        fase('syncBestiaryTokensFromLocal', syncBestiaryTokensFromLocal);
+        fase('viewport', () => {
+            if (state.viewport.scale === 1 && state.viewport.x === 0 && state.viewport.y === 0) {
+                centerBoard();
+            } else {
+                applyViewport();
+            }
+        });
+        // bindEvents é CRÍTICO — sem ele, nenhum botão funciona.
+        fase('bindEvents', bindEvents);
+        fase('bindTooltip', bindTooltip);
+
+        console.info(tag, 'Mesa de Jogo pronta.');
     }
 
     if (document.readyState === 'loading') {
