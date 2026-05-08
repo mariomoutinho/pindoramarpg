@@ -65,6 +65,7 @@
         terrainSpecialBiome: 'mangue', // bioma escolhido ao marcar 'special'
         modoCena: 'edit',            // 'edit' | 'play' — modo da Mesa de Jogo
         sceneBiome: '',              // bioma/ambiente dominante da cena
+        combateAtivo: false,         // true quando há um combate em curso na cena
         fichas: [],                // cache da lista de fichas
         fichasLoaded: false,
         bestiario: [],             // cache da lista de criaturas do bestiário
@@ -220,6 +221,8 @@
         modePlayBtn: document.getElementById('cbModePlay'),
         sceneBiome:  document.getElementById('cbSceneBiome'),
         sceneBiomeTag: document.getElementById('cbSceneBiomeTag'),
+        startCombatBtn: document.getElementById('cbStartCombat'),
+        endCombatBtn:   document.getElementById('cbEndCombat'),
         tokenEditorModal: document.getElementById('cbTokenEditorModal'),
         tokenEditorClose: document.getElementById('cbTokenEditorClose'),
         tokenEditorCancel: document.getElementById('cbTokenEditorCancel'),
@@ -634,7 +637,8 @@
             terrainSpecial: (page.terrainSpecial && typeof page.terrainSpecial === 'object')
                 ? page.terrainSpecial : {},
             modoCena: page.modoCena === 'play' ? 'play' : 'edit',
-            sceneBiome: typeof page.sceneBiome === 'string' ? page.sceneBiome : ''
+            sceneBiome: typeof page.sceneBiome === 'string' ? page.sceneBiome : '',
+            combateAtivo: !!page.combateAtivo
         };
     }
 
@@ -704,6 +708,7 @@
             ? { ...state.terrainSpecial } : {};
         page.modoCena = state.modoCena === 'play' ? 'play' : 'edit';
         page.sceneBiome = state.sceneBiome || '';
+        page.combateAtivo = !!state.combateAtivo;
     }
 
     function loadPageIntoLive(page) {
@@ -727,6 +732,7 @@
         state.terrainSpecial   = (page.terrainSpecial && typeof page.terrainSpecial === 'object') ? { ...page.terrainSpecial } : {};
         state.modoCena = page.modoCena === 'play' ? 'play' : 'edit';
         state.sceneBiome = typeof page.sceneBiome === 'string' ? page.sceneBiome : '';
+        state.combateAtivo = !!page.combateAtivo;
         state.terrainMarkingMode = false;
         if (!state.terrainMarkingType) state.terrainMarkingType = 'difficult';
         state.selectedId = null;
@@ -1934,6 +1940,7 @@
             els.modePlayBtn.classList.toggle('is-active', modo === 'play');
             els.modePlayBtn.setAttribute('aria-selected', modo === 'play' ? 'true' : 'false');
         }
+        refreshCombatUI();
     }
 
     // ---- Biomas / ambientes da cena (Parte 4) ----
@@ -1964,6 +1971,185 @@
     }
     function getSceneTerrainType() {
         return state.sceneBiome || '';
+    }
+
+    // ---- Combate ativo (Iniciar/Encerrar) ----
+
+    function refreshCombatUI() {
+        const ativo = !!state.combateAtivo;
+        const modoPlay = state.modoCena === 'play';
+
+        if (els.startCombatBtn) {
+            els.startCombatBtn.hidden = ativo || !modoPlay;
+        }
+        if (els.endCombatBtn) {
+            els.endCombatBtn.hidden = !ativo;
+        }
+        document.body.dataset.combate = ativo ? 'ativo' : 'inativo';
+    }
+
+    function iniciarCombate() {
+        const elegiveis = state.tokens.filter(t => !t.layer || t.layer !== 'mapa');
+        if (elegiveis.length < 1) {
+            showCbToast('Adicione pelo menos um token antes de iniciar o combate.');
+            return;
+        }
+        const msg = elegiveis.length === 1
+            ? 'Iniciar combate com 1 token?'
+            : `Iniciar combate com ${elegiveis.length} tokens? A iniciativa será rolada automaticamente.`;
+        if (!confirm(msg)) return;
+
+        // Reusa a rolagem de iniciativa existente (que já reseta movimentos
+        // e foca o primeiro). Adiciona apenas a flag de combate ativo.
+        rollInitiativeForScene();
+        state.combateAtivo = true;
+        // A rodada já foi resetada para 1 dentro do rollInitiativeForScene.
+        const turn = state.turns[state.currentTurnIndex];
+        const tokenAtual = turn ? state.tokens.find(t => t.id === turn.tokenId) : null;
+        const nome = tokenAtual ? (tokenAtual.name || 'Token') : '—';
+        showCombatBanner('Combate iniciado', `Rodada 1 · Turno de ${nome}`);
+        addLog({ title: 'Combate iniciado', detail: `Rodada 1 · Primeiro turno: ${nome}.` });
+        refreshCombatUI();
+        renderTurnList();
+        renderTokens();
+        saveState();
+    }
+
+    function encerrarCombate() {
+        if (!state.combateAtivo) return;
+        if (!confirm('Encerrar combate? Posições, mapa e cena permanecem.')) return;
+        state.combateAtivo = false;
+        clearReachPreview(false);
+        addLog({ title: 'Combate encerrado', detail: 'A cena permanece; posições preservadas.' });
+        showCombatBanner('Combate encerrado', '');
+        refreshCombatUI();
+        renderTurnList();
+        renderTokens();
+        renderBoard();
+        saveState();
+    }
+
+    // ---- Banner central transiente (Combate iniciado / Nova rodada) ----
+    let _combatBannerTimer = null;
+    function buildTurnoAtualCard() {
+        // Sempre que combate estiver ativo OU houver turno definido,
+        // mostra um card no topo do painel de iniciativa com o foco
+        // visual no token da vez. Em combate inativo, mostra estado
+        // "preparação" + botão Iniciar Combate.
+        const wrap = document.createElement('div');
+        wrap.className = 'cb-turno-atual';
+
+        if (!state.combateAtivo) {
+            wrap.classList.add('cb-turno-atual--inativo');
+            const titulo = document.createElement('strong');
+            titulo.textContent = state.modoCena === 'play'
+                ? 'Sem combate ativo'
+                : 'Cena em preparação';
+            wrap.appendChild(titulo);
+
+            const sub = document.createElement('p');
+            sub.textContent = state.modoCena === 'play'
+                ? 'Inicie um combate para rolar iniciativa e controlar turnos.'
+                : 'Mude para “Jogar cena” na topbar para iniciar combate.';
+            wrap.appendChild(sub);
+
+            if (state.modoCena === 'play') {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cb-turno-atual-iniciar';
+                btn.textContent = '⚔ Iniciar Combate';
+                btn.addEventListener('click', iniciarCombate);
+                wrap.appendChild(btn);
+            }
+            return wrap;
+        }
+
+        // Combate ativo
+        const turn = state.turns[state.currentTurnIndex];
+        const token = turn ? state.tokens.find(t => t.id === turn.tokenId) : null;
+        if (!token) return null;
+
+        wrap.classList.add('cb-turno-atual--ativo');
+
+        const head = document.createElement('div');
+        head.className = 'cb-turno-atual-head';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'cb-turno-atual-thumb';
+        const src = resolveTokenImageSrc(token);
+        if (src) {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = '';
+            img.loading = 'lazy';
+            applyTokenImageAdjustment(img, token.tokenImageAdjust ?? token.imageAdjust);
+            thumb.appendChild(img);
+        } else {
+            thumb.textContent = getTokenInitials(token.name || '?');
+        }
+        head.appendChild(thumb);
+
+        const info = document.createElement('div');
+        info.className = 'cb-turno-atual-info';
+        const tag = document.createElement('span');
+        tag.className = 'cb-turno-atual-tag';
+        tag.textContent = 'AGORA';
+        info.appendChild(tag);
+        const nome = document.createElement('strong');
+        nome.textContent = token.name || 'Token';
+        info.appendChild(nome);
+        const meta = document.createElement('span');
+        const total = tokenDeslocamentoQuadrados(token);
+        const restante = tokenMovimentoRestante(token);
+        const padrao = (token.acaoPadraoUsada || token.acaoCompletaUsada) ? 0 : 1;
+        const movRest = token.acaoCompletaUsada ? 0 : (token.acaoMovimentoUsada ? 0 : 1);
+        meta.className = 'cb-turno-atual-meta';
+        meta.textContent = `Rodada ${state.currentRound} · P:${padrao} M:${movRest} · ${restante}/${total} qd`;
+        info.appendChild(meta);
+        head.appendChild(info);
+
+        const focusBtn = document.createElement('button');
+        focusBtn.type = 'button';
+        focusBtn.className = 'cb-turno-atual-focus';
+        focusBtn.title = 'Centralizar mapa no token da vez';
+        focusBtn.setAttribute('aria-label', 'Focar token atual');
+        focusBtn.textContent = '⌖';
+        focusBtn.addEventListener('click', () => {
+            selectToken(token.id);
+            focusTokenOnMap(token);
+        });
+        head.appendChild(focusBtn);
+
+        wrap.appendChild(head);
+
+        const endBtn = document.createElement('button');
+        endBtn.type = 'button';
+        endBtn.className = 'cb-turno-atual-end';
+        endBtn.textContent = 'Terminar turno ▶';
+        endBtn.addEventListener('click', nextTurn);
+        wrap.appendChild(endBtn);
+
+        return wrap;
+    }
+
+    function showCombatBanner(titulo, subtitulo) {
+        let el = document.getElementById('cbCombatBanner');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'cbCombatBanner';
+            el.className = 'cb-combat-banner';
+            el.setAttribute('role', 'status');
+            el.setAttribute('aria-live', 'polite');
+            el.innerHTML = '<strong></strong><span></span>';
+            document.body.appendChild(el);
+        }
+        el.querySelector('strong').textContent = titulo || '';
+        el.querySelector('span').textContent = subtitulo || '';
+        el.classList.add('is-visible');
+        if (_combatBannerTimer) clearTimeout(_combatBannerTimer);
+        _combatBannerTimer = setTimeout(() => {
+            el.classList.remove('is-visible');
+        }, 2500);
     }
 
     /**
@@ -7807,8 +7993,18 @@
         state.currentTurnIndex = Math.min(state.currentTurnIndex, Math.max(0, state.turns.length - 1));
         refreshRoundDisplay();
         els.turnList.innerHTML = '';
+
+        // Card "Turno Atual" no topo: ativo apenas em combate.
+        const cardTurnoAtual = buildTurnoAtualCard();
+        if (cardTurnoAtual) els.turnList.appendChild(cardTurnoAtual);
+
         if (!state.turns.length) {
-            els.turnList.innerHTML = '<p class="cb-sidebar-empty">Adicione tokens para criar a ordem de turno.</p>';
+            const vazio = document.createElement('p');
+            vazio.className = 'cb-sidebar-empty';
+            vazio.textContent = state.combateAtivo
+                ? 'Adicione tokens à iniciativa.'
+                : 'Adicione tokens e clique em "Iniciar Combate" para começar.';
+            els.turnList.appendChild(vazio);
             return;
         }
         const round = Math.max(1, Number(state.currentRound) || 1);
@@ -8005,10 +8201,12 @@
     function nextTurn() {
         if (!state.turns.length) return;
         const last = state.turns.length - 1;
+        let virouRodada = false;
         if (state.currentTurnIndex >= last) {
             // ciclo completo: avança rodada e zera deslocamentos.
             state.currentTurnIndex = 0;
             state.currentRound = (Number(state.currentRound) || 1) + 1;
+            virouRodada = true;
             addLog({ title: 'Nova rodada', detail: 'Rodada ' + state.currentRound + '.' });
             resetMovimentosTodos({ silent: true });
         } else {
@@ -8019,6 +8217,16 @@
         if (turn) {
             const incoming = state.tokens.find(t => t.id === turn.tokenId);
             if (incoming) resetTurnActions(incoming);
+        }
+        // Banner: nova rodada ou apenas troca de turno (mais discreto).
+        const tokenAtual = turn ? state.tokens.find(t => t.id === turn.tokenId) : null;
+        const nomeAtual = tokenAtual ? (tokenAtual.name || 'Token') : '—';
+        if (state.combateAtivo) {
+            if (virouRodada) {
+                showCombatBanner(`Rodada ${state.currentRound}`, `Turno de ${nomeAtual}`);
+            } else {
+                showCombatBanner(`Turno de ${nomeAtual}`, '');
+            }
         }
         // Avanço de turno limpa o histórico — desfazer turno é fora de
         // escopo (restauraria múltiplos tokens; ver Parte 2 do plano).
@@ -8727,6 +8935,8 @@
         }
         if (els.modeEditBtn) els.modeEditBtn.addEventListener('click', () => setModoCena('edit'));
         if (els.modePlayBtn) els.modePlayBtn.addEventListener('click', () => setModoCena('play'));
+        if (els.startCombatBtn) els.startCombatBtn.addEventListener('click', iniciarCombate);
+        if (els.endCombatBtn)   els.endCombatBtn.addEventListener('click', encerrarCombate);
         if (els.terrainSpecialBiome) {
             els.terrainSpecialBiome.addEventListener('change', () => {
                 state.terrainSpecialBiome = els.terrainSpecialBiome.value || 'mangue';

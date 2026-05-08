@@ -1519,6 +1519,29 @@
     outline-offset: 4px;
 }
 
+/* Em combate ativo, o token da vez recebe um anel pulsante mais
+   evidente — diferenciando a "preparação" do "combate em curso". */
+body[data-combate="ativo"] .cb-token.is-current-turn .cb-token-circle {
+    outline: 4px solid #f0c850;
+    outline-offset: 4px;
+    box-shadow:
+        0 0 0 8px rgba(216, 166, 50, 0.18),
+        0 0 22px rgba(216, 166, 50, 0.55);
+    animation: cbCurrentTurnPulse 1600ms ease-in-out infinite;
+}
+@keyframes cbCurrentTurnPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 8px rgba(216, 166, 50, 0.18),
+            0 0 18px rgba(216, 166, 50, 0.45);
+    }
+    50% {
+        box-shadow:
+            0 0 0 12px rgba(216, 166, 50, 0.28),
+            0 0 30px rgba(216, 166, 50, 0.65);
+    }
+}
+
 .cb-token[data-layer="mapa"] {
     opacity: 0.82;
 }
@@ -1680,6 +1703,199 @@
 body.cb-body[data-mode="play"] .cb-edit-only {
     display: none !important;
 }
+
+/* Botões "Iniciar Combate" e "Encerrar Combate" na topbar. */
+.cb-combat-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+.cb-combat-btn--start {
+    background: linear-gradient(135deg, #c2872c, #8a4f15);
+    color: #fff;
+    border: 2px solid #6c3d10;
+    box-shadow: 0 4px 12px rgba(70, 30, 0, 0.30);
+}
+.cb-combat-btn--start:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(70,30,0,0.42); }
+.cb-combat-btn--end {
+    background: #fff;
+    color: #7a153a;
+    border: 2px solid #9b254d;
+}
+.cb-combat-btn--end:hover { background: rgba(155, 37, 77, 0.12); }
+.cb-combat-btn[hidden] { display: none; }
+
+/* Banner central de evento de combate (transiente, ~2.5s). */
+.cb-combat-banner {
+    position: fixed;
+    left: 50%;
+    top: 28%;
+    transform: translate(-50%, -16px) scale(0.96);
+    z-index: 250;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, rgba(67, 33, 80, 0.96), rgba(40, 18, 50, 0.96));
+    color: #fff;
+    border: 2px solid rgba(240, 200, 80, 0.55);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(20, 5, 30, 0.55);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 220ms ease, transform 220ms ease;
+    max-width: min(520px, calc(100vw - 32px));
+}
+.cb-combat-banner.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+.cb-combat-banner strong {
+    display: block;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.45rem;
+    letter-spacing: 0.5px;
+    color: #f4d97a;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+.cb-combat-banner span {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+/* Card "Turno Atual" no topo da lista de iniciativa. */
+.cb-turno-atual {
+    background: rgba(255, 253, 253, 0.92);
+    border: 2px solid var(--purple);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    display: grid;
+    gap: 8px;
+}
+.cb-turno-atual--inativo {
+    border-style: dashed;
+    border-color: rgba(118, 84, 124, 0.5);
+    text-align: center;
+}
+.cb-turno-atual--inativo strong {
+    color: var(--purple-dark);
+    font-size: 0.95rem;
+}
+.cb-turno-atual--inativo p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+.cb-turno-atual-iniciar {
+    margin-top: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 2px solid #6c3d10;
+    background: linear-gradient(135deg, #c2872c, #8a4f15);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+}
+.cb-turno-atual-iniciar:hover { filter: brightness(1.08); }
+
+.cb-turno-atual--ativo {
+    border-color: #d8a632;
+    background:
+        radial-gradient(circle at top right, rgba(240, 200, 80, 0.18), transparent 60%),
+        rgba(255, 253, 253, 0.95);
+    box-shadow: 0 8px 18px rgba(216, 166, 50, 0.18);
+}
+.cb-turno-atual-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cb-turno-atual-thumb {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #d8a632;
+    background: var(--purple-light);
+    color: var(--purple-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+}
+.cb-turno-atual-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.cb-turno-atual-info {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 1px;
+}
+.cb-turno-atual-tag {
+    display: inline-block;
+    width: fit-content;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #d8a632;
+    color: #2b1232;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+.cb-turno-atual-info strong {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    color: var(--purple-dark);
+    line-height: 1.2;
+    margin-top: 1px;
+}
+.cb-turno-atual-meta {
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+.cb-turno-atual-focus {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border: 1.5px solid var(--purple);
+    background: #fff;
+    color: var(--purple-dark);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+.cb-turno-atual-focus:hover { background: var(--purple-light); }
+.cb-turno-atual-end {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 2px solid #6c3d10;
+    background: linear-gradient(135deg, #c2872c, #8a4f15);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+.cb-turno-atual-end:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 4px 12px rgba(70,30,0,0.35); }
 
 /* Indicador discreto do bioma da cena no modo Jogar. */
 .cb-scene-biome-tag {

@@ -14,7 +14,7 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260503g" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508k" />
-    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508n" />
+    <link rel="stylesheet" href="assets/css/campo-batalha.css?v=20260508r" />
 </head>
 <body class="cb-body" data-papel="<?= htmlspecialchars($papelUsuarioCB) ?>">
     <script>window.PINDORAMA_PAPEL = <?= json_encode($papelUsuarioCB) ?>;</script>
@@ -34,6 +34,8 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
                         title="Jogar cena: focar em iniciativa, ações, ataque e movimento">Jogar cena</button>
             </div>
             <span id="cbSceneBiomeTag" class="cb-scene-biome-tag" hidden></span>
+            <button type="button" id="cbStartCombat" class="cb-combat-btn cb-combat-btn--start" hidden>⚔ Iniciar Combate</button>
+            <button type="button" id="cbEndCombat"   class="cb-combat-btn cb-combat-btn--end"   hidden>⚐ Encerrar Combate</button>
             <span id="cbSaveStatus" class="cb-save-status" aria-live="polite"></span>
             <nav class="cb-nav">
                 <a class="cb-link-btn cb-link-btn--mini" href="fichas.php">Fichas</a>
@@ -550,6 +552,6 @@ $papelUsuarioCB = papelGlobal() ?: 'participante';
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260508p"></script>
+    <script src="assets/js/campo-batalha.js?v=20260508r"></script>
 </body>
 </html>
