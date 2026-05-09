@@ -4406,6 +4406,59 @@ function getClasseSelecionada() {
     return getDadosClassePorCampo(classeCampo);
 }
 
+function getClassSlugDoCampo(classeCampo) {
+    if (!classeCampo) return "";
+    const opt = classeCampo.options ? classeCampo.options[classeCampo.selectedIndex] : null;
+    const fromData = opt && opt.dataset ? (opt.dataset.classeId || "") : "";
+    if (fromData) return String(fromData).toLowerCase();
+    // Fallback: deriva slug do nome (sem acentos, lowercase).
+    const nome = (classeCampo.value || "").toString();
+    if (!nome) return "";
+    return nome
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
+function aplicarClassIllustration(slug) {
+    const box = document.getElementById("classSummaryIllustration");
+    if (!box) return;
+
+    if (!slug) {
+        box.classList.add("is-empty");
+        box.innerHTML = '<span class="class-illustration-glyph">&#9884;</span>';
+        return;
+    }
+
+    const tryUrls = [
+        `assets/img/classes/${slug}.png`,
+        `assets/img/classes/${slug}.webp`,
+    ];
+
+    box.classList.remove("is-empty");
+    box.innerHTML = "";
+    const img = document.createElement("img");
+    img.className = "class-summary-illustration-img";
+    img.alt = `Ilustração da classe ${slug}`;
+    img.loading = "lazy";
+
+    let idx = 0;
+    img.addEventListener("error", () => {
+        idx += 1;
+        if (idx < tryUrls.length) {
+            img.src = tryUrls[idx];
+            return;
+        }
+        // Sem ilustração disponível: mostra placeholder elegante.
+        box.classList.add("is-empty");
+        box.innerHTML = '<span class="class-illustration-glyph">&#9884;</span>';
+    });
+    img.src = tryUrls[0];
+    box.appendChild(img);
+}
+
 function atualizarResumoClasse() {
     const classeCampo =
         document.getElementById("classeSelect") ||
@@ -4427,6 +4480,7 @@ function atualizarResumoClasse() {
             classPageLink.removeAttribute("href");
         }
 
+        aplicarClassIllustration("");
         return;
     }
 
@@ -4443,6 +4497,8 @@ function atualizarResumoClasse() {
         classPageLink.hidden = false;
         classPageLink.href = classe.slug;
     }
+
+    aplicarClassIllustration(getClassSlugDoCampo(classeCampo));
 }
 
 function atualizarRecursosPorClasse() {

@@ -6,7 +6,7 @@
     <title>Rústico - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260509a" />
 </head>
 
 <body>
@@ -24,6 +24,12 @@
                 <a class="system-link-btn" href="ficha.php">Ficha</a>
             </div>
         </header>
+
+        <?php
+            $cb_class_slug = 'rustico';
+            $cb_class_name = 'Rústico';
+            include __DIR__ . '/includes/class-hero.php';
+        ?>
 
         <section class="classes-layout">
 

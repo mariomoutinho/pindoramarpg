@@ -1608,3 +1608,109 @@ body {
         display: inline-flex;
     }
 }
+
+/* =====================================================
+   HERO DE ILUSTRAÇÃO DA CLASSE
+   Card visual no topo da página de cada classe.
+   Usa fundo lilás escuro radial para valorizar PNGs
+   transparentes em corpo inteiro.
+===================================================== */
+.class-hero {
+    margin: 6px 0 18px;
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    align-items: center;
+    gap: 22px;
+}
+.class-hero-tagline {
+    margin: 0;
+    color: var(--purple-dark, #3b1d43);
+    font-size: 1rem;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+.class-illustration-card {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 2px solid rgba(105, 67, 111, 0.40);
+    background:
+        radial-gradient(circle at 50% 30%, rgba(245, 220, 180, 0.18) 0%, transparent 55%),
+        radial-gradient(circle at 50% 75%, rgba(43, 18, 50, 0.55) 0%, rgba(43, 18, 50, 0.92) 100%);
+    box-shadow:
+        0 12px 28px rgba(43, 18, 50, 0.30),
+        inset 0 0 0 1px rgba(216, 162, 58, 0.18);
+    aspect-ratio: 3 / 4;
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.class-illustration-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 6px 6px 0;
+    /* PNG transparente: garante que sombra do card não afete o personagem. */
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.class-illustration-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: rgba(245, 220, 180, 0.65);
+    text-align: center;
+    padding: 20px;
+}
+.class-illustration-glyph {
+    font-size: 3.2rem;
+    line-height: 1;
+    color: rgba(216, 162, 58, 0.78);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.class-illustration-empty-text {
+    font-size: 0.9rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.class-illustration-caption {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 10px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: rgba(43, 18, 50, 0.72);
+    color: #f4e8d6;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    letter-spacing: 0.6px;
+    border: 1px solid rgba(216, 162, 58, 0.45);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 720px) {
+    .class-hero {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .class-illustration-card {
+        max-width: 240px;
+        margin: 0 auto;
+    }
+    .class-hero-tagline {
+        text-align: center;
+    }
+}

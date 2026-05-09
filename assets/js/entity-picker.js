@@ -486,11 +486,20 @@
             </div>
         ` : '';
 
-        const imgHtml = temImg
-            ? `<div class="anc-picker-preview-image">
-                   <img src="${escapeHtml(item.imagem)}"
-                        alt="${escapeHtml(item.nome)}"
-                        onerror="this.style.display='none';this.parentElement.innerHTML='<span class=&quot;placeholder&quot;>?</span>';" />
+        // Cadeia de URLs a tentar (primária + fallbacks). Sem inline onerror —
+        // o handler é vinculado em JS depois do innerHTML, evitando escape hell.
+        const imgChain = [];
+        if (item.imagem) imgChain.push(item.imagem);
+        if (Array.isArray(item.imagemFallbacks)) {
+            for (const u of item.imagemFallbacks) if (u) imgChain.push(u);
+        }
+        const fitClass = item.imagemFit === 'contain' ? ' anc-picker-preview-image--contain' : '';
+
+        const imgHtml = imgChain.length
+            ? `<div class="anc-picker-preview-image${fitClass}">
+                   <img class="anc-picker-preview-img-el"
+                        src="${escapeHtml(imgChain[0])}"
+                        alt="${escapeHtml(item.nome)}" />
                </div>`
             : '';
 
@@ -504,6 +513,22 @@
         `;
 
         el.classList.toggle('anc-picker-preview-no-image', !temImg);
+
+        // Vincula a cadeia de fallback de imagem (PNG → WebP → placeholder).
+        const imgEl = el.querySelector('.anc-picker-preview-img-el');
+        if (imgEl && imgChain.length) {
+            let idx = 0;
+            imgEl.addEventListener('error', () => {
+                idx += 1;
+                if (idx < imgChain.length) {
+                    imgEl.src = imgChain[idx];
+                    return;
+                }
+                const wrap = imgEl.parentElement;
+                imgEl.remove();
+                if (wrap) wrap.innerHTML = '<span class="placeholder">?</span>';
+            });
+        }
 
         // Vincula clique nas tags
         el.querySelectorAll('.anc-picker-tag').forEach(btn => {
@@ -694,7 +719,9 @@
                 id,
                 nome: def.nome || id,
                 descricao: null,                              // não existe em classes.json
-                imagem: 'assets/img/classes/' + id + '.webp', // se não existir, fallback
+                imagem: 'assets/img/classes/' + id + '.png',  // .png por convenção
+                imagemFallbacks: ['assets/img/classes/' + id + '.webp'],
+                imagemFit: 'contain',                         // corpo inteiro: não cortar
             }));
             montar({
                 selectId: 'classeSelect',

@@ -322,6 +322,20 @@
     object-position: center top;
 }
 
+/* Variante para imagens de corpo inteiro (classes): não corta cabeça/pés.
+   Usa fundo radial lilás escuro p/ destacar PNG transparente. */
+.anc-picker-preview-image--contain {
+    background:
+        radial-gradient(circle at 50% 30%, rgba(245, 220, 180, 0.14) 0%, transparent 55%),
+        radial-gradient(circle at 50% 80%, rgba(43, 18, 50, 0.85) 0%, rgba(43, 18, 50, 0.96) 100%);
+}
+.anc-picker-preview-image--contain img {
+    object-fit: contain;
+    object-position: center bottom;
+    padding: 8px 8px 0;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.40));
+}
+
 .anc-picker-preview-image .placeholder {
     color: var(--muted);
     font-size: 2.5rem;

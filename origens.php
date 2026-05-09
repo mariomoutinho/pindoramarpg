@@ -25,7 +25,7 @@ $nomeAtributo = [
     <title>Origens — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css?v=20260430" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260509a" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
 </head>

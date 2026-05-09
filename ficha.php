@@ -18,12 +18,12 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260508s" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260509a" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
     <link rel="stylesheet" href="assets/css/divindades.css?v=20260430j" />
-    <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260503c" />
+    <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260509a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
 </head>
 <body class="ficha-page">
@@ -220,6 +220,21 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                             Selecione uma ancestralidade para ver seus tra&ccedil;os.
                         </div>
                         <div class="ancestralidade-tags" id="ancestralidadeTracos"></div>
+                    </div>
+
+                    <div class="field wide class-summary-field" id="classSummaryField">
+                        <label>Resumo da Classe</label>
+                        <div class="class-summary-inner">
+                            <div class="class-summary-illustration is-empty" id="classSummaryIllustration" aria-hidden="true">
+                                <span class="class-illustration-glyph">&#9884;</span>
+                            </div>
+                            <div class="class-summary-body">
+                                <div class="class-summary-box" id="classSummaryBox">
+                                    <span>Selecione uma classe para ver PV, PM, atributo-chave e per&iacute;cias.</span>
+                                </div>
+                                <a class="class-page-link" id="classPageLink" hidden>Abrir p&aacute;gina da classe</a>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -854,13 +869,13 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
 
     </main>
 
-    <script src="assets/js/ficha.js?v=20260508s"></script>
+    <script src="assets/js/ficha.js?v=20260509a"></script>
     <script src="assets/js/atributos.js?v=20260501u"></script>
     <script src="assets/js/poderes.js?v=20260430j"></script>
     <script src="assets/js/ancestralidades-ficha.js?v=20260508s"></script>
     <script src="assets/js/origens.js?v=20260430x"></script>
     <script src="assets/js/divindades.js?v=20260430j"></script>
-    <script src="assets/js/entity-picker.js?v=20260503e"></script>
+    <script src="assets/js/entity-picker.js?v=20260509a"></script>
 
     <script>
     /* Auto-carrega ficha se ?id=N estiver na URL (vem da página fichas.php) */
