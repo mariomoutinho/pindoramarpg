@@ -934,8 +934,17 @@
                         }
                     }
                     if (state.movePicker.path) {
-                        const inPath = state.movePicker.path.some(p => p.col === c && p.row === r);
+                        const path = state.movePicker.path;
+                        const inPath = path.some(p => p.col === c && p.row === r);
                         if (inPath) cell.classList.add('cb-cell--mov-caminho');
+                        const last = path[path.length - 1];
+                        if (last && last.col === c && last.row === r) {
+                            cell.classList.add('cb-cell--mov-target');
+                            const cost = state.movePicker.dist.has(k) ? state.movePicker.dist.get(k) : null;
+                            if (cost !== null && cost > state.movePicker.max1) {
+                                cell.classList.add('cb-cell--mov-target-2x');
+                            }
+                        }
                     }
                 } else if (isMovePreviewCell(c, r)) {
                     cell.classList.add('cb-cell--movimento');
@@ -1375,6 +1384,11 @@
         // Tracking do aim para preview de área (sem precisar de drag/interaction)
         if (state.reachPreview && state.reachPreview.action && isAreaAttack(state.reachPreview.action)) {
             updateAreaAim(ev.clientX, ev.clientY);
+        }
+
+        // Modo "click-to-move": atualiza caminho/destino sob o cursor a cada movimento.
+        if (state.movePicker && ev.target.closest('#cbStage')) {
+            updateMovePickerHover(ev.clientX, ev.clientY);
         }
 
         if (!interaction) return;
@@ -2298,11 +2312,15 @@
 
         wrap.appendChild(head);
 
+        // Linha de ações primárias: Mover + Atacar lado a lado.
+        const acoesPrim = document.createElement('div');
+        acoesPrim.className = 'cb-turno-atual-acoes';
+
         // Botão "Mover" — entra em modo click-to-move.
         const moverBtn = document.createElement('button');
         moverBtn.type = 'button';
         moverBtn.className = 'cb-turno-atual-mover';
-        moverBtn.textContent = '↣ Mover';
+        moverBtn.innerHTML = '<span class="cb-turno-atual-icon" aria-hidden="true">↣</span> Mover';
         // Reusa `movRest` já calculado acima (linha do meta). Não redeclarar.
         const podeDobro = !token.acaoPadraoUsada || token.dobroMovimento;
         // Habilitado se ainda há mov OU se padrão livre p/ converter em dobro.
@@ -2313,7 +2331,30 @@
             if (state.selectedId !== token.id) selectToken(token.id);
             entrarModoMover();
         });
-        wrap.appendChild(moverBtn);
+        acoesPrim.appendChild(moverBtn);
+
+        // Botão "Atacar" — abre o painel de ataque (variação quente).
+        const atacarBtn = document.createElement('button');
+        atacarBtn.type = 'button';
+        atacarBtn.className = 'cb-turno-atual-atacar';
+        atacarBtn.innerHTML = '<span class="cb-turno-atual-icon" aria-hidden="true">⚔</span> Atacar';
+        // Habilitado apenas se ainda houver ação padrão disponível.
+        const podeAtacar = canTakeStandardAction(token);
+        atacarBtn.disabled = !podeAtacar;
+        atacarBtn.title = podeAtacar
+            ? 'Abrir painel de ataques deste combatente.'
+            : (token.acaoCompletaUsada
+                ? 'Ação completa já gasta — sem ação padrão.'
+                : (token.dobroMovimento
+                    ? '2ª ação de movimento em uso — sem ação padrão.'
+                    : 'Ação padrão já gasta neste turno.'));
+        atacarBtn.addEventListener('click', () => {
+            if (state.selectedId !== token.id) selectToken(token.id);
+            openTokenActionPanel(token.id, 'ataques', { attackMode: true });
+        });
+        acoesPrim.appendChild(atacarBtn);
+
+        wrap.appendChild(acoesPrim);
 
         const endBtn = document.createElement('button');
         endBtn.type = 'button';
@@ -4980,23 +5021,35 @@
         saveState();
     }
 
-    function openTokenActionPanel(tokenId, actionType = null) {
+    function openTokenActionPanel(tokenId, actionType = null, opts = null) {
         const token = state.tokens.find(t => t.id === tokenId);
         if (!token) return;
+        const attackMode = !!(opts && opts.attackMode);
         const groups = getTokenActionGroups(token);
         const types = actionType
             ? [actionType]
             : Object.keys(ACTION_LABELS).filter(type => groups[type] && groups[type].length);
-        els.actionTitle.textContent = token.name ? `Ações — ${token.name}` : 'Ações';
+        const isOnlyAttacks = attackMode || (types.length === 1 && types[0] === 'ataques');
+        const tituloBase = isOnlyAttacks ? 'Ataques' : 'Ações';
+        els.actionTitle.textContent = token.name ? `${tituloBase} — ${token.name}` : tituloBase;
         els.actionList.innerHTML = '';
 
-        if (!types.length) {
-            els.actionList.innerHTML = '<p class="cb-action-empty">Nada cadastrado nesta categoria.</p>';
+        // Variação visual "ataque" — paleta quente (vinho/âmbar) sobre a roxa/dourada.
+        els.actionPanel.classList.toggle('is-attack-mode', isOnlyAttacks);
+
+        if (!types.length || (isOnlyAttacks && !(groups.ataques || []).length)) {
+            const empty = document.createElement('p');
+            empty.className = 'cb-action-empty';
+            empty.textContent = isOnlyAttacks
+                ? 'Nenhum ataque disponível para este combatente.'
+                : 'Nada cadastrado nesta categoria.';
+            els.actionList.appendChild(empty);
         } else {
             const frag = document.createDocumentFragment();
             for (const type of types) {
                 const section = document.createElement('section');
                 section.className = 'cb-action-section';
+                if (type === 'ataques') section.classList.add('cb-action-section--ataques');
 
                 const sectionTitle = document.createElement('h3');
                 sectionTitle.className = 'cb-action-section-title';
@@ -6154,6 +6207,7 @@
             startKey: r.startKey,
             path: null
         };
+        _moveHoverKey = '';
         showCbToast('Escolha um destino no grid. ESC cancela.');
         renderBoard();
     }
@@ -6161,6 +6215,7 @@
     function sairModoMover() {
         if (!state.movePicker) return;
         state.movePicker = null;
+        _moveHoverKey = '';
         renderBoard();
     }
 
@@ -6172,6 +6227,30 @@
         const path = reconstruirCaminho(mp.parent, mp.startKey, targetKey);
         const cost = mp.dist.get(targetKey);
         return { path, cost, targetKey };
+    }
+
+    // Hover dinâmico do modo de seleção de destino: a cada movimento do
+    // cursor, repinta o caminho mais curto até a célula sob o mouse e
+    // marca essa célula como destino.
+    let _moveHoverKey = '';
+    function updateMovePickerHover(clientX, clientY) {
+        const mp = state.movePicker;
+        if (!mp) return;
+        const cell = screenToCell(clientX, clientY);
+        const key = occupiedKey(cell.col, cell.row);
+        if (key === _moveHoverKey) return;
+        _moveHoverKey = key;
+
+        if (key === mp.startKey || !mp.dist.has(key)) {
+            // Origem ou inalcançável: limpa o caminho preview.
+            if (mp.path) {
+                mp.path = null;
+                renderBoard();
+            }
+            return;
+        }
+        mp.path = reconstruirCaminho(mp.parent, mp.startKey, key);
+        renderBoard();
     }
 
     async function escolherDestinoMover(destCol, destRow) {
@@ -6901,6 +6980,7 @@
 
     function closeTokenActionPanel() {
         els.actionPanel.hidden = true;
+        els.actionPanel.classList.remove('is-attack-mode');
         hideActionPreview();
     }
 

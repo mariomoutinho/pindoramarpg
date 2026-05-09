@@ -1897,27 +1897,78 @@ body.cb-body[data-mode="play"] .cb-edit-only {
 }
 .cb-turno-atual-end:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 4px 12px rgba(70,30,0,0.35); }
 
-.cb-turno-atual-mover {
+/* Linha que segura os botões primários "Mover" e "Atacar" lado a lado. */
+.cb-turno-atual-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.cb-turno-atual-mover,
+.cb-turno-atual-atacar {
     width: 100%;
-    padding: 8px 14px;
+    padding: 9px 12px;
     border-radius: 10px;
-    border: 2px solid var(--purple);
-    background: #fff;
-    color: var(--purple-dark);
     font-family: inherit;
     font-size: 0.88rem;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.3px;
     cursor: pointer;
     transition: 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+}
+
+.cb-turno-atual-mover {
+    border: 2px solid var(--purple);
+    background: #fff;
+    color: var(--purple-dark);
 }
 .cb-turno-atual-mover:hover:not(:disabled) {
     background: var(--purple-light);
     transform: translateY(-1px);
 }
-.cb-turno-atual-mover:disabled {
+
+/* Atacar: tom vinho/âmbar dourado-queimado, alinhado à paleta da Mesa. */
+.cb-turno-atual-atacar {
+    border: 2px solid #7a2030;
+    background: linear-gradient(135deg, #8b1f2e 0%, #b34935 55%, #d8a23a 100%);
+    color: #fff7e6;
+    box-shadow: 0 3px 10px rgba(122, 32, 48, 0.30), inset 0 1px 0 rgba(255, 220, 150, 0.35);
+    text-shadow: 0 1px 0 rgba(58, 12, 20, 0.45);
+}
+.cb-turno-atual-atacar:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    border-color: #d8a23a;
+    box-shadow: 0 5px 16px rgba(122, 32, 48, 0.42), inset 0 1px 0 rgba(255, 220, 150, 0.55);
+}
+.cb-turno-atual-atacar:focus-visible {
+    outline: 3px solid #f6c66a;
+    outline-offset: 2px;
+}
+
+.cb-turno-atual-mover:disabled,
+.cb-turno-atual-atacar:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+    filter: grayscale(0.25);
+    box-shadow: none;
+    transform: none;
+}
+
+.cb-turno-atual-icon {
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+@media (max-width: 540px) {
+    .cb-turno-atual-acoes {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ---------- Click-to-move: visualização da área e do caminho ---------- */
@@ -1945,6 +1996,27 @@ body.cb-body[data-mode="play"] .cb-edit-only {
 .cb-cell--mov-caminho {
     background: rgba(118, 84, 124, 0.55) !important;
     box-shadow: inset 0 0 0 2px rgba(43, 18, 50, 0.7);
+}
+/* Célula final sob o cursor: dourado forte, contraste com a área verde/âmbar. */
+.cb-cell--mov-target {
+    background: rgba(216, 162, 58, 0.78) !important;
+    box-shadow:
+        inset 0 0 0 3px #f6c66a,
+        inset 0 0 0 5px rgba(43, 18, 50, 0.85),
+        0 0 14px rgba(216, 162, 58, 0.45) !important;
+    animation: cb-mov-target-pulse 1.2s ease-in-out infinite;
+}
+/* Quando o destino requer 2ª ação de movimento, vira tom alaranjado/vinho de alerta. */
+.cb-cell--mov-target.cb-cell--mov-target-2x {
+    background: rgba(179, 73, 53, 0.82) !important;
+    box-shadow:
+        inset 0 0 0 3px #f6c66a,
+        inset 0 0 0 5px rgba(60, 14, 22, 0.9),
+        0 0 16px rgba(179, 73, 53, 0.55) !important;
+}
+@keyframes cb-mov-target-pulse {
+    0%, 100% { filter: brightness(1.0); }
+    50%      { filter: brightness(1.18); }
 }
 
 /* Indicador discreto do bioma da cena no modo Jogar. */
@@ -2708,6 +2780,88 @@ body.cb-body[data-mode="play"] .cb-scene-biome-tag {
     grid-template-columns: minmax(78px, auto) 1fr;
     padding: 4px 0;
     gap: 8px;
+}
+
+/* ---------- Painel de ATAQUE (variação quente) ----------
+   Aplicado quando o painel é aberto pelo botão "Atacar" do card do
+   combatente da vez. Mantém a estrutura do painel base, mas troca
+   tons para vinho/âmbar com brilho dourado. */
+.cb-action-panel.is-attack-mode {
+    background:
+        radial-gradient(circle at top left, rgba(255, 196, 128, 0.30), transparent 42%),
+        radial-gradient(circle at bottom right, rgba(139, 31, 46, 0.18), transparent 50%),
+        rgba(255, 250, 244, 0.98);
+    border-color: #7a2030;
+    box-shadow:
+        0 18px 44px rgba(60, 14, 22, 0.42),
+        0 0 0 1px rgba(216, 162, 58, 0.25);
+}
+.cb-action-panel.is-attack-mode header {
+    background: linear-gradient(135deg, #8b1f2e 0%, #b34935 60%, #d8a23a 100%);
+    border-bottom: 2px solid rgba(60, 14, 22, 0.35);
+}
+.cb-action-panel.is-attack-mode header h2 {
+    color: #fff7e6;
+    text-shadow: 0 1px 0 rgba(58, 12, 20, 0.45);
+}
+.cb-action-panel.is-attack-mode header h2::before {
+    content: '⚔ ';
+    color: #ffe2a3;
+    margin-right: 4px;
+    font-weight: 900;
+}
+.cb-action-panel.is-attack-mode header button {
+    color: #fff7e6;
+}
+.cb-action-panel.is-attack-mode header button:hover {
+    background: rgba(255, 247, 230, 0.18);
+}
+.cb-action-panel.is-attack-mode .cb-action-section-title {
+    color: #7a2030;
+    border-bottom-color: rgba(122, 32, 48, 0.30);
+}
+.cb-action-panel.is-attack-mode .cb-action-card {
+    border-color: rgba(122, 32, 48, 0.42);
+    background: linear-gradient(135deg, #fff 0%, rgba(255, 232, 210, 0.65) 100%);
+    box-shadow: 0 2px 8px rgba(60, 14, 22, 0.14);
+}
+.cb-action-panel.is-attack-mode .cb-action-card:hover,
+.cb-action-panel.is-attack-mode .cb-action-card.is-expanded {
+    border-color: #b34935;
+    box-shadow: 0 6px 16px rgba(60, 14, 22, 0.22);
+}
+.cb-action-panel.is-attack-mode .cb-action-card-header h4 {
+    color: #5a1018;
+}
+.cb-action-panel.is-attack-mode .cb-action-card-chevron {
+    color: #b34935;
+}
+.cb-action-panel.is-attack-mode .cb-action-card-summary {
+    color: #7a3a1c;
+}
+.cb-action-panel.is-attack-mode .cb-action-card-header:hover {
+    background: rgba(216, 162, 58, 0.10);
+}
+.cb-action-panel.is-attack-mode .cb-attack-fields dt {
+    color: #7a2030;
+}
+.cb-action-panel.is-attack-mode .cb-attack-fields dd {
+    color: #3a0c14;
+}
+.cb-action-panel.is-attack-mode .cb-action-empty {
+    color: #7a3a1c;
+}
+
+/* Drawer inferior em telas pequenas — painel cobre menos do grid. */
+@media (max-width: 720px) {
+    .cb-action-panel.is-attack-mode {
+        right: 8px;
+        left: 8px;
+        bottom: 8px;
+        width: auto;
+        max-height: 60vh;
+        border-radius: 16px 16px 12px 12px;
+    }
 }
 
 /* ---------- Toast discreto ---------- */
