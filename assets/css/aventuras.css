@@ -977,8 +977,14 @@
         width: min(1180px, 100%);
         max-width: 1180px;
     }
-    /* Hero do editor (título + subtítulo) — apenas centralização limpa. */
-    .aventura-editor-shell > .home-hero { text-align: left; align-items: flex-start; }
+    /* Hero do editor (título + subtítulo) — alinhado à esquerda em desktop.
+       padding-left reserva a faixa do .home-back (position:absolute,left:0)
+       para que título e subtítulo não passem por baixo do botão. */
+    .aventura-editor-shell > .home-hero {
+        text-align: left;
+        align-items: flex-start;
+        padding-left: 52px;
+    }
     .aventura-editor-shell > .home-hero .home-back { left: 0; }
 
     /* Form principal: capa e dados lado a lado, com o textarea de texto

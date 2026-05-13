@@ -48,7 +48,7 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
     <link rel="stylesheet" href="assets/css/painel-facilitador.css?v=20260508a" />
-    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513n" />
+    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513o" />
 </head>
 <body class="home-body aventuras-page">
     <script src="assets/js/transitions.js?v=20260508u"></script>
