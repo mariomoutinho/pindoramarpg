@@ -825,3 +825,23 @@
         padding: 40px 56px;
     }
 }
+
+/* O h2 do corpo passa a exibir o título da aventura (em vez do rótulo
+   estático "Texto integral"). Mantemos a fonte Cordelina, cor e o
+   ornamento ❖ já definidos em .aventura-leitura-corpo h2 (base e
+   desktop). Apenas reforçamos a quebra elegante para títulos longos. */
+.aventura-leitura-corpo-title {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    line-height: 1.15;
+    /* Em telas pequenas, deixa o tamanho ajustar suavemente entre
+       1.2rem e 1.7rem. Em desktop, a regra existente em
+       .aventura-leitura-corpo h2 (>=1024px) já define 1.55rem. */
+    font-size: clamp(1.2rem, 4.4vw, 1.55rem);
+}
+@media (min-width: 1024px) {
+    .aventura-leitura-corpo-title {
+        font-size: clamp(1.55rem, 2.2vw, 2rem);
+    }
+}
