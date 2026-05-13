@@ -1355,3 +1355,37 @@
     margin-top: 0;
     border-radius: 14px;
 }
+
+/* =====================================================
+   Listagem de aventuras — composição desktop
+   .aventuras-listagem-shell sobrescreve o cap de 440px
+   herdado de .home-shell, e o grid ganha colunas fixas
+   por breakpoint para os cards manterem ~tamanho atual.
+===================================================== */
+@media (min-width: 720px) {
+    /* Tablet: 2 cards por linha. */
+    .aventuras-listagem-shell .aventuras-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
+}
+@media (min-width: 1024px) {
+    .aventuras-listagem-shell {
+        width: min(1180px, 100%);
+        max-width: 1180px;
+    }
+    /* Desktop/notebook: 3 cards por linha — cada um ~365px de largura. */
+    .aventuras-listagem-shell .aventuras-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+    }
+    /* Cabeçalho e botão "Nova aventura" alinhados à esquerda em desktop. */
+    .aventuras-listagem-shell .home-hero { text-align: left; align-items: flex-start; }
+    .aventuras-listagem-shell .aventuras-topbar-actions { justify-content: flex-end; }
+}
+@media (min-width: 1366px) {
+    .aventuras-listagem-shell {
+        max-width: 1280px;
+        width: min(1280px, 100%);
+    }
+}
