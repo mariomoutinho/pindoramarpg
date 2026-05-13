@@ -1,0 +1,8 @@
+# Uploads de usuário (capas, tokens, imagens de campo de batalha).
+uploads/**
+!uploads/**/.gitignore
+
+# Estados locais e caches
+data/campo-batalha-state*.json
+.DS_Store
+Thumbs.db

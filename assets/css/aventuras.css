@@ -1,0 +1,576 @@
+/* =====================================================
+   Módulo AVENTURAS — Pindorama RPG
+   Listagem, editor e leitura. Visual de grimório/acervo
+   coerente com a paleta roxa/dourada e cards já usados.
+===================================================== */
+
+.aventuras-page {
+    color: var(--purple-dark, #3b1d43);
+}
+
+/* ---------- Botões reaproveitáveis ---------- */
+.aventuras-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--purple, #69436f);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--purple-dark, #3b1d43);
+    font-weight: 700;
+    font-size: 0.92rem;
+    line-height: 1.1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+.aventuras-btn:hover,
+.aventuras-btn:focus-visible {
+    background: var(--purple, #69436f);
+    color: #fff;
+    outline: none;
+    box-shadow: 0 4px 10px rgba(59, 29, 67, 0.20);
+}
+.aventuras-btn--primary {
+    background: linear-gradient(135deg, var(--purple, #69436f) 0%, var(--purple-dark, #3b1d43) 100%);
+    color: #fff7e6;
+    border-color: var(--purple-dark, #3b1d43);
+    box-shadow: 0 3px 10px rgba(43, 18, 50, 0.30);
+}
+.aventuras-btn--primary:hover,
+.aventuras-btn--primary:focus-visible {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    color: #fff;
+}
+.aventuras-btn--danger {
+    border-color: #7a2030;
+    background: rgba(255, 248, 246, 0.95);
+    color: #7a2030;
+}
+.aventuras-btn--danger:hover,
+.aventuras-btn--danger:focus-visible {
+    background: linear-gradient(135deg, #8b1f2e 0%, #b34935 100%);
+    color: #fff;
+}
+.aventuras-btn--ghost {
+    background: transparent;
+    cursor: pointer;
+}
+.aventuras-btn--lg {
+    padding: 12px 22px;
+    font-size: 1rem;
+}
+
+.aventuras-topbar-actions {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Estado vazio ---------- */
+.aventuras-empty {
+    margin-top: 24px;
+    display: flex;
+    justify-content: center;
+}
+.aventuras-empty-card {
+    max-width: 540px;
+    width: 100%;
+    padding: 28px 24px;
+    text-align: center;
+    border: 2px dashed rgba(118, 84, 124, 0.45);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at top, rgba(245, 220, 180, 0.18), transparent 55%),
+        rgba(255, 252, 247, 0.96);
+    box-shadow: 0 12px 30px rgba(43, 18, 50, 0.18);
+}
+.aventuras-empty-glyph {
+    font-size: 2.4rem;
+    color: var(--purple, #69436f);
+    display: block;
+    margin-bottom: 8px;
+}
+.aventuras-empty-card h2 {
+    margin: 0 0 6px;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    color: var(--purple-dark, #3b1d43);
+}
+.aventuras-empty-card p {
+    margin: 0 0 16px;
+    color: var(--muted, #91739a);
+}
+
+/* ---------- Grid de cards ---------- */
+.aventuras-grid {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.aventura-card {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid rgba(118, 84, 124, 0.32);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 253, 250, 0.98);
+    box-shadow: 0 6px 18px rgba(43, 18, 50, 0.14);
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.aventura-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(43, 18, 50, 0.22);
+}
+.aventura-card-cover {
+    display: block;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 30%, rgba(245, 220, 180, 0.22), transparent 55%),
+        linear-gradient(160deg, rgba(43, 18, 50, 0.80) 0%, rgba(43, 18, 50, 0.92) 100%);
+    border-bottom: 1.5px solid rgba(118, 84, 124, 0.32);
+}
+.aventura-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+.aventura-card.is-no-cover .aventura-card-cover img {
+    object-fit: contain;
+    padding: 18%;
+    opacity: 0.75;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30));
+}
+.aventura-card-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+.aventura-card-head h3.aventura-card-title {
+    margin: 0;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    color: var(--purple-dark, #3b1d43);
+    font-size: 1.25rem;
+    line-height: 1.15;
+    letter-spacing: 0.4px;
+}
+.aventura-card-subtitle {
+    margin: 4px 0 0;
+    color: var(--muted, #91739a);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+.aventura-card-sinopse {
+    margin: 0;
+    font-size: 0.94rem;
+    color: var(--purple-dark, #3b1d43);
+    line-height: 1.45;
+}
+.aventura-card-meta {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.aventura-meta-tag {
+    display: inline-flex;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(118, 84, 124, 0.10);
+    color: var(--purple, #69436f);
+    border: 1px solid rgba(118, 84, 124, 0.22);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.aventura-meta-status--rascunho   { background: rgba(216, 162, 58, 0.18); color: #7a4b00;  border-color: rgba(216, 162, 58, 0.45); }
+.aventura-meta-status--publicada  { background: rgba(80, 160, 90, 0.18);  color: #1f5d2c;  border-color: rgba(80, 160, 90, 0.50); }
+.aventura-meta-status--arquivada  { background: rgba(118, 84, 124, 0.18); color: var(--purple-dark, #3b1d43); border-color: rgba(118, 84, 124, 0.40); }
+.aventura-meta-date {
+    background: transparent;
+    border-color: rgba(118, 84, 124, 0.12);
+    color: var(--muted, #91739a);
+    font-weight: 600;
+}
+
+.aventura-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+.aventura-card-delete-form {
+    margin: 0;
+    display: inline-flex;
+}
+
+/* ---------- Modal de confirmação visual ---------- */
+.aventuras-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    background: rgba(15, 5, 25, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+.aventuras-confirm-backdrop[hidden] { display: none; }
+.aventuras-confirm-backdrop.is-visible { opacity: 1; }
+.aventuras-confirm-card {
+    width: min(420px, 100%);
+    background: rgba(255, 252, 247, 0.99);
+    border: 2px solid #7a2030;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(43, 18, 50, 0.40);
+    overflow: hidden;
+}
+.aventuras-confirm-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #8b1f2e 0%, #b34935 100%);
+    color: #fff7e6;
+}
+.aventuras-confirm-card header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    letter-spacing: 0.4px;
+}
+.aventuras-confirm-x {
+    background: transparent;
+    border: 0;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+.aventuras-confirm-x:hover { background: rgba(255, 255, 255, 0.18); }
+.aventuras-confirm-body {
+    padding: 16px;
+    color: var(--purple-dark, #3b1d43);
+    line-height: 1.45;
+}
+.aventuras-confirm-card footer {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: rgba(118, 84, 124, 0.05);
+    border-top: 1px solid rgba(118, 84, 124, 0.18);
+}
+
+/* ---------- Editor (formulário) ---------- */
+.aventura-form {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.aventura-form-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 18px;
+    align-items: start;
+}
+.aventura-form-cover {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.aventura-form-cover-label {
+    font-weight: 800;
+    color: var(--purple, #69436f);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-size: 0.78rem;
+}
+.aventura-cover-preview {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1.5px solid rgba(118, 84, 124, 0.32);
+    background:
+        radial-gradient(circle at 50% 30%, rgba(245, 220, 180, 0.18), transparent 55%),
+        linear-gradient(160deg, rgba(43, 18, 50, 0.65) 0%, rgba(43, 18, 50, 0.90) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.aventura-cover-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+.aventura-cover-placeholder {
+    color: rgba(255, 247, 230, 0.75);
+    text-align: center;
+    font-size: 1.8rem;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+}
+.aventura-cover-placeholder small {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 0.4px;
+    margin-top: 6px;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+.aventura-cover-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.aventura-cover-hint {
+    color: var(--muted, #91739a);
+    font-size: 0.8rem;
+}
+
+.aventura-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.aventura-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+.aventura-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.aventura-form .field > span {
+    color: var(--purple, #69436f);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-size: 0.74rem;
+}
+.aventura-form .field > span small {
+    color: var(--muted, #91739a);
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+}
+.aventura-form .field input,
+.aventura-form .field select,
+.aventura-form .field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(118, 84, 124, 0.42);
+    border-radius: 10px;
+    background: rgba(255, 252, 247, 0.96);
+    color: var(--purple-dark, #3b1d43);
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    transition: 0.15s ease;
+}
+.aventura-form .field input:focus,
+.aventura-form .field select:focus,
+.aventura-form .field textarea:focus {
+    outline: none;
+    border-color: var(--purple, #69436f);
+    box-shadow: 0 0 0 3px rgba(105, 67, 111, 0.18);
+    background: #fff;
+}
+.aventura-form textarea {
+    resize: vertical;
+    min-height: 90px;
+    font-family: 'Iowan Old Style', Georgia, "Times New Roman", serif;
+}
+
+#aventuraTextoIntegral {
+    min-height: 360px;
+    line-height: 1.55;
+    font-size: 1rem;
+}
+
+.aventura-form-block {
+    border-top: 1px dashed rgba(118, 84, 124, 0.28);
+    padding-top: 14px;
+}
+
+.aventura-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+}
+
+/* ---------- Página de leitura ---------- */
+.aventura-leitura-shell {
+    gap: 18px;
+}
+.aventura-leitura-hero {
+    position: relative;
+    min-height: 320px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(160deg, rgba(43, 18, 50, 0.85) 0%, rgba(43, 18, 50, 0.95) 100%);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 16px 36px rgba(43, 18, 50, 0.36);
+}
+.aventura-leitura-hero.is-no-cover {
+    min-height: 200px;
+}
+.aventura-leitura-hero-overlay {
+    position: relative;
+    padding: 30px 28px 26px;
+    background: linear-gradient(180deg,
+        rgba(15, 5, 25, 0.10) 0%,
+        rgba(15, 5, 25, 0.55) 60%,
+        rgba(15, 5, 25, 0.85) 100%);
+    color: #fff7e6;
+    min-height: inherit;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+}
+.aventura-leitura-hero.is-no-cover .aventura-leitura-hero-overlay {
+    background: none;
+}
+.aventura-leitura-back {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 247, 230, 0.92);
+    color: var(--purple-dark, #3b1d43);
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 38px;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.30);
+}
+.aventura-leitura-back:hover { filter: brightness(1.08); }
+.aventura-leitura-status {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+.aventura-leitura-title {
+    margin: 0;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.05;
+    letter-spacing: 0.6px;
+    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
+.aventura-leitura-subtitle {
+    margin: 0;
+    font-style: italic;
+    font-size: 1.05rem;
+    opacity: 0.92;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.50);
+}
+.aventura-leitura-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 6px;
+    color: rgba(255, 247, 230, 0.92);
+    font-size: 0.92rem;
+}
+.aventura-leitura-meta strong { color: #ffe2a3; }
+.aventura-leitura-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.aventura-leitura-sinopse,
+.aventura-leitura-corpo,
+.aventura-leitura-obs {
+    background: rgba(255, 252, 247, 0.98);
+    border: 1.5px solid rgba(118, 84, 124, 0.30);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 8px 22px rgba(43, 18, 50, 0.12);
+}
+.aventura-leitura-sinopse h2,
+.aventura-leitura-corpo h2,
+.aventura-leitura-obs h2 {
+    margin: 0 0 10px;
+    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    color: var(--purple-dark, #3b1d43);
+    border-bottom: 1px solid rgba(118, 84, 124, 0.28);
+    padding-bottom: 6px;
+    font-size: 1.2rem;
+    letter-spacing: 0.4px;
+}
+.aventura-leitura-obs {
+    border-left: 6px solid var(--purple, #69436f);
+    background:
+        repeating-linear-gradient(0deg, rgba(118, 84, 124, 0.04) 0 30px, transparent 30px 31px),
+        rgba(255, 252, 247, 0.98);
+}
+.aventura-leitura-obs h2 small {
+    color: var(--muted, #91739a);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+.aventura-leitura-texto {
+    font-family: 'Iowan Old Style', Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: #2b1232;
+}
+.aventura-leitura-vazio {
+    color: var(--muted, #91739a);
+    font-style: italic;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 720px) {
+    .aventura-form-grid {
+        grid-template-columns: 1fr;
+    }
+    .aventura-form-cover {
+        max-width: 260px;
+        margin: 0 auto;
+        width: 100%;
+    }
+    .aventuras-topbar-actions {
+        justify-content: center;
+    }
+    .aventura-card-actions {
+        gap: 6px;
+    }
+    .aventura-leitura-hero-overlay {
+        padding: 22px 18px 18px;
+    }
+}

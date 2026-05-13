@@ -54,6 +54,12 @@ $usuario = usuarioLogado();
                 <strong>Mesa de Jogo</strong>
                 <span>Cenas em grid, mapas e tokens.</span>
             </a>
+            <?php if ($usuario && ($usuario['role'] ?? '') === 'facilitador'): ?>
+            <a class="home-card-ref home-card-home home-card-aventuras" href="aventuras.php">
+                <strong>Aventuras</strong>
+                <span>Crie e narre aventuras prontas.</span>
+            </a>
+            <?php endif; ?>
             <a class="home-card-ref home-card-home home-card-acervo" href="referencia.php">
                 <strong>Acervo</strong>
                 <span>Catálogos e regras do sistema.</span>

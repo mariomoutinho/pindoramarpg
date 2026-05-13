@@ -56,9 +56,9 @@ $ehFacilitador = ehFacilitadorGlobal();
                     <strong>Magias e Poderes</strong>
                     <span>Conteúdos customizados da mesa.</span>
                 </a>
-                <a class="home-card-ref" href="mesa-conteudos.php?tipo=aventura">
+                <a class="home-card-ref" href="aventuras.php">
                     <strong>Aventuras</strong>
-                    <span>Estrutura geral das tramas.</span>
+                    <span>Crie e narre aventuras prontas.</span>
                 </a>
                 <a class="home-card-ref" href="mesa-conteudos.php?tipo=narrativa">
                     <strong>Narrativas</strong>

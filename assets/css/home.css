@@ -422,6 +422,23 @@
 .home-card-home.home-card-acervo {
     background-image: url('../img/home-buttons/acervo-bg.png');
 }
+/* Aventuras — usa imagem em assets/img/home-buttons/aventuras-bg.png se existir;
+   se ainda não houver, o gradient vinho→dourado mantém a coerência visual e
+   o glifo ⚜ no canto inferior direito reforça o tema de grimório. */
+.home-card-home.home-card-aventuras {
+    background-image:
+        linear-gradient(135deg, rgba(122, 32, 48, 0.55) 0%, rgba(216, 162, 58, 0.45) 100%);
+}
+.home-card-home.home-card-aventuras::after {
+    content: "\269C";
+    position: absolute;
+    right: 14px;
+    bottom: 6px;
+    font-size: 2.4rem;
+    color: rgba(122, 32, 48, 0.35);
+    z-index: 0;
+    pointer-events: none;
+}
 
 /* Mobile: cards ficam mais largos, mas mantém a leitura */
 @media (max-width: 600px) {
