@@ -1379,8 +1379,14 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 22px;
     }
-    /* Cabeçalho e botão "Nova aventura" alinhados à esquerda em desktop. */
-    .aventuras-listagem-shell .home-hero { text-align: left; align-items: flex-start; }
+    /* Cabeçalho e botão "Nova aventura" alinhados à esquerda em desktop.
+       padding-left reserva a área do .home-back (position:absolute,left:0)
+       para que título e subtítulo não fiquem por baixo dele. */
+    .aventuras-listagem-shell .home-hero {
+        text-align: left;
+        align-items: flex-start;
+        padding-left: 52px;
+    }
     .aventuras-listagem-shell .aventuras-topbar-actions { justify-content: flex-end; }
 }
 @media (min-width: 1366px) {
