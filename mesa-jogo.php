@@ -585,6 +585,6 @@ if ($aventuraCtxId > 0) {
     </main>
 
     <script src="assets/js/regras-distancia.js?v=20260507a"></script>
-    <script src="assets/js/campo-batalha.js?v=20260513a"></script>
+    <script src="assets/js/campo-batalha.js?v=20260513b"></script>
 </body>
 </html>

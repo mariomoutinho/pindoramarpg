@@ -11,11 +11,19 @@
     // Estado
     // ----------------------------------------------------------------
 
-    const STORAGE_KEY = 'pindorama:campo-batalha:v1';
     // Quando a Mesa de Jogo é aberta com ?aventura_id=N, o backend
     // roteia carregar/salvar para data/aventuras/<id>/cenas.json — basta
     // anexar o parâmetro às URLs. Sem contexto, segue o estado global.
     const AVENTURA_ID = (typeof window !== 'undefined' && window.PINDORAMA_AVENTURA_ID) || null;
+
+    // Chave do localStorage isolada por contexto: a Mesa de Jogo padrão
+    // tem a sua, e cada aventura tem a sua. Isso evita que uma aventura
+    // recém-criada (sem cenas no servidor) "herde" o último estado salvo
+    // localmente da mesa padrão ou de outra aventura.
+    const STORAGE_KEY = AVENTURA_ID
+        ? ('pindorama:campo-batalha:av:' + AVENTURA_ID + ':v1')
+        : 'pindorama:campo-batalha:v1';
+
     function withAventuraParam(url) {
         if (!AVENTURA_ID) return url;
         const sep = url.indexOf('?') >= 0 ? '&' : '?';
