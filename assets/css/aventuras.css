@@ -987,11 +987,31 @@
     }
     .aventura-editor-shell > .home-hero .home-back { left: 0; }
 
-    /* Form principal: capa e dados lado a lado, com o textarea de texto
-       integral em coluna única ocupando toda a largura abaixo. */
+    /* Form em coluna única no desktop: todos os campos compartilham a
+       mesma largura externa (igual à dos textareas dos blocos extras e
+       da seção Cenas da Aventura). A capa fica em um bloco horizontal
+       compacto no topo (preview à esquerda + ações à direita), sem
+       roubar largura dos campos. */
     .aventura-form-grid {
-        grid-template-columns: 280px 1fr;
-        gap: 24px;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .aventura-form-cover {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 18px;
+        align-items: center;
+    }
+    .aventura-form-cover .aventura-form-cover-label {
+        grid-column: 1 / -1;
+    }
+    .aventura-cover-preview {
+        width: 180px;
+        max-width: 100%;
+        margin: 0;
+    }
+    .aventura-cover-actions {
+        align-self: center;
     }
     #aventuraTextoIntegral {
         min-height: 420px;
@@ -1013,7 +1033,10 @@
 }
 @media (min-width: 1366px) {
     .aventura-editor-shell { max-width: 1280px; width: min(1280px, 100%); }
-    .aventura-form-grid { grid-template-columns: 320px 1fr; gap: 30px; }
+    /* Em telas grandes, dá um pouco mais de presença à miniatura da capa,
+       mantendo a coluna única para alinhar tudo. */
+    .aventura-form-cover { grid-template-columns: 220px 1fr; gap: 24px; }
+    .aventura-cover-preview { width: 220px; }
 }
 
 /* =====================================================
