@@ -1285,3 +1285,52 @@
     }
     .aventura-cena-card-nome { font-size: 1.7rem; }
 }
+
+/* Campo de imagem do NPC: URL + upload de arquivo lado a lado + preview. */
+.aventura-npc-imagem-field {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.aventura-npc-imagem-field .field-label-line {
+    color: var(--purple, #69436f);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-size: 0.74rem;
+}
+.aventura-npc-imagem-inputs {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.aventura-npc-imagem-url {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+.aventura-npc-imagem-upload {
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.aventura-npc-imagem-preview {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1.5px solid rgba(118, 84, 124, 0.36);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(216, 162, 58, 0.20);
+}
+.aventura-npc-imagem-preview[hidden] { display: none; }
+.aventura-npc-imagem-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.aventura-npc-imagem-hint {
+    color: var(--muted, #91739a);
+    font-size: 0.78rem;
+}

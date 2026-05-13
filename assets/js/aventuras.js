@@ -97,6 +97,40 @@
         });
     }
 
+    /* ---------- Preview da imagem do NPC ---------- */
+    // Mesma validação client-side (espelha o backend). Se houver URL
+    // preenchida e o usuário escolher arquivo, o backend prioriza o
+    // arquivo — o input file é o "campo vencedor".
+    const npcFile    = document.getElementById('aventuraNpcImagemArquivo');
+    const npcPreview = document.getElementById('aventuraNpcImagemPreview');
+    if (npcFile && npcPreview) {
+        const npcImgEl = npcPreview.querySelector('img');
+        npcFile.addEventListener('change', () => {
+            const file = npcFile.files && npcFile.files[0];
+            if (!file) { npcPreview.hidden = true; return; }
+            const okMime = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+            if (!okMime) {
+                showFlash('Formato não suportado para a imagem do NPC. Use JPG, PNG ou WebP.', 'error');
+                npcFile.value = '';
+                npcPreview.hidden = true;
+                return;
+            }
+            const maxBytes = 8 * 1024 * 1024;
+            if (file.size > maxBytes) {
+                showFlash('A imagem do NPC excede 8 MB.', 'error');
+                npcFile.value = '';
+                npcPreview.hidden = true;
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (npcImgEl) npcImgEl.src = e.target.result;
+                npcPreview.hidden = false;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
     function showFlash(msg, type) {
         let host = document.querySelector('.painel-flash.painel-flash--js');
         if (!host) {

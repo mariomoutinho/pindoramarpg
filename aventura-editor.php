@@ -48,7 +48,7 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
     <link rel="stylesheet" href="assets/css/painel-facilitador.css?v=20260508a" />
-    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513j" />
+    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513k" />
 </head>
 <body class="home-body aventuras-page">
     <script src="assets/js/transitions.js?v=20260508u"></script>
@@ -229,7 +229,9 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
                     <p>Cadastre NPCs próprios da aventura. Eles também aparecem no Bestiário do facilitador.</p>
                 </header>
                 <div class="aventura-secao-body">
-                    <form method="post" action="salvar-aventura-npc.php" class="aventura-npc-form">
+                    <form method="post" action="salvar-aventura-npc.php"
+                          enctype="multipart/form-data"
+                          class="aventura-npc-form" id="aventuraNpcForm">
                         <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>" />
                         <input type="hidden" name="aventura_id" value="<?= (int) $aventura['id'] ?>" />
                         <div class="aventura-npc-grid">
@@ -279,10 +281,29 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
                                 <span>Deslocamento</span>
                                 <input type="text" name="deslocamento" maxlength="40" placeholder="ex.: 6m" />
                             </label>
-                            <label class="field">
-                                <span>Imagem (URL)</span>
-                                <input type="text" name="imagem" maxlength="255" placeholder="assets/img/bestiario/..." />
-                            </label>
+                            <div class="field aventura-npc-imagem-field">
+                                <span class="field-label-line">Imagem do NPC</span>
+                                <div class="aventura-npc-imagem-inputs">
+                                    <input type="text" name="imagem" maxlength="255"
+                                           class="aventura-npc-imagem-url"
+                                           placeholder="URL ou caminho — opcional" />
+                                    <label class="aventuras-btn aventuras-btn--ghost aventura-npc-imagem-upload">
+                                        <input type="file"
+                                               name="imagem_arquivo"
+                                               id="aventuraNpcImagemArquivo"
+                                               accept="image/jpeg,image/png,image/webp"
+                                               hidden />
+                                        <span>Enviar arquivo</span>
+                                    </label>
+                                </div>
+                                <div class="aventura-npc-imagem-preview" id="aventuraNpcImagemPreview" hidden>
+                                    <img alt="Prévia da imagem do NPC" />
+                                </div>
+                                <small class="aventura-npc-imagem-hint">
+                                    JPG, PNG ou WebP — até 8&nbsp;MB. Se enviar arquivo e URL ao mesmo tempo,
+                                    o arquivo tem prioridade.
+                                </small>
+                            </div>
                             <label class="field wide">
                                 <span>Descrição</span>
                                 <textarea name="descricao" rows="2" maxlength="4000"></textarea>
@@ -347,6 +368,6 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
         <?php endif; ?>
     </main>
 
-    <script src="assets/js/aventuras.js?v=20260513a"></script>
+    <script src="assets/js/aventuras.js?v=20260513b"></script>
 </body>
 </html>

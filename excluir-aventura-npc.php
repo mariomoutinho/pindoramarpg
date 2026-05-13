@@ -23,5 +23,11 @@ if (!$atual || (int) $atual['usuario_id'] !== (int) $usuario['id']) {
 $aventuraId = (int) $atual['aventura_id'];
 aventuraExcluirNpc($npcId);
 
+// Se a imagem do NPC era um arquivo nosso (uploads/aventuras/npcs/),
+// limpa do disco. Caminhos externos / URLs são preservados (não nossos).
+if (!empty($atual['imagem'])) {
+    excluirArquivoImagemNpcAventura((string) $atual['imagem']);
+}
+
 header('Location: aventura-editor.php?id=' . $aventuraId . '&type=success&msg=' . urlencode('NPC removido.') . '#aventuraNpcsTitulo');
 exit;

@@ -14,6 +14,8 @@ require_once __DIR__ . '/auth.php';
 
 const AVENTURAS_UPLOAD_DIR = __DIR__ . '/../uploads/aventuras/capas';
 const AVENTURAS_UPLOAD_URL = 'uploads/aventuras/capas';
+const AVENTURAS_NPC_UPLOAD_DIR = __DIR__ . '/../uploads/aventuras/npcs';
+const AVENTURAS_NPC_UPLOAD_URL = 'uploads/aventuras/npcs';
 const AVENTURAS_PLACEHOLDER = 'assets/img/branding/pindorama-logo-nova.png';
 
 const AVENTURAS_STATUS_LIST = ['rascunho', 'publicada', 'arquivada'];
@@ -249,6 +251,89 @@ function excluirArquivoCapaAventura(string $relPath): void
     if (strpos($relPath, AVENTURAS_UPLOAD_URL . '/') !== 0) return;
     $abs = realpath(__DIR__ . '/../' . $relPath);
     $base = realpath(AVENTURAS_UPLOAD_DIR);
+    if ($abs && $base && strpos($abs, $base) === 0 && is_file($abs)) {
+        @unlink($abs);
+    }
+}
+
+/* ---------- Upload de imagem de NPC de aventura ---------- */
+
+function aventurasGarantirPastaUploadNpc(): void
+{
+    if (!is_dir(AVENTURAS_NPC_UPLOAD_DIR)) {
+        @mkdir(AVENTURAS_NPC_UPLOAD_DIR, 0775, true);
+    }
+}
+
+/**
+ * Reaproveita o mesmo padrão de processarUploadCapaAventura(): valida
+ * tipo (JPG/PNG/WebP), tamanho (<= 8 MB), gera nome seguro com hash
+ * aleatório e grava em uploads/aventuras/npcs/. Retorna o caminho
+ * relativo ao docroot, pronto para persistir em aventura_npcs.imagem.
+ */
+function processarUploadImagemNpcAventura(?array $arquivo, ?string &$erro = null): ?string
+{
+    $erro = null;
+    if (!$arquivo || !isset($arquivo['error']) || $arquivo['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($arquivo['error'] !== UPLOAD_ERR_OK) {
+        $erro = 'Falha ao receber o arquivo da imagem do NPC.';
+        return null;
+    }
+
+    $maxBytes = 8 * 1024 * 1024;
+    if ($arquivo['size'] > $maxBytes) {
+        $erro = 'A imagem excede o tamanho máximo permitido (8 MB).';
+        return null;
+    }
+
+    $tmp = $arquivo['tmp_name'];
+    if (!is_uploaded_file($tmp)) {
+        $erro = 'Arquivo inválido.';
+        return null;
+    }
+
+    $info = @getimagesize($tmp);
+    if (!$info) {
+        $erro = 'O arquivo enviado não é uma imagem válida.';
+        return null;
+    }
+    $mimeMap = [
+        IMAGETYPE_JPEG => ['jpg', 'image/jpeg'],
+        IMAGETYPE_PNG  => ['png', 'image/png'],
+        IMAGETYPE_WEBP => ['webp', 'image/webp'],
+    ];
+    if (!isset($mimeMap[$info[2]])) {
+        $erro = 'Formato não suportado. Use JPG, PNG ou WebP.';
+        return null;
+    }
+    [$ext, ] = $mimeMap[$info[2]];
+
+    aventurasGarantirPastaUploadNpc();
+
+    $tentativas = 0;
+    do {
+        $nome = bin2hex(random_bytes(12)) . '.' . $ext;
+        $destinoAbs = AVENTURAS_NPC_UPLOAD_DIR . '/' . $nome;
+        $tentativas++;
+    } while (file_exists($destinoAbs) && $tentativas < 5);
+
+    if (!@move_uploaded_file($tmp, $destinoAbs)) {
+        $erro = 'Não foi possível salvar a imagem do NPC.';
+        return null;
+    }
+    @chmod($destinoAbs, 0644);
+    return AVENTURAS_NPC_UPLOAD_URL . '/' . $nome;
+}
+
+function excluirArquivoImagemNpcAventura(string $relPath): void
+{
+    if ($relPath === '') return;
+    $relPath = ltrim($relPath, '/');
+    if (strpos($relPath, AVENTURAS_NPC_UPLOAD_URL . '/') !== 0) return;
+    $abs = realpath(__DIR__ . '/../' . $relPath);
+    $base = realpath(AVENTURAS_NPC_UPLOAD_DIR);
     if ($abs && $base && strpos($abs, $base) === 0 && is_file($abs)) {
         @unlink($abs);
     }

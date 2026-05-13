@@ -27,11 +27,28 @@ if ($dados['nome'] === '') {
     exit;
 }
 
+// Upload opcional da imagem do NPC. Regra de prioridade: se o arquivo
+// vier válido, ele substitui o que estiver no campo "Imagem (URL)".
+$erroUpload = null;
+$imagemArquivo = processarUploadImagemNpcAventura($_FILES['imagem_arquivo'] ?? null, $erroUpload);
+if ($erroUpload) {
+    header('Location: aventura-editor.php?id=' . $aventuraId . '&type=error&msg=' . urlencode($erroUpload) . '#aventuraNpcsTitulo');
+    exit;
+}
+if ($imagemArquivo !== null) {
+    $dados['imagem'] = $imagemArquivo;
+}
+
 if ($npcId > 0) {
     $atual = aventuraCarregarNpc($npcId);
     if (!$atual || (int) $atual['usuario_id'] !== (int) $usuario['id']) {
         header('Location: acesso-negado.php?m=' . urlencode('NPC não pertence a você.'));
         exit;
+    }
+    // Se um arquivo novo substituiu a imagem, apaga o anterior do disco
+    // (quando o anterior também era um arquivo nosso, não uma URL externa).
+    if ($imagemArquivo !== null && !empty($atual['imagem'])) {
+        excluirArquivoImagemNpcAventura((string) $atual['imagem']);
     }
     aventuraAtualizarNpc($npcId, $dados);
     $msg = 'NPC atualizado.';

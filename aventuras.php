@@ -22,7 +22,7 @@ $lista = listarAventurasDoUsuario((int) $usuario['id']);
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
     <link rel="stylesheet" href="assets/css/painel-facilitador.css?v=20260508a" />
-    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513j" />
+    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513k" />
 </head>
 <body class="home-body aventuras-page">
     <script src="assets/js/transitions.js?v=20260508u"></script>
@@ -120,6 +120,6 @@ $lista = listarAventurasDoUsuario((int) $usuario['id']);
             </footer>
         </div>
     </div>
-    <script src="assets/js/aventuras.js?v=20260513a"></script>
+    <script src="assets/js/aventuras.js?v=20260513b"></script>
 </body>
 </html>
