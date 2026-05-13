@@ -976,6 +976,19 @@
     .aventura-editor-shell {
         width: min(1180px, 100%);
         max-width: 1180px;
+        /* .home-shell base é align-items: center — sobrescreve para que
+           form, header e painel de cenas ocupem a MESMA largura externa
+           do shell, sem nenhum "encolher" no eixo cruzado. */
+        align-items: stretch;
+    }
+    /* Garantia explícita para filhos diretos: form, painel de cenas,
+       painel de NPCs, flash, modal de confirmação. */
+    .aventura-editor-shell > form.aventura-form,
+    .aventura-editor-shell > .aventura-secao,
+    .aventura-editor-shell > .painel-flash {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     /* Hero do editor (título + subtítulo) — alinhado à esquerda em desktop.
        padding-left reserva a faixa do .home-back (position:absolute,left:0)
