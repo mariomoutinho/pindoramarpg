@@ -48,7 +48,7 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
     <link rel="stylesheet" href="assets/css/painel-facilitador.css?v=20260508a" />
-    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513i" />
+    <link rel="stylesheet" href="assets/css/aventuras.css?v=20260513j" />
 </head>
 <body class="home-body aventuras-page">
     <script src="assets/js/transitions.js?v=20260508u"></script>
@@ -180,11 +180,19 @@ $npcsAventura  = $aventura ? aventuraListarNpcs((int) $aventura['id'])  : [];
                                 $cenaMesaJogoUrl = 'mesa-jogo.php?aventura_id=' . (int) $aventura['id'];
                                 foreach ($cenasAventura as $c):
                                     $cImg = (string) ($c['coverImage'] ?? '');
-                                    $cBgStyle = $cImg !== ''
-                                        ? ' style="--cena-cover:url(\'' . htmlspecialchars($cImg) . '\')"'
-                                        : '';
                             ?>
-                                <li class="aventura-cena-card<?= $cImg === '' ? ' is-no-cover' : '' ?>"<?= $cBgStyle ?>>
+                                <li class="aventura-cena-card<?= $cImg === '' ? ' is-no-cover' : ' has-cover' ?>">
+                                    <?php if ($cImg !== ''): ?>
+                                        <!-- Imagem real do cenário renderizada como <img> (mais previsível
+                                             que background-image: var(--x) em pseudo-elementos; permite
+                                             onerror p/ cair em fallback gracioso). Texto fica em camada
+                                             superior (.aventura-cena-card-link, z-index 2) e nítido. -->
+                                        <img class="aventura-cena-card-bg"
+                                             src="<?= htmlspecialchars($cImg) ?>"
+                                             alt=""
+                                             loading="lazy"
+                                             onerror="this.remove();this.closest('.aventura-cena-card').classList.add('is-no-cover');" />
+                                    <?php endif; ?>
                                     <a class="aventura-cena-card-link"
                                        href="<?= htmlspecialchars($cenaMesaJogoUrl) ?>"
                                        title="Abrir esta aventura na Mesa de Jogo">
