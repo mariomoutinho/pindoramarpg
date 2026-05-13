@@ -194,3 +194,79 @@ function listarFichasSemDono(): array
     );
     return $stmt->fetchAll();
 }
+
+/* ============================================================
+ * Vínculo N:N entre mesas e aventuras (tabela mesa_aventuras).
+ * Aventuras continuam vivendo no módulo Aventuras — aqui só
+ * gerenciamos a associação por mesa. Reuso 100% relacional.
+ * ============================================================ */
+
+/**
+ * Aventuras já vinculadas a uma mesa (com dados úteis para listagem).
+ * O filtro por $usuarioId garante que só aparecem aventuras do próprio
+ * facilitador (defesa em profundidade — quem chama já valida ownership
+ * da mesa, mas reforçamos no JOIN).
+ */
+function listarAventurasDaMesa(int $mesaId, int $usuarioId): array
+{
+    global $pdo;
+    $stmt = $pdo->prepare(
+        "SELECT a.id, a.titulo, a.subtitulo, a.sinopse, a.status, a.capa_path,
+                ma.id AS vinculo_id, ma.created_at AS vinculado_em
+         FROM mesa_aventuras ma
+         JOIN aventuras a ON a.id = ma.aventura_id
+         WHERE ma.mesa_id = :mesa AND a.usuario_id = :uid
+         ORDER BY ma.created_at DESC, a.titulo"
+    );
+    $stmt->execute(['mesa' => $mesaId, 'uid' => $usuarioId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Aventuras do usuário que AINDA NÃO estão vinculadas à mesa.
+ * Alimenta o <select> de "Vincular aventura" e impede duplicidade
+ * na UI antes mesmo de chegar no banco (o UNIQUE também impede).
+ */
+function listarAventurasDisponiveisParaMesa(int $mesaId, int $usuarioId): array
+{
+    global $pdo;
+    $stmt = $pdo->prepare(
+        "SELECT a.id, a.titulo, a.status
+         FROM aventuras a
+         WHERE a.usuario_id = :uid
+           AND NOT EXISTS (
+               SELECT 1 FROM mesa_aventuras ma
+               WHERE ma.mesa_id = :mesa AND ma.aventura_id = a.id
+           )
+         ORDER BY a.titulo"
+    );
+    $stmt->execute(['mesa' => $mesaId, 'uid' => $usuarioId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Insere o vínculo (idempotente via UNIQUE). Retorna true se houve
+ * uma nova linha, false se já existia. Quem chama deve ter validado
+ * ownership da mesa e da aventura previamente.
+ */
+function vincularAventuraNaMesa(int $mesaId, int $aventuraId): bool
+{
+    global $pdo;
+    $stmt = $pdo->prepare(
+        "INSERT IGNORE INTO mesa_aventuras (mesa_id, aventura_id)
+         VALUES (:mesa, :aid)"
+    );
+    $stmt->execute(['mesa' => $mesaId, 'aid' => $aventuraId]);
+    return $stmt->rowCount() > 0;
+}
+
+function desvincularAventuraDaMesa(int $mesaId, int $aventuraId): bool
+{
+    global $pdo;
+    $stmt = $pdo->prepare(
+        "DELETE FROM mesa_aventuras
+         WHERE mesa_id = :mesa AND aventura_id = :aid"
+    );
+    $stmt->execute(['mesa' => $mesaId, 'aid' => $aventuraId]);
+    return $stmt->rowCount() > 0;
+}
