@@ -18,7 +18,7 @@
     font-display: swap;
 }
 :root {
-    --aventura-titulo-font: 'Cordelina', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    --aventura-titulo-font: 'Cordelina', Georgia, "Times New Roman", serif;
 }
 
 .aventuras-page {

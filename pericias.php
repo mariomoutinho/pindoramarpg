@@ -6,7 +6,7 @@
     <title>Perícias - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260507b" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260513a" />
     <link rel="stylesheet" href="assets/css/pericias.css?v=20260503-padrao" />
 </head>
 

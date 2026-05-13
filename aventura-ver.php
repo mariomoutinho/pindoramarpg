@@ -36,7 +36,7 @@ $obsHtml   = formatarTextoIntegralAventura($aventura['observacoes_facilitador'])
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><?= $titulo ?> — Aventuras — Pindorama RPG</title>
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/home.css?v=20260507d" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260513f" />
     <link rel="stylesheet" href="assets/css/auth.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
     <link rel="stylesheet" href="assets/css/painel-facilitador.css?v=20260508a" />

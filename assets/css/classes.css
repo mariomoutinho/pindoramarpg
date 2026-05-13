@@ -4,12 +4,10 @@
 ===================================================== */
 
 /* Classe utilitária para títulos em estilo cordel/xilogravura.
-   Quando o arquivo PindoramaCordel-Regular.ttf for criado em assets/fonts/,
-   adicione um @font-face apontando para ele e a fonte autoral começa a ser
-   usada automaticamente. Enquanto isso, o fallback é Eldes Cordel (já
-   registrada em home.css) e depois Georgia/serif. */
+   A fonte temática "Cordelina" é declarada em home.css (carregada por
+   esta página). Fallback final: Georgia/serif. */
 .titulo-cordel {
-    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     letter-spacing: 0.5px;
 }
 
@@ -27,7 +25,7 @@
     color: var(--purple-dark, #3b1d43);
 }
 .caixa-regra .caixa-regra-titulo {
-    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-size: 1.1rem;
     margin: 0 0 8px;
     color: var(--purple-dark, #3b1d43);
@@ -94,7 +92,7 @@
 }
 .regras-table caption {
     text-align: left;
-    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-weight: 800;
     color: var(--purple-dark, #3b1d43);
     padding: 6px 8px 8px;
@@ -125,7 +123,7 @@
     text-align: center;
     margin: 8px auto 16px;
     padding: 10px 14px;
-    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-size: 1.05rem;
     letter-spacing: 0.5px;
     color: var(--purple-dark, #3b1d43);
@@ -1694,7 +1692,7 @@ body {
     border-radius: 999px;
     background: rgba(43, 18, 50, 0.72);
     color: #f4e8d6;
-    font-family: 'Pindorama Cordel', 'Eldes Cordel', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-size: 1.05rem;
     letter-spacing: 0.6px;
     border: 1px solid rgba(216, 162, 58, 0.45);

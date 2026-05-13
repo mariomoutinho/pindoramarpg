@@ -6,7 +6,7 @@
     <title>Acervo — Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/home.css?v=20260507d" />
+    <link rel="stylesheet" href="assets/css/home.css?v=20260513f" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
 </head>
 <body class="home-body">

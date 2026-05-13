@@ -3,15 +3,10 @@
    Usa as variáveis de paleta de ficha.css (--purple, --purple-dark, ...)
    ==================================================================== */
 
-/* Fonte temática do projeto — arquivo já presente em
-   assets/fonts/CordelEncarnado-Regular.ttf */
-@font-face {
-    font-family: 'Cordel Encarnado';
-    src: url('../fonts/CordelEncarnado-Regular.ttf') format('truetype');
-    font-display: swap;
-    font-weight: normal;
-    font-style: normal;
-}
+/* A fonte temática "Cordelina" é declarada globalmente em home.css.
+   Esta página já carrega home.css junto, então o @font-face local
+   anterior (Cordel Encarnado) foi removido para evitar duplicidade
+   estética. */
 
 /* O <select> nativo continua existindo mas escondido (a JS o sincroniza) */
 .anc-picker-hidden-select {
@@ -343,7 +338,7 @@
 
 .anc-picker-preview-name {
     margin: 0;
-    font-family: 'Cordel Encarnado', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-size: 2.4rem;
     color: var(--pink-light);
     letter-spacing: 1px;
@@ -429,7 +424,7 @@
 
 .anc-picker-traco-name {
     margin: 0 0 6px;
-    font-family: 'Cordel Encarnado', Georgia, "Times New Roman", serif;
+    font-family: 'Cordelina', Georgia, "Times New Roman", serif;
     font-size: 1.15rem;
     text-transform: uppercase;
     color: var(--pink-light);

@@ -6,7 +6,7 @@
     <title>Rústico - Pindorama RPG</title>
 
     <link rel="stylesheet" href="assets/css/ficha.css" />
-    <link rel="stylesheet" href="assets/css/classes.css?v=20260509a" />
+    <link rel="stylesheet" href="assets/css/classes.css?v=20260513a" />
 </head>
 
 <body>

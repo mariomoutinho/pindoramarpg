@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Equipamentos - Pindorama RPG</title>
 <link href="assets/css/ficha.css" rel="stylesheet"/>
-<link href="assets/css/classes.css?v=20260507b" rel="stylesheet"/>
+<link href="assets/css/classes.css?v=20260513a" rel="stylesheet"/>
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
 </head>
 <body>
