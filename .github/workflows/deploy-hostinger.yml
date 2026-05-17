@@ -54,7 +54,7 @@ jobs:
           FTP_PASSWORD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
           FTP_PORT:       ${{ secrets.HOSTINGER_FTP_PORT }}
           # Opcional. Se vazio, publicamos no caminho real do erro PHP:
-          # /domains/coletivopindorama.com.br/public_html/pindorama-rpg.
+          # domains/coletivopindorama.com.br/public_html/pindorama-rpg.
           # Se a conta FTP já estiver escopada diretamente nessa pasta,
           # configure "." no secret.
           FTP_REMOTE_DIR: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
@@ -77,7 +77,7 @@ jobs:
           esac
 
           if [ -z "$REMOTE_DIR" ]; then
-            REMOTE_DIR="/domains/coletivopindorama.com.br/public_html/pindorama-rpg"
+            REMOTE_DIR="domains/coletivopindorama.com.br/public_html/pindorama-rpg"
           fi
 
           if [ "$REMOTE_DIR" = "." ] || [ "$REMOTE_DIR" = "./" ]; then
@@ -90,6 +90,25 @@ jobs:
 
           # lftp recebe senha via -u; nada cai em logs. `set xfer:log
           # false` e `set cmdline:save-history off` reforçam isso.
+          for HOTFIX_DIR in "." "public_html/pindorama-rpg" "domains/coletivopindorama.com.br/public_html/pindorama-rpg"; do
+            echo "Hotfix: tentando publicar arquivos críticos em '$HOTFIX_DIR'"
+            lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF || true
+              set ftp:ssl-allow no
+              set ftp:passive-mode true
+              set net:max-retries 1
+              set net:timeout 20
+              set xfer:log false
+              set cmd:fail-exit no
+
+              mkdir -p -f "$HOTFIX_DIR"
+              cd "$HOTFIX_DIR"
+              mkdir -p -f includes
+              put includes/auth.php -o includes/auth.php
+              put .user.ini -o .user.ini
+              put deploy-version.txt -o deploy-version.txt
+EOF
+          done
+
           lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
             set ftp:ssl-allow no
             set ftp:passive-mode true

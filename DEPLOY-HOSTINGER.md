@@ -54,7 +54,7 @@ A publicação mira explicitamente a pasta final do projeto:
 ```
 
 Por padrão, se `HOSTINGER_FTP_REMOTE_DIR` ficar vazio, o workflow usa
-`/domains/coletivopindorama.com.br/public_html/pindorama-rpg`. Se uma conta FTP adicional for escopada
+`domains/coletivopindorama.com.br/public_html/pindorama-rpg`. Se uma conta FTP adicional for escopada
 diretamente para essa pasta final, configure `HOSTINGER_FTP_REMOTE_DIR=.`
 para publicar na raiz da conta.
 
@@ -71,7 +71,7 @@ repository secret**:
 | `HOSTINGER_FTP_USER` | ✅ | Usuário FTP da conta escopada | `u234997903.pindorama` |
 | `HOSTINGER_FTP_PASSWORD` | ✅ | Senha do usuário FTP | (senha) |
 | `HOSTINGER_FTP_PORT` | opcional (default `21`) | Porta FTP | `21` |
-| `HOSTINGER_FTP_REMOTE_DIR` | opcional (vazio = caminho público do domínio) | Pasta remota de destino; use `.` se a conta já cair na pasta final | `/domains/coletivopindorama.com.br/public_html/pindorama-rpg` |
+| `HOSTINGER_FTP_REMOTE_DIR` | opcional (vazio = caminho público do domínio) | Pasta remota de destino; use `.` se a conta já cair na pasta final | `domains/coletivopindorama.com.br/public_html/pindorama-rpg` |
 
 Nada de credenciais no código — o workflow só lê dos secrets.
 
