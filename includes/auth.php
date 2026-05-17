@@ -7,6 +7,76 @@
 require_once __DIR__ . '/db.php';
 
 /**
+ * Garante as tabelas-base de autenticação.
+ *
+ * O deploy para hospedagem compartilhada nem sempre consegue rodar migrations
+ * imediatamente. Sem essa proteção, cadastro/login quebram com erro fatal
+ * quando `usuarios` ainda não existe no banco de produção.
+ */
+function garantirTabelasAuth(PDO $pdo): bool
+{
+    static $verificada = null;
+    if ($verificada !== null) {
+        return $verificada;
+    }
+
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS usuarios (
+                id INT(11) NOT NULL AUTO_INCREMENT,
+                nome VARCHAR(150) NOT NULL,
+                email VARCHAR(190) NOT NULL,
+                senha_hash VARCHAR(255) NOT NULL,
+                role ENUM('facilitador','participante') NOT NULL DEFAULT 'participante',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY usuarios_email_unq (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS mesas (
+                id INT(11) NOT NULL AUTO_INCREMENT,
+                facilitador_id INT(11) NOT NULL,
+                nome VARCHAR(180) NOT NULL,
+                descricao TEXT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY mesas_facilitador_idx (facilitador_id),
+                CONSTRAINT mesas_facilitador_fk
+                    FOREIGN KEY (facilitador_id) REFERENCES usuarios (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS mesa_participantes (
+                id INT(11) NOT NULL AUTO_INCREMENT,
+                mesa_id INT(11) NOT NULL,
+                usuario_id INT(11) NOT NULL,
+                papel ENUM('facilitador','participante') NOT NULL DEFAULT 'participante',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY mesa_participantes_mesa_usuario_unq (mesa_id, usuario_id),
+                KEY mesa_participantes_usuario_idx (usuario_id),
+                CONSTRAINT mesa_participantes_mesa_fk
+                    FOREIGN KEY (mesa_id) REFERENCES mesas (id) ON DELETE CASCADE,
+                CONSTRAINT mesa_participantes_usuario_fk
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        $check = $pdo->query("SHOW TABLES LIKE 'usuarios'");
+        $verificada = $check && $check->fetch() ? true : false;
+        return $verificada;
+    } catch (Throwable $e) {
+        $verificada = false;
+        return false;
+    }
+}
+
+/**
  * Inicia (ou reaproveita) a sessão PHP com cookies em modo httponly.
  * Idempotente: pode ser chamada várias vezes na mesma requisição.
  */
@@ -55,6 +125,10 @@ function autenticar(string $email, string $senha): bool
 {
     global $pdo;
 
+    if (!garantirTabelasAuth($pdo)) {
+        return false;
+    }
+
     $email = trim(strtolower($email));
     if ($email === '' || $senha === '') {
         return false;
@@ -90,6 +164,10 @@ function autenticar(string $email, string $senha): bool
 function registrarUsuario(string $nome, string $email, string $senha, string $role = 'participante'): ?int
 {
     global $pdo;
+
+    if (!garantirTabelasAuth($pdo)) {
+        return null;
+    }
 
     $nome  = trim($nome);
     $email = trim(strtolower($email));
