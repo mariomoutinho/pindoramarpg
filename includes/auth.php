@@ -27,6 +27,7 @@ function garantirTabelasAuth(PDO $pdo): bool
                 nome VARCHAR(150) NOT NULL,
                 email VARCHAR(190) NOT NULL,
                 senha_hash VARCHAR(255) NOT NULL,
+                foto_path VARCHAR(255) NULL,
                 role ENUM('facilitador','participante') NOT NULL DEFAULT 'participante',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -41,6 +42,7 @@ function garantirTabelasAuth(PDO $pdo): bool
                 facilitador_id INT(11) NOT NULL,
                 nome VARCHAR(180) NOT NULL,
                 descricao TEXT NULL,
+                status ENUM('rascunho','ativa','arquivada') NOT NULL DEFAULT 'ativa',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
@@ -67,12 +69,31 @@ function garantirTabelasAuth(PDO $pdo): bool
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
+        garantirColunaTabela($pdo, 'usuarios', 'foto_path', 'foto_path VARCHAR(255) NULL AFTER senha_hash');
+        garantirColunaTabela($pdo, 'mesas', 'status', "status ENUM('rascunho','ativa','arquivada') NOT NULL DEFAULT 'ativa' AFTER descricao");
+
         $check = $pdo->query("SHOW TABLES LIKE 'usuarios'");
         $verificada = $check && $check->fetch() ? true : false;
         return $verificada;
     } catch (Throwable $e) {
         $verificada = false;
         return false;
+    }
+}
+
+function garantirColunaTabela(PDO $pdo, string $tabela, string $coluna, string $definicao): void
+{
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) AS total
+           FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = :tabela
+            AND COLUMN_NAME = :coluna"
+    );
+    $stmt->execute(['tabela' => $tabela, 'coluna' => $coluna]);
+
+    if ((int) ($stmt->fetch()['total'] ?? 0) === 0) {
+        $pdo->exec("ALTER TABLE {$tabela} ADD COLUMN {$definicao}");
     }
 }
 
