@@ -106,7 +106,7 @@ jobs:
               put includes/auth.php -o includes/auth.php
               put .user.ini -o .user.ini
               put deploy-version.txt -o deploy-version.txt
-EOF
+          EOF
           done
 
           lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
