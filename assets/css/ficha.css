@@ -3355,3 +3355,23 @@ max-width: 160px;
         grid-template-columns: minmax(82px, auto) 1fr;
     }
 }
+
+/* Resumo de "Benefícios de Origem" no topo da ficha. Reaproveita
+   .ancestralidade-tags / .ancestralidade-tag para uniformizar com os
+   Traços Ancestrais, mas como é read-only desativa cursor/hover. */
+.origem-resumo-tag {
+    cursor: default;
+}
+.origem-resumo-tag:hover {
+    background: #fff;
+    transform: none;
+}
+/* Variação de matiz sutil para distinguir perícia x poder sem fugir do tema. */
+.origem-resumo-tag--poder {
+    background: rgba(216, 162, 58, 0.18);
+    border-color: rgba(216, 162, 58, 0.55);
+    color: #7a4b00;
+}
+.origem-resumo-tag--poder:hover {
+    background: rgba(216, 162, 58, 0.18);
+}

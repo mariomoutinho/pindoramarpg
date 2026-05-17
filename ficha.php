@@ -18,7 +18,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260509b" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260513c" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
@@ -220,6 +220,17 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                             Selecione uma ancestralidade para ver seus tra&ccedil;os.
                         </div>
                         <div class="ancestralidade-tags" id="ancestralidadeTracos"></div>
+                    </div>
+
+                    <!-- Resumo dos Benefícios de Origem já escolhidos
+                         (consome o mesmo estado escolhasAtuais usado pela
+                         seção inferior; renderizado por origens.js). -->
+                    <div class="field wide ancestralidade-ficha-panel origem-resumo-panel">
+                        <label>Benef&iacute;cios de Origem</label>
+                        <div class="ancestralidade-empty" id="origemBeneficiosResumoEmpty">
+                            Nenhum benef&iacute;cio escolhido.
+                        </div>
+                        <div class="ancestralidade-tags" id="origemBeneficiosResumo"></div>
                     </div>
                 </section>
 

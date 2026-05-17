@@ -113,6 +113,39 @@
         renderizar();
     }
 
+    /**
+     * Resumo (read-only) dos benefícios de origem já escolhidos —
+     * exibido no topo da ficha, na linha logo abaixo de Traços
+     * Ancestrais. Reaproveita as classes visuais
+     * `.ancestralidade-tags / .ancestralidade-empty` para manter
+     * exatamente o mesmo padrão dos Traços. Consome o estado já
+     * existente `escolhasAtuais` — sem duplicar regra de negócio.
+     */
+    function renderResumoTopo() {
+        const tags  = document.getElementById('origemBeneficiosResumo');
+        const empty = document.getElementById('origemBeneficiosResumoEmpty');
+        if (!tags || !empty) return;
+
+        if (!escolhasAtuais.length) {
+            tags.innerHTML = '';
+            empty.style.display = '';
+            return;
+        }
+
+        empty.style.display = 'none';
+        tags.innerHTML = escolhasAtuais.map(escolha => {
+            if (escolha.tipo === 'pericia') {
+                return `<span class="ancestralidade-tag origem-resumo-tag origem-resumo-tag--pericia">${escaparHtml(escolha.nome)}</span>`;
+            }
+            // Poder: tenta resolver o nome via origemAtual; fallback p/ id
+            // (caso renderResumoTopo rode antes do fetch da origem terminar
+            // ao carregar uma ficha salva).
+            const poder = ((origemAtual && origemAtual.poderes) || []).find(p => p.id === escolha.id);
+            const nome = poder?.nome || escolha.id;
+            return `<span class="ancestralidade-tag origem-resumo-tag origem-resumo-tag--poder">${escaparHtml(nome)}</span>`;
+        }).join('');
+    }
+
     function renderizar() {
         const empty = document.getElementById('origemEmpty');
         const conteudo = document.getElementById('origemConteudo');
@@ -123,6 +156,7 @@
             if (conteudo) conteudo.hidden = true;
             if (contador) contador.textContent = '0 / 2';
             renderEscolhidos();
+            renderResumoTopo();
             return;
         }
 
@@ -164,6 +198,7 @@
         renderPericias();
         renderPoderes();
         renderEscolhidos();
+        renderResumoTopo();
 
         if (contador) contador.textContent = `${escolhasAtuais.length} / 2`;
         persistirHidden();
@@ -363,8 +398,13 @@
                 .filter(b => b.tipo === 'pericia')
                 .forEach(b => desmarcarPericiaTreinada(b.nome));
             escolhasAtuais = [];
+            renderResumoTopo();    // limpa o resumo do topo antes do fetch
             carregarOrigem(sel.value);
         });
+
+        // Estado inicial: garante o resumo vazio mesmo antes do primeiro
+        // change/load (ex.: ficha em branco recém-criada).
+        renderResumoTopo();
 
         const fechar  = document.getElementById('origemModalFechar');
         const adquirir = document.getElementById('origemModalAdquirir');
