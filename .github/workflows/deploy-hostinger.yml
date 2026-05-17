@@ -1,0 +1,133 @@
+name: Deploy Pindorama RPG → Hostinger
+
+# Quando rodar:
+#   - push em main (deploy automático);
+#   - workflow_dispatch (botão "Run workflow" no GitHub → primeiro deploy
+#     ou redeploy sem precisar de novo commit).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancelar deploys em corrida se um novo push chegar — evita publicações
+# se sobrepondo. Mantém o último em pé.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Upload incremental via FTPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          # Não precisamos do histórico completo para fazer upload.
+          fetch-depth: 1
+
+      - name: Instalar lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      # --------------------------------------------------------------------
+      # Estratégia de envio: lftp mirror INVERSO (-R = upload), com
+      #   --only-newer  → manda apenas arquivos cujo mtime/size diferem;
+      #   --parallel=4  → paralelismo seguro;
+      #   --no-symlinks → segurança;
+      #   --verbose     → log claro no Actions;
+      # SEM --delete e SEM --delete-first → arquivos remotos NUNCA são
+      # apagados. Se um arquivo sumir do repositório, ele PERMANECE no
+      # servidor. Esse é o comportamento desejado: deploy é incremental,
+      # nada destrutivo, nada toca o que está fora da pasta destino.
+      # --------------------------------------------------------------------
+      - name: Publicar via lftp (incremental, sem deletar nada remoto)
+        env:
+          FTP_HOST:       ${{ secrets.HOSTINGER_FTP_HOST }}
+          FTP_USER:       ${{ secrets.HOSTINGER_FTP_USER }}
+          FTP_PASSWORD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          FTP_PORT:       ${{ secrets.HOSTINGER_FTP_PORT }}
+          FTP_REMOTE_DIR: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+
+          : "${FTP_HOST:?secret HOSTINGER_FTP_HOST não definido}"
+          : "${FTP_USER:?secret HOSTINGER_FTP_USER não definido}"
+          : "${FTP_PASSWORD:?secret HOSTINGER_FTP_PASSWORD não definido}"
+          : "${FTP_REMOTE_DIR:?secret HOSTINGER_FTP_REMOTE_DIR não definido}"
+          PORT="${FTP_PORT:-21}"
+
+          # Bloqueio explícito: nunca aceitar destino vazio, "/" ou
+          # "public_html" diretamente — só subpastas dentro de public_html.
+          case "$FTP_REMOTE_DIR" in
+            ""|"/"|"public_html"|"public_html/")
+              echo "::error::Destino remoto '$FTP_REMOTE_DIR' é inseguro. Use uma SUBPASTA, ex: 'public_html/pindorama-rpg'."
+              exit 1
+              ;;
+          esac
+
+          echo "Destino: ftps://$FTP_HOST:$PORT$FTP_REMOTE_DIR"
+
+          # Cuidado com segredos: lftp recebe a senha via env, nunca
+          # registrada nos logs. set xfer:log false reforça isso.
+          lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftps://$FTP_HOST" <<EOF
+            set ssl:verify-certificate no
+            set ftp:ssl-protect-data true
+            set net:max-retries 3
+            set net:timeout 30
+            set xfer:log false
+            set cmd:fail-exit yes
+
+            # Garante que a pasta destino existe (sem criar nada acima dela)
+            mkdir -p -f "$FTP_REMOTE_DIR"
+            cd "$FTP_REMOTE_DIR"
+            lcd .
+
+            # ATENÇÃO: nenhuma das flags abaixo apaga arquivos remotos.
+            # --reverse  = upload (local → remoto)
+            # --only-newer = só envia se mais novo (mtime/size diferente)
+            # --no-symlinks = não envia links simbólicos
+            # NÃO usar: --delete, --delete-first, --remove-source-files
+            mirror --reverse \
+                   --only-newer \
+                   --no-symlinks \
+                   --parallel=4 \
+                   --verbose \
+                   --exclude-glob '.git/'             --exclude-glob '.git/**' \
+                   --exclude-glob '.github/'          --exclude-glob '.github/**' \
+                   --exclude-glob '.claude/'          --exclude-glob '.claude/**' \
+                   --exclude-glob '.codex/'           --exclude-glob '.codex/**' \
+                   --exclude-glob '.agents/'          --exclude-glob '.agents/**' \
+                   --exclude-glob '.vscode/'          --exclude-glob '.vscode/**' \
+                   --exclude-glob '.gitignore'        --exclude-glob '.gitattributes' \
+                   --exclude-glob 'DEPLOY_HOSTINGER.md' \
+                   --exclude-glob 'PORTE-GODOT.md'    --exclude-glob 'REGRAS-DE-CODIGO.md' \
+                   --exclude-glob 'REGRAS-DE-NEGOCIO.md' \
+                   --exclude-glob 'tests/'            --exclude-glob 'tests/**' \
+                   --exclude-glob 'node_modules/'     --exclude-glob 'node_modules/**' \
+                   --exclude-glob 'vendor/'           --exclude-glob 'vendor/**' \
+                   --exclude-glob 'uploads/'          --exclude-glob 'uploads/**' \
+                   --exclude-glob 'data/campo-batalha-state*.json' \
+                   --exclude-glob 'data/aventuras/' \
+                   --exclude-glob 'data/aventuras/**' \
+                   --exclude-glob '*.log' \
+                   --exclude-glob '*.sql.bak' \
+                   --exclude-glob 'database.sql' \
+                   --exclude-glob '_pindorama_rpg.sql' \
+                   --exclude-glob '.DS_Store' \
+                   --exclude-glob 'Thumbs.db' \
+                   .
+          EOF
+
+          echo "Deploy concluído com sucesso."
+
+      - name: Resumo
+        if: always()
+        run: |
+          echo "## Resumo do deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Destino: \`$HOSTINGER_FTP_REMOTE_DIR\` (Hostinger)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Modo: \`lftp mirror -R --only-newer\` (incremental, sem --delete)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${GITHUB_REF_NAME}\` · Commit: \`${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          HOSTINGER_FTP_REMOTE_DIR: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
