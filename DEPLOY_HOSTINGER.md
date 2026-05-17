@@ -13,8 +13,11 @@ que roda automaticamente em **push para `main`** e também pode ser
 disparado manualmente em **Actions → Deploy Pindorama RPG → Hostinger
 → Run workflow**.
 
-O envio é feito por **FTPS** com o utilitário `lftp` em modo
-`mirror --reverse --only-newer`:
+O envio é feito por **FTP** (porta 21) com o utilitário `lftp` em
+modo `mirror --reverse --only-newer`. As contas FTP adicionais da
+Hostinger não suportam FTPS/TLS — a senha trafega no protocolo, mas
+o escopo da conta (limitada à pasta `public_html/pindorama-rpg/`)
+contém qualquer impacto.
 
 - Apenas arquivos novos/alterados são enviados.
 - Arquivos remotos **nunca são apagados** — não há `--delete`,

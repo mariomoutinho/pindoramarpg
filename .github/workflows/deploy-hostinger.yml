@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Upload incremental via FTPS
+    name: Upload incremental via FTP
     runs-on: ubuntu-latest
 
     steps:
@@ -66,16 +66,21 @@ jobs:
               ;;
           esac
 
-          echo "Destino: ftps://$FTP_HOST:$PORT$FTP_REMOTE_DIR"
+          echo "Destino: ftp://$FTP_HOST:$PORT$FTP_REMOTE_DIR"
 
-          # Cuidado com segredos: lftp recebe a senha via env, nunca
-          # registrada nos logs. set xfer:log false reforça isso.
-          lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftps://$FTP_HOST" <<EOF
-            set ssl:verify-certificate no
-            set ftp:ssl-protect-data true
+          # Conexão FTP simples na porta 21 — é o que a Hostinger oferece
+          # para contas FTP adicionais (FTPS/TLS não é suportado neste
+          # tipo de conta). Senha trafega pelo protocolo, mas o escopo da
+          # conta limita o impacto à pasta do projeto. Cuidado com segredos:
+          # lftp recebe a senha via env, nunca registrada nos logs;
+          # `set xfer:log false` e `set cmdline:save-history off` reforçam isso.
+          lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
+            set ftp:ssl-allow no
+            set ftp:passive-mode true
             set net:max-retries 3
             set net:timeout 30
             set xfer:log false
+            set cmdline:save-history off
             set cmd:fail-exit yes
 
             # Garante que a pasta destino existe (sem criar nada acima dela)
