@@ -406,6 +406,18 @@
         // change/load (ex.: ficha em branco recém-criada).
         renderResumoTopo();
 
+        // Botão "editar" do resumo no topo dispara o trigger do picker
+        // de Origem (o painel embarcado aparece junto). Sem JS extra
+        // fora deste módulo.
+        const editarBtn = document.getElementById('origemEditarBtn');
+        if (editarBtn) {
+            editarBtn.addEventListener('click', () => {
+                const field = document.getElementById('origemSelect')?.parentElement;
+                const trigger = field?.querySelector('.anc-picker-trigger');
+                if (trigger) trigger.click();
+            });
+        }
+
         const fechar  = document.getElementById('origemModalFechar');
         const adquirir = document.getElementById('origemModalAdquirir');
         const remover = document.getElementById('origemModalRemover');

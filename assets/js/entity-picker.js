@@ -266,6 +266,11 @@
             resumos: config.resumos || {},
             valueField: config.valueField || 'nome',  // 'nome' | 'id'
             placeholder: config.placeholder || '(nenhum)',
+            // Opcional: id do painel "extra" (ex: 'origemPanel') que deve
+            // ser MOVIDO para dentro do modal enquanto ele está aberto e
+            // devolvido para o host (`<id>Host`) ao fechar. Permite manter
+            // a UI rica de Origem/Devoção como fonte única, sem duplicar.
+            panelHostId: config.panelHostId || null,
             triggerBtn: null,
             triggerLabel: null,
             backdrop: null,
@@ -364,6 +369,10 @@
                         <div class="anc-picker-preview-empty">Passe o mouse sobre uma opção para ver detalhes.</div>
                     </div>
                 </div>
+
+                <!-- Slot para painéis "extras" embarcados (Benefícios da Origem,
+                     Devoção etc.). Preenchido por abrir() via panelHostId. -->
+                <div class="anc-picker-extras"></div>
 
                 <footer class="anc-picker-footer">
                     <button type="button" class="anc-picker-btn anc-picker-btn-cancel">Cancelar</button>
@@ -601,6 +610,21 @@
 
     function abrir(state) {
         if (!state.ready) return;
+
+        // Embarca o painel rico (Origem/Devoção) dentro do modal.
+        // O elemento original vive em #<panelHostId>Host quando o modal
+        // está fechado — manter um único nó no DOM = fonte única de
+        // verdade para origens.js / divindades.js.
+        if (state.panelHostId) {
+            const panel = document.getElementById(state.panelHostId);
+            const slot  = state.backdrop.querySelector('.anc-picker-extras');
+            if (panel && slot) {
+                slot.appendChild(panel);
+                panel.classList.add('is-in-picker');
+                panel.hidden = false;
+            }
+        }
+
         state.backdrop.classList.add('is-open');
         state.triggerBtn.setAttribute('aria-expanded', 'true');
 
@@ -631,6 +655,17 @@
         if (!state.backdrop.classList.contains('is-open')) return;  // já fechado
         state.backdrop.classList.remove('is-open');
         state.triggerBtn.setAttribute('aria-expanded', 'false');
+
+        // Devolve o painel embarcado ao seu host fora do modal.
+        if (state.panelHostId) {
+            const panel = document.getElementById(state.panelHostId);
+            const host  = document.getElementById(state.panelHostId + 'Host');
+            if (panel && host) {
+                host.appendChild(panel);
+                panel.classList.remove('is-in-picker');
+            }
+        }
+
         liberarScrollBody();
         state.triggerBtn.focus();
     }
@@ -783,6 +818,9 @@
                 resumos: RESUMOS_ORIGEM,
                 valueField: 'id',
                 placeholder: 'Selecione uma origem',
+                // Embarca a seção rica de Benefícios da Origem dentro do
+                // modal — fonte única, sem reescrever origens.js.
+                panelHostId: 'origemPanel',
             });
         } catch (err) {
             console.error('[picker] origens:', err);
@@ -826,6 +864,8 @@
                 resumos: RESUMOS_DIVINDADE,
                 valueField: 'id',
                 placeholder: 'Sem devoção',
+                // Embarca a seção rica de Devoção dentro do modal.
+                panelHostId: 'divindadePanel',
             });
         } catch (err) {
             console.error('[picker] divindades:', err);

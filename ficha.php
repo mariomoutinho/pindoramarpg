@@ -18,12 +18,12 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ficha Pindorama RPG</title>
 
-    <link rel="stylesheet" href="assets/css/ficha.css?v=20260513c" />
+    <link rel="stylesheet" href="assets/css/ficha.css?v=20260513d" />
     <link rel="stylesheet" href="assets/css/poderes.css?v=20260507a" />
     <link rel="stylesheet" href="assets/css/ancestralidades.css?v=20260430" />
     <link rel="stylesheet" href="assets/css/origens.css?v=20260430x" />
     <link rel="stylesheet" href="assets/css/divindades.css?v=20260430j" />
-    <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260513b" />
+    <link rel="stylesheet" href="assets/css/ancestralidade-picker.css?v=20260513c" />
     <link rel="stylesheet" href="assets/css/transitions.css?v=20260508u" />
 </head>
 <body class="ficha-page">
@@ -222,15 +222,33 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                         <div class="ancestralidade-tags" id="ancestralidadeTracos"></div>
                     </div>
 
-                    <!-- Resumo dos Benefícios de Origem já escolhidos
-                         (consome o mesmo estado escolhasAtuais usado pela
-                         seção inferior; renderizado por origens.js). -->
+                    <!-- Resumo dos Benefícios de Origem já escolhidos.
+                         Botão "Editar" abre o modal de Origem (onde a
+                         seleção dos benefícios agora acontece). -->
                     <div class="field wide ancestralidade-ficha-panel origem-resumo-panel">
-                        <label>Benef&iacute;cios de Origem</label>
+                        <label>
+                            Benef&iacute;cios de Origem
+                            <button type="button" class="resumo-editar-btn" id="origemEditarBtn"
+                                    aria-label="Editar benefícios da origem">&#9998;</button>
+                        </label>
                         <div class="ancestralidade-empty" id="origemBeneficiosResumoEmpty">
                             Nenhum benef&iacute;cio escolhido.
                         </div>
                         <div class="ancestralidade-tags" id="origemBeneficiosResumo"></div>
+                    </div>
+
+                    <!-- Resumo das Devoções escolhidas. Botão "Editar"
+                         abre o modal de Divindade. -->
+                    <div class="field wide ancestralidade-ficha-panel divindade-resumo-panel">
+                        <label>
+                            Devo&ccedil;&otilde;es
+                            <button type="button" class="resumo-editar-btn" id="divindadeEditarBtn"
+                                    aria-label="Editar devoções">&#9998;</button>
+                        </label>
+                        <div class="ancestralidade-empty" id="divindadeDevocoesResumoEmpty">
+                            Nenhuma devo&ccedil;&atilde;o escolhida.
+                        </div>
+                        <div class="ancestralidade-tags" id="divindadeDevocoesResumo"></div>
                     </div>
                 </section>
 
@@ -496,6 +514,12 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                         </details>
                     </section>
 
+                    <!-- Host oculto da seção rica de Benefícios da Origem.
+                         Quando o modal de Origem abre, o entity-picker move
+                         #origemPanel para dentro de .anc-picker-extras; ao
+                         fechar, devolve para cá. Sem este host, #origemPanel
+                         desapareceria do DOM e perderia estado. -->
+                    <div id="origemPanelHost" hidden>
                     <section class="panel origem-panel origem-panel-recolhido" id="origemPanel">
                         <div class="panel-title">
                             Benefícios da Origem
@@ -546,7 +570,10 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                             </div>
                         </div>
                     </section>
+                    </div><!-- /#origemPanelHost -->
 
+                    <!-- Host oculto da seção rica de Devoção, mesmo padrão. -->
+                    <div id="divindadePanelHost" hidden>
                     <section class="panel divindade-panel divindade-panel-recolhido" id="divindadePanel">
                         <div class="panel-title">
                             Devoção
@@ -602,6 +629,7 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                             </div>
                         </div>
                     </section>
+                    </div><!-- /#divindadePanelHost -->
 
                     <section class="panel poderes-panel poderes-panel-recolhido" id="poderesPanel">
                         <div class="panel-title">

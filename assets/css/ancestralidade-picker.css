@@ -545,3 +545,27 @@
         max-height: 92vh;
     }
 }
+
+/* Slot de painéis "extras" embarcados no modal (Benefícios da Origem,
+   Devoção). Vazio por padrão; preenchido por entity-picker.js (abrir/
+   fechar movem o nó entre o slot e #<panelHostId>Host). */
+.anc-picker-extras:empty { display: none; }
+.anc-picker-extras {
+    padding: 14px 24px 0;
+    border-top: 1px solid rgba(216, 162, 58, 0.22);
+    background: rgba(15, 5, 25, 0.45);
+}
+/* Painéis que vivem na ficha (.panel) recebem .is-in-picker quando
+   estão dentro do modal — adapta cores e remove "card branco solto". */
+.anc-picker-extras > .panel.is-in-picker {
+    background: rgba(255, 252, 247, 0.97);
+    border-radius: 12px;
+    margin: 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.anc-picker-extras > .panel.is-in-picker.origem-panel-recolhido,
+.anc-picker-extras > .panel.is-in-picker.divindade-panel-recolhido {
+    /* No modal queremos a seção SEMPRE expandida, ignorando o recolhimento
+       da ficha. As classes de "recolhido" só afetam tamanho/visibilidade
+       das listas, então o "embarcado" começa expandido. */
+}

@@ -3375,3 +3375,39 @@ max-width: 160px;
 .origem-resumo-tag--poder:hover {
     background: rgba(216, 162, 58, 0.18);
 }
+
+/* Botão "Editar" (lápis) ao lado dos títulos de resumo (Benefícios
+   de Origem / Devoções) no topo da ficha. Discreto até o hover. */
+.resumo-editar-btn {
+    margin-left: 8px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(118, 84, 124, 0.45);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--purple, #69436f);
+    font-size: 0.78rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: 0.15s ease;
+    vertical-align: middle;
+}
+.resumo-editar-btn:hover,
+.resumo-editar-btn:focus-visible {
+    background: var(--purple, #69436f);
+    color: #fff;
+    outline: none;
+    transform: scale(1.05);
+}
+
+/* Chip de devoção: tom verde-musgo sutil para diferenciar de Traços
+   (lilás) e Benefícios de Origem (dourado). Read-only, sem hover. */
+.divindade-resumo-tag {
+    background: rgba(80, 140, 90, 0.16);
+    border-color: rgba(80, 140, 90, 0.45);
+    color: #1f5d2c;
+}
+.divindade-resumo-tag:hover {
+    background: rgba(80, 140, 90, 0.16);
+}
