@@ -4471,8 +4471,8 @@ function atualizarResumoClasse() {
 /* ============================================================
  * Tooltip flutuante de prévia da classe selecionada.
  * Substitui o antigo bloco fixo "Resumo da Classe". Aparece ao
- * passar mouse / focar / clicar no botão ⓘ ao lado do trigger
- * da Classe. Singleton em document.body p/ não ser cortado.
+ * passar mouse / focar no próprio campo da Classe. Singleton em
+ * document.body p/ não ser cortado.
  * ============================================================ */
 let refreshClassPreviewTooltip = function () {};
 
@@ -4491,22 +4491,10 @@ function setupClassPreviewTooltip() {
     card.hidden = true;
     document.body.appendChild(card);
 
-    // Botão ⓘ — usado em touch/mobile para abrir o card sem conflitar com
-    // o clique do trigger (que abre o modal de seleção). Em desktop o
-    // hover já dá conta; o botão fica visível mas discreto.
-    const infoBtn = document.createElement("button");
-    infoBtn.type = "button";
-    infoBtn.className = "class-preview-info-btn";
-    infoBtn.setAttribute("aria-label", "Ver detalhes da classe selecionada");
-    infoBtn.setAttribute("aria-expanded", "false");
-    infoBtn.setAttribute("aria-controls", "classePreviewCard");
-    infoBtn.textContent = "ⓘ";
-    fieldWrap.appendChild(infoBtn);
-
     let openTimer = null;
     let closeTimer = null;
     let isOpen = false;
-    let isPinned = false; // aberto via clique/toque/Esc — só fecha por gesto explícito
+    let isPinned = false; // aberto via toque no campo; fecha por gesto explícito ou Esc
 
     function pickTrigger() {
         // Prefere o gatilho do entity-picker quando montado; senão o select nativo.
@@ -4645,7 +4633,8 @@ function setupClassPreviewTooltip() {
         position();
         isOpen = true;
         isPinned = pin;
-        infoBtn.setAttribute("aria-expanded", "true");
+        const trigger = pickTrigger();
+        if (trigger) trigger.setAttribute("aria-describedby", "classePreviewCard");
     }
 
     function hide({ force = false } = {}) {
@@ -4655,7 +4644,6 @@ function setupClassPreviewTooltip() {
         card.classList.remove("is-visible");
         isOpen = false;
         isPinned = false;
-        infoBtn.setAttribute("aria-expanded", "false");
         closeTimer = setTimeout(() => {
             card.hidden = true;
         }, 180);
@@ -4686,10 +4674,8 @@ function setupClassPreviewTooltip() {
     });
     card.addEventListener("mouseleave", scheduleClose);
 
-    // Foco via teclado: abre quando o trigger ou o select recebe foco.
-    fieldWrap.addEventListener("focusin", (ev) => {
-        // Não abre se o foco for no botão ⓘ (que tem toggle próprio).
-        if (ev.target === infoBtn) return;
+    // Foco via teclado/toque: abre quando o trigger ou o select recebe foco.
+    fieldWrap.addEventListener("focusin", () => {
         scheduleOpen();
     });
     fieldWrap.addEventListener("focusout", (ev) => {
@@ -4701,15 +4687,14 @@ function setupClassPreviewTooltip() {
         }, 0);
     });
 
-    // Toggle por clique/toque no botão ⓘ — não dispara o picker.
-    infoBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        if (isOpen && isPinned) {
-            hide({ force: true });
-        } else {
-            show({ pin: true });
-        }
+    // Em telas sem hover, um toque no próprio campo mantém a prévia acessível
+    // quando o picker não estiver aberto.
+    fieldWrap.addEventListener("click", (ev) => {
+        const trigger = pickTrigger();
+        if (!trigger || !trigger.contains(ev.target)) return;
+        if (!window.matchMedia || !window.matchMedia("(hover: none)").matches) return;
+        if (trigger.getAttribute("aria-expanded") === "true") return;
+        show({ pin: true });
     });
 
     // Esc fecha card pinado/aberto.

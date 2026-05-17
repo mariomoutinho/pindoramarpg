@@ -3190,47 +3190,6 @@ max-width: 160px;
    overflow/transform/contain de ancestrais).
 ===================================================== */
 
-/* Botão ⓘ ao lado do label da classe (touch + acessibilidade).
-   Posicionado sobre o canto superior-direito do .field, fora da área do
-   trigger do picker — não conflita com a seta do dropdown. */
-.field .class-preview-info-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 1.5px solid rgba(105, 67, 111, 0.45);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--purple, #69436f);
-    font-size: 0.88rem;
-    font-weight: 800;
-    line-height: 1;
-    cursor: help;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.15s ease;
-    z-index: 2;
-}
-.field .class-preview-info-btn:hover,
-.field .class-preview-info-btn:focus-visible {
-    background: var(--purple, #69436f);
-    color: #fff;
-    border-color: var(--purple, #69436f);
-    outline: none;
-    box-shadow: 0 2px 8px rgba(105, 67, 111, 0.30);
-}
-.field .class-preview-info-btn[aria-expanded="true"] {
-    background: var(--purple, #69436f);
-    color: #fff;
-}
-/* O .field que contém #classeSelect precisa ser anchor relativo p/ o ⓘ. */
-.field:has(#classeSelect) {
-    position: relative;
-}
-
 .class-preview-card {
     position: absolute;
     top: 0;
