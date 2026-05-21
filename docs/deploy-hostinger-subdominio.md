@@ -1,67 +1,68 @@
 # Deploy do Pindorama RPG em subdomínio Hostinger
 
 Guia para publicar o sistema em
-`https://pindoramarpg.coletivopindorama.com.br` (ou em qualquer outro
-subdomínio próprio na Hostinger) usando o workflow do GitHub Actions
-`deploy-hostinger.yml`.
+**`https://pindoramarpg.coletivopindorama.com.br`** usando o workflow do
+GitHub Actions `deploy-hostinger.yml`.
 
-> **Pré-condição importante.** O destino remoto (`HOSTINGER_TARGET_DIR`)
-> **precisa ser confirmado no hPanel/File Browser antes do primeiro
-> deploy**. O workflow não publica sem ele, justamente para não escrever
-> em cima do site principal ou de outros projetos da hospedagem.
+> **Status atual (2026-05-21).** O subdomínio já está criado no hPanel e
+> o document root confirmado é:
+> ```
+> /home/u234997903/domains/coletivopindorama.com.br/public_html/pindoramarpg
+> ```
+> O valor a ser cadastrado no secret `HOSTINGER_TARGET_DIR` é o **caminho
+> relativo** ao home do usuário FTP:
+> ```
+> domains/coletivopindorama.com.br/public_html/pindoramarpg
+> ```
+> (Se a conta FTP da Hostinger já estiver escopada diretamente nessa
+> pasta — recomendação no passo 2 — use `.` em vez do caminho acima.)
 
 ---
 
-## 1. Criar o subdomínio no hPanel
+## 1. Criar o subdomínio no hPanel (já feito)
+
+> ✅ Pulável se já tiver `https://pindoramarpg.coletivopindorama.com.br`
+> respondendo (mesmo que com a página padrão da Hostinger).
 
 1. Entre no hPanel da Hostinger e abra **Domínios → Subdomínios**.
 2. Em "Criar um novo subdomínio", preencha:
    - **Subdomínio**: `pindoramarpg`
    - **Domínio**: `coletivopindorama.com.br`
    - **Pasta personalizada (Document Root)**: deixe o sugerido
-     (`public_html/pindoramarpg`) ou anote o caminho que o painel
-     mostrar — vai ser usado no passo 2.
+     (`public_html/pindoramarpg`) — esse é o caminho que o secret
+     `HOSTINGER_TARGET_DIR` vai usar.
 3. Clique em **Criar**. Aguarde a propagação do DNS (geralmente alguns
-   minutos; pode levar até algumas horas).
-4. Teste no navegador acessar
-   `https://pindoramarpg.coletivopindorama.com.br/` — deve cair em uma
-   página vazia/diretório do servidor enquanto não houver código
-   publicado. Se cair em 404 do Hostinger é normal nessa fase.
+   minutos).
+4. Acesse `https://pindoramarpg.coletivopindorama.com.br/` — deve cair
+   na **página padrão da Hostinger** enquanto não houver código
+   publicado. É normal.
 
 > Não apague nem renomeie `public_html/` (raiz do
-> `coletivopindorama.com.br`) nem pastas de outros sites. O subdomínio
-> vive em uma pasta separada.
+> `coletivopindorama.com.br`) nem pastas de outros sites/subdomínios.
+> O subdomínio vive em uma pasta separada.
 
 ---
 
-## 2. Identificar o document root do subdomínio
+## 2. Conferir o document root e a conta FTP
 
-No hPanel, abra **Arquivos → Gerenciador de Arquivos** e navegue até a
-pasta que o painel apontou ao criar o subdomínio. O caminho absoluto
-aparece no topo do gerenciador — geralmente algo como:
+No hPanel, abra **Arquivos → Gerenciador de Arquivos** e confirme o
+caminho do subdomínio no topo da página. Para este projeto, o caminho
+absoluto já confirmado é:
 
 ```
 /home/u234997903/domains/coletivopindorama.com.br/public_html/pindoramarpg
 ```
 
-ou, em algumas contas:
-
-```
-/home/u234997903/public_html/pindoramarpg
-```
-
-Anote o **caminho relativo** ao home do usuário FTP (sem o `/home/u…/`
-no começo). Para o exemplo acima, fica:
+O **caminho relativo** ao home do usuário FTP (que é o que o
+`HOSTINGER_TARGET_DIR` aceita) é:
 
 ```
 domains/coletivopindorama.com.br/public_html/pindoramarpg
 ```
 
-Esse é o valor que vai no secret `HOSTINGER_TARGET_DIR`.
-
 > **Atalho recomendado:** crie no hPanel uma **conta FTP adicional
 > escopada diretamente nessa pasta** (Arquivos → Contas FTP → Criar
-> conta FTP → "Diretório" = a pasta do subdomínio). Aí o
+> conta FTP → "Diretório" = a pasta do subdomínio acima). Aí o
 > `HOSTINGER_TARGET_DIR` pode ser apenas `.` e qualquer credencial
 > vazada não toca o site principal nem outros projetos.
 
@@ -78,7 +79,7 @@ secret**:
 | `HOSTINGER_USERNAME` | ✅ | Usuário FTP escopado no subdomínio | `u234997903.pindoramarpg` |
 | `HOSTINGER_PASSWORD` | ✅ | Senha do usuário FTP | (segredo) |
 | `HOSTINGER_PORT` | opcional (default `21`) | Porta FTP | `21` |
-| `HOSTINGER_TARGET_DIR` | ✅ | Pasta remota do subdomínio (relativa ao home FTP) ou `.` se a conta já estiver escopada | `domains/coletivopindorama.com.br/public_html/pindoramarpg` |
+| `HOSTINGER_TARGET_DIR` | ✅ | Pasta remota do subdomínio (relativa ao home FTP) ou `.` se a conta já estiver escopada | `domains/coletivopindorama.com.br/public_html/pindoramarpg` (ou `.`) |
 
 Os nomes antigos (`HOSTINGER_FTP_HOST`, `HOSTINGER_FTP_USER`,
 `HOSTINGER_FTP_PASSWORD`, `HOSTINGER_FTP_PORT`,
@@ -107,30 +108,44 @@ Depois do primeiro deploy manual bem-sucedido, todo `git push` em
 
 ---
 
-## 5. Testar o subdomínio
+## 5. Criar o `config.php` no servidor
 
-Acesse no navegador (substitua o subdomínio se for outro):
+O `config.php` real **não é versionado** nem enviado pelo deploy (está
+na lista de exclusão do workflow). Crie-o uma única vez, direto pelo
+Gerenciador de Arquivos do hPanel, dentro de
+`domains/coletivopindorama.com.br/public_html/pindoramarpg/`.
+
+Use o template em [config.example.php](../config.example.php) como
+ponto de partida — basta copiar o conteúdo, substituir host/usuário/
+senha/banco pelos valores do hPanel (**MySQL → Detalhes**) e salvar
+como `config.php`.
+
+Se aparecer erro de banco depois do deploy, também é hora de importar
+as migrations da pasta `migrations/` (ordem `001…013`) pelo
+phpMyAdmin/MySQL da Hostinger.
+
+---
+
+## 6. Testar o subdomínio
+
+Acesse no navegador:
 
 - `https://pindoramarpg.coletivopindorama.com.br/` → deve cair em
   `index.php` (homepage do sistema).
+- `https://pindoramarpg.coletivopindorama.com.br/index.php` → idem.
 - `https://pindoramarpg.coletivopindorama.com.br/register.php` → form
   de cadastro.
 - `https://pindoramarpg.coletivopindorama.com.br/login.php` → form de
   login.
-- Verifique no DevTools que `assets/css/*` e `assets/js/*` carregam
-  com **200** (todos os caminhos do projeto são relativos, então
+- Após cadastrar/logar: `painel.php`, `mesas.php`, `fichas.php`,
+  `aventuras.php`, `ficha.php` etc. devem abrir normalmente.
+- Verifique no DevTools (Network) que `assets/css/*` e `assets/js/*`
+  retornam **200** (todos os caminhos do projeto são relativos, então
   funcionam em qualquer raiz — domínio, subdomínio ou subdiretório).
-
-Se aparecer erro de banco, é hora de:
-
-- importar as migrations (`migrations/001…`) no MySQL da Hostinger;
-- criar `config.php` direto pelo gerenciador de arquivos (template no
-  `DEPLOY-HOSTINGER.md`). Esse arquivo **não** é versionado nem
-  enviado pelo workflow.
 
 ---
 
-## 6. Coexistência com o site principal
+## 7. Coexistência com o site principal
 
 - O workflow **não apaga arquivos remotos** (sem `--delete`/`--mirror`
   destrutivo). Só envia/atualiza os arquivos do projeto.
@@ -143,7 +158,7 @@ Se aparecer erro de banco, é hora de:
 
 ---
 
-## 7. Troubleshooting rápido
+## 8. Troubleshooting rápido
 
 - **`HOSTINGER_TARGET_DIR ... precisa estar definido`** → cadastre o
   secret antes de rodar.

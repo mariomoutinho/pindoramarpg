@@ -27,5 +27,7 @@ vendor/
 # Credenciais e segredos — NUNCA subir
 .env
 .env.*
+config.php
 config.local.php
 secrets.*
+!config.example.php
