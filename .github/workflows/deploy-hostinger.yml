@@ -9,6 +9,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target_dir_override:
+        description: "Sobrescreve HOSTINGER_TARGET_DIR só nesta execução. Use '.' para a raiz da conta FTP."
+        required: false
+        default: ""
 
 # Evita publicações sobrepostas: se um novo push chegar enquanto o
 # anterior ainda está subindo, o último é cancelado e o novo prevalece.
@@ -41,73 +46,69 @@ jobs:
       # SEM `--delete`, SEM `--delete-first`, SEM `--remove-source-files`
       # → arquivos remotos jamais são apagados.
       #
-      # Por que lftp e não FTP-Deploy-Action: o action SamKirkland/
-      # FTP-Deploy-Action tem race condition de MKD no FTP plain da
-      # Hostinger, que dispara "550 No such file or directory" ao
-      # criar certas subpastas (ex.: lib/). lftp serializa criação e
-      # upload de forma robusta e não tem esse problema.
+      # Secrets aceitos (nomes novos têm preferência; nomes antigos
+      # continuam funcionando para não quebrar deploys existentes):
+      #   HOSTINGER_HOST       (fallback: HOSTINGER_FTP_HOST)
+      #   HOSTINGER_USERNAME   (fallback: HOSTINGER_FTP_USER)
+      #   HOSTINGER_PASSWORD   (fallback: HOSTINGER_FTP_PASSWORD)
+      #   HOSTINGER_PORT       (fallback: HOSTINGER_FTP_PORT, default 21)
+      #   HOSTINGER_TARGET_DIR (fallback: HOSTINGER_FTP_REMOTE_DIR)
+      #
+      # HOSTINGER_TARGET_DIR é OBRIGATÓRIO para evitar publicar no lugar
+      # errado. Veja docs/deploy-hostinger-subdominio.md para descobrir
+      # o valor certo no hPanel antes do primeiro deploy.
       # ----------------------------------------------------------------
       - name: Publicar via lftp (FTP plain, incremental, sem deletar nada)
         env:
-          FTP_HOST:       ${{ secrets.HOSTINGER_FTP_HOST }}
-          FTP_USER:       ${{ secrets.HOSTINGER_FTP_USER }}
-          FTP_PASSWORD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          FTP_PORT:       ${{ secrets.HOSTINGER_FTP_PORT }}
-          # Opcional. Se vazio, publicamos no caminho real do erro PHP:
-          # domains/coletivopindorama.com.br/public_html/pindorama-rpg.
-          # Se a conta FTP já estiver escopada diretamente nessa pasta,
-          # configure "." no secret.
-          FTP_REMOTE_DIR: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+          FTP_HOST_NEW:       ${{ secrets.HOSTINGER_HOST }}
+          FTP_HOST_OLD:       ${{ secrets.HOSTINGER_FTP_HOST }}
+          FTP_USER_NEW:       ${{ secrets.HOSTINGER_USERNAME }}
+          FTP_USER_OLD:       ${{ secrets.HOSTINGER_FTP_USER }}
+          FTP_PASSWORD_NEW:   ${{ secrets.HOSTINGER_PASSWORD }}
+          FTP_PASSWORD_OLD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          FTP_PORT_NEW:       ${{ secrets.HOSTINGER_PORT }}
+          FTP_PORT_OLD:       ${{ secrets.HOSTINGER_FTP_PORT }}
+          FTP_REMOTE_DIR_NEW: ${{ secrets.HOSTINGER_TARGET_DIR }}
+          FTP_REMOTE_DIR_OLD: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+          TARGET_DIR_OVERRIDE: ${{ github.event.inputs.target_dir_override }}
         run: |
           set -euo pipefail
 
-          : "${FTP_HOST:?secret HOSTINGER_FTP_HOST não definido}"
-          : "${FTP_USER:?secret HOSTINGER_FTP_USER não definido}"
-          : "${FTP_PASSWORD:?secret HOSTINGER_FTP_PASSWORD não definido}"
-          PORT="${FTP_PORT:-21}"
-          REMOTE_DIR="${FTP_REMOTE_DIR:-}"
+          FTP_HOST="${FTP_HOST_NEW:-${FTP_HOST_OLD:-}}"
+          FTP_USER="${FTP_USER_NEW:-${FTP_USER_OLD:-}}"
+          FTP_PASSWORD="${FTP_PASSWORD_NEW:-${FTP_PASSWORD_OLD:-}}"
+          FTP_PORT="${FTP_PORT_NEW:-${FTP_PORT_OLD:-}}"
+          REMOTE_DIR="${TARGET_DIR_OVERRIDE:-${FTP_REMOTE_DIR_NEW:-${FTP_REMOTE_DIR_OLD:-}}}"
 
-          # Guarda: se o usuário definir manualmente algo perigoso no
-          # secret REMOTE_DIR, recusa rodar.
+          : "${FTP_HOST:?HOSTINGER_HOST (ou HOSTINGER_FTP_HOST) não definido}"
+          : "${FTP_USER:?HOSTINGER_USERNAME (ou HOSTINGER_FTP_USER) não definido}"
+          : "${FTP_PASSWORD:?HOSTINGER_PASSWORD (ou HOSTINGER_FTP_PASSWORD) não definido}"
+          PORT="${FTP_PORT:-21}"
+
+          if [ -z "$REMOTE_DIR" ]; then
+            echo "::error::HOSTINGER_TARGET_DIR (ou HOSTINGER_FTP_REMOTE_DIR) precisa estar definido. Use '.' se a conta FTP já estiver escopada na raiz do subdomínio. Veja docs/deploy-hostinger-subdominio.md."
+            exit 1
+          fi
+
+          # Guarda: recusa destinos perigosos que sobrescreveriam o site
+          # principal ou outros projetos da hospedagem.
           case "$REMOTE_DIR" in
-            "/"|"public_html"|"public_html/")
-              echo "::error::Destino remoto '$REMOTE_DIR' é inseguro. Deixe vazio se a conta FTP já está escopada, ou aponte para uma subpasta."
+            "/"|"public_html"|"public_html/"|"public_html/."|"/public_html"|"/public_html/")
+              echo "::error::Destino remoto '$REMOTE_DIR' é inseguro — atingiria o site principal. Aponte para a pasta exclusiva do subdomínio (ou use '.' se a conta FTP já estiver escopada nela)."
               exit 1
               ;;
           esac
 
-          if [ -z "$REMOTE_DIR" ]; then
-            REMOTE_DIR="domains/coletivopindorama.com.br/public_html/pindorama-rpg"
-          fi
-
           if [ "$REMOTE_DIR" = "." ] || [ "$REMOTE_DIR" = "./" ]; then
-            echo "Destino: ftp://$FTP_HOST:$PORT/ (raiz da conta — escopo atual da conta FTP)"
-            CD_LINE=""   # conta já cai na pasta certa, sem cd
+            echo "Destino: ftp://$FTP_HOST:$PORT/ (raiz da conta FTP — assume conta escopada no subdomínio)"
+            CD_LINE=""
           else
-            echo "Destino: ftp://$FTP_HOST:$PORT$REMOTE_DIR"
+            echo "Destino: ftp://$FTP_HOST:$PORT/$REMOTE_DIR"
             CD_LINE="mkdir -p -f \"$REMOTE_DIR\"; cd \"$REMOTE_DIR\";"
           fi
 
           # lftp recebe senha via -u; nada cai em logs. `set xfer:log
           # false` e `set cmdline:save-history off` reforçam isso.
-          for HOTFIX_DIR in "." "public_html/pindorama-rpg" "domains/coletivopindorama.com.br/public_html/pindorama-rpg"; do
-            echo "Hotfix: tentando publicar arquivos críticos em '$HOTFIX_DIR'"
-            lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF || true
-              set ftp:ssl-allow no
-              set ftp:passive-mode true
-              set net:max-retries 1
-              set net:timeout 20
-              set xfer:log false
-              set cmd:fail-exit no
-
-              mkdir -p -f "$HOTFIX_DIR"
-              cd "$HOTFIX_DIR"
-              mkdir -p -f includes
-              put includes/auth.php -o includes/auth.php
-              put .user.ini -o .user.ini
-          EOF
-          done
-
           lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
             set ftp:ssl-allow no
             set ftp:passive-mode true
@@ -138,6 +139,7 @@ jobs:
                    --exclude-glob 'README.md' \
                    --exclude-glob 'DEPLOY-HOSTINGER.md' \
                    --exclude-glob 'DEPLOY_HOSTINGER.md' \
+                   --exclude-glob 'docs/'             --exclude-glob 'docs/**' \
                    --exclude-glob 'PORTE-GODOT.md'    --exclude-glob 'REGRAS-DE-*.md' \
                    --exclude-glob 'tests/'            --exclude-glob 'tests/**' \
                    --exclude-glob 'node_modules/'     --exclude-glob 'node_modules/**' \
@@ -164,7 +166,7 @@ jobs:
             echo "## Resumo do deploy"
             echo ""
             echo "- Branch: \`${GITHUB_REF_NAME}\` · Commit: \`${GITHUB_SHA::7}\`"
-            echo "- Protocolo: \`ftp\` (porta vinda de HOSTINGER_FTP_PORT, default 21)"
+            echo "- Protocolo: \`ftp\` (porta de HOSTINGER_PORT, default 21)"
             echo "- Ferramenta: \`lftp mirror -R\` (sobrescreve versionados, sem --delete)"
-            echo "- Destino: escopo da conta FTP (\`HOSTINGER_FTP_REMOTE_DIR\` vazio = raiz da conta)"
+            echo "- Destino: definido por \`HOSTINGER_TARGET_DIR\` (use '.' para raiz da conta FTP)"
           } >> "$GITHUB_STEP_SUMMARY"
