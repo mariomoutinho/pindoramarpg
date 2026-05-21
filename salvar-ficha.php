@@ -16,7 +16,9 @@ if (!garantirColunaUsuarioFicha($pdo)) {
     http_response_code(500);
     $resposta = [
         'success' => false,
-        'message' => 'Não foi possível preparar o vínculo da ficha com o usuário logado.'
+        'message' => 'Não foi possível preparar o vínculo da ficha com o usuário logado. '
+            . 'Aplique migrations/013_ficha_usuarios_fallback.sql no MySQL da hospedagem '
+            . 'e/ou abra diagnostico-ficha.php para detalhes.',
     ];
     if (ambienteDesenvolvimento()) {
         $resposta['debug'] = ultimoErroVinculoFicha();
