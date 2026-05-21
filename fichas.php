@@ -5,18 +5,6 @@ exigirLogin();
 require_once 'config.php';
 require_once __DIR__ . '/includes/permissions.php';
 
-// Facilitador vê todas as fichas; Participante vê apenas as próprias.
-// O filtro depende da migration 007 (`fichas.usuario_id`); se a coluna
-// ainda não existir, o Participante recebe lista vazia (mais seguro
-// que vazar todas).
-$temColunaUsuarioIdFichas = false;
-try {
-    $check = $pdo->query("SHOW COLUMNS FROM fichas LIKE 'usuario_id'");
-    $temColunaUsuarioIdFichas = $check && $check->fetch() ? true : false;
-} catch (Throwable $e) {
-    $temColunaUsuarioIdFichas = false;
-}
-
 $colunasFichas = "id, participante, personagem, ancestralidade, classe, nivel,
        personagem_imagem, personagem_imagem_ajuste,
        personagem_token_imagem, personagem_token_imagem_ajuste,
@@ -25,13 +13,9 @@ $colunasFichas = "id, participante, personagem, ancestralidade, classe, nivel,
 if (isFacilitador()) {
     $stmt = $pdo->query("SELECT $colunasFichas FROM fichas ORDER BY updated_at DESC");
     $fichas = $stmt->fetchAll();
-} elseif ($temColunaUsuarioIdFichas) {
+} elseif (garantirColunaUsuarioFicha($pdo)) {
     $u = usuarioLogado();
-    $stmt = $pdo->prepare(
-        "SELECT $colunasFichas FROM fichas WHERE usuario_id = :uid ORDER BY updated_at DESC"
-    );
-    $stmt->execute(['uid' => (int) $u['id']]);
-    $fichas = $stmt->fetchAll();
+    $fichas = listarFichasDoUsuario($pdo, $colunasFichas, (int) $u['id']);
 } else {
     $fichas = [];
 }

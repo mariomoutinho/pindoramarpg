@@ -12,7 +12,8 @@ if (!garantirColunaUsuarioFicha($pdo)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Não foi possível preparar o vínculo das fichas com o usuário logado.'
+        'message' => 'Não foi possível preparar o vínculo das fichas com o usuário logado.',
+        'debug' => ambienteDesenvolvimentoBuscarFicha() ? ultimoErroVinculoFicha() : null,
     ]);
     exit;
 }
@@ -27,13 +28,7 @@ if (!$id) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM fichas WHERE id = :id AND usuario_id = :uid");
-$stmt->execute([
-    'id' => $id,
-    'uid' => (int) $usuarioAtual['id'],
-]);
-
-$ficha = $stmt->fetch();
+$ficha = buscarFichaDoUsuario($pdo, (int) $id, (int) $usuarioAtual['id']);
 
 if (!$ficha) {
     echo json_encode([
@@ -71,3 +66,9 @@ echo json_encode([
     'success' => true,
     'ficha' => $ficha
 ]);
+
+function ambienteDesenvolvimentoBuscarFicha(): bool
+{
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    return $host === '' || str_contains($host, 'localhost') || str_contains($host, '127.0.0.1');
+}

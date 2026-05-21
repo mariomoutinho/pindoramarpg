@@ -12,7 +12,8 @@ if (!garantirColunaUsuarioFicha($pdo)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Não foi possível preparar o vínculo das fichas com o usuário logado.'
+        'message' => 'Não foi possível preparar o vínculo das fichas com o usuário logado.',
+        'debug' => ambienteDesenvolvimentoListaFichas() ? ultimoErroVinculoFicha() : null,
     ]);
     exit;
 }
@@ -31,8 +32,10 @@ $colunas = "
     updated_at
 ";
 
-$stmt = $pdo->prepare(
-    "SELECT $colunas FROM fichas WHERE usuario_id = :uid ORDER BY updated_at DESC"
-);
-$stmt->execute(['uid' => (int) $usuarioAtual['id']]);
-echo json_encode($stmt->fetchAll());
+echo json_encode(listarFichasDoUsuario($pdo, $colunas, (int) $usuarioAtual['id']));
+
+function ambienteDesenvolvimentoListaFichas(): bool
+{
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    return $host === '' || str_contains($host, 'localhost') || str_contains($host, '127.0.0.1');
+}

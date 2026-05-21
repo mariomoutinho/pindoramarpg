@@ -14,18 +14,23 @@ garantirColunasTokenImagem($pdo);
 
 if (!garantirColunaUsuarioFicha($pdo)) {
     http_response_code(500);
-    echo json_encode([
+    $resposta = [
         'success' => false,
         'message' => 'Não foi possível preparar o vínculo da ficha com o usuário logado.'
-    ]);
+    ];
+    if (ambienteDesenvolvimento()) {
+        $resposta['debug'] = ultimoErroVinculoFicha();
+    }
+    echo json_encode($resposta);
     exit;
 }
 
 $usuarioAtualId = (int) $usuarioAtual['id'];
+$modoVinculoFicha = modoVinculoUsuarioFicha($pdo);
 
 // Autorização: cada usuário só edita fichas da própria conta.
 if ($id !== null && $id !== '') {
-    $stmt = $pdo->prepare("SELECT usuario_id FROM fichas WHERE id = :id LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id FROM fichas WHERE id = :id LIMIT 1");
     $stmt->execute(['id' => (int) $id]);
     $fichaDono = $stmt->fetch();
 
@@ -38,7 +43,7 @@ if ($id !== null && $id !== '') {
         exit;
     }
 
-    if ((int) ($fichaDono['usuario_id'] ?? 0) !== $usuarioAtualId) {
+    if (!fichaPertenceAoUsuario($pdo, (int) $id, $usuarioAtualId)) {
         http_response_code(403);
         echo json_encode([
             'success' => false,
@@ -263,24 +268,34 @@ try {
         foreach ($campos as $campo) {
             $sets[] = "$campo = :$campo";
         }
-        $sql = "UPDATE fichas SET " . implode(", ", $sets) . " WHERE id = :id AND usuario_id = :usuario_id_cond";
+        $where = $modoVinculoFicha === 'coluna'
+            ? "id = :id AND usuario_id = :usuario_id_cond"
+            : "id = :id";
+        $sql = "UPDATE fichas SET " . implode(", ", $sets) . " WHERE $where";
         $stmt = $pdo->prepare($sql);
         $dadosUpdate = $dados;
         $dadosUpdate['id'] = $id;
-        $dadosUpdate['usuario_id_cond'] = $usuarioAtualId;
+        if ($modoVinculoFicha === 'coluna') {
+            $dadosUpdate['usuario_id_cond'] = $usuarioAtualId;
+        }
         $stmt->execute($dadosUpdate);
         $fichaId = $id;
     } else {
         $camposInsert = $campos;
         $dadosInsert = $dados;
-        $camposInsert[] = 'usuario_id';
-        $dadosInsert['usuario_id'] = $usuarioAtualId;
+        if ($modoVinculoFicha === 'coluna') {
+            $camposInsert[] = 'usuario_id';
+            $dadosInsert['usuario_id'] = $usuarioAtualId;
+        }
         $colunas = implode(", ", $camposInsert);
         $placeholders = ":" . implode(", :", $camposInsert);
         $sql = "INSERT INTO fichas ($colunas) VALUES ($placeholders)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($dadosInsert);
         $fichaId = (int) $pdo->lastInsertId();
+        if (!vincularFichaAoUsuario($pdo, $fichaId, $usuarioAtualId)) {
+            throw new RuntimeException('Nao foi possivel vincular a ficha ao usuario logado.');
+        }
     }
 
     $pdo->prepare("DELETE FROM ficha_classes WHERE ficha_id = :ficha_id")
@@ -330,11 +345,34 @@ echo json_encode([
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    echo json_encode([
+    error_log('[Pindorama][salvar-ficha] ' . $e->getMessage());
+    $resposta = [
         'success' => false,
-        'message' => 'Erro ao salvar a ficha.',
-        'error' => $e->getMessage()
-    ]);
+        'message' => 'Erro ao salvar a ficha.'
+    ];
+    if (ambienteDesenvolvimento()) {
+        $resposta['error'] = $e->getMessage();
+    }
+    echo json_encode($resposta);
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log('[Pindorama][salvar-ficha] ' . $e->getMessage());
+    $resposta = [
+        'success' => false,
+        'message' => 'Erro ao salvar a ficha.'
+    ];
+    if (ambienteDesenvolvimento()) {
+        $resposta['error'] = $e->getMessage();
+    }
+    echo json_encode($resposta);
+}
+
+function ambienteDesenvolvimento(): bool
+{
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    return $host === '' || str_contains($host, 'localhost') || str_contains($host, '127.0.0.1');
 }
 
 function garantirColunaAjusteImagem(PDO $pdo): void
