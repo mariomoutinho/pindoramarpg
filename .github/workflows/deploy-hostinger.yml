@@ -109,9 +109,17 @@ jobs:
 
           # lftp recebe senha via -u; nada cai em logs. `set xfer:log
           # false` e `set cmdline:save-history off` reforçam isso.
+          #
+          # `set ftp:disable-features chmod` desliga globalmente o uso
+          # do SITE CHMOD pelo lftp — a Hostinger derruba esse comando
+          # em alguns diretórios (sintoma: "chmod: Access failed: 550
+          # **/lib: No such file or directory" quebrando o deploy
+          # mesmo com upload bem-sucedido). Sem chmod do nosso lado as
+          # permissões padrão da conta FTP/Hostinger são preservadas.
           lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
             set ftp:ssl-allow no
             set ftp:passive-mode true
+            set ftp:disable-features chmod
             set net:max-retries 3
             set net:timeout 30
             set xfer:log false
@@ -123,10 +131,14 @@ jobs:
 
             # mirror --reverse  = upload (local → remoto)
             # --no-symlinks     = ignora symlinks (segurança)
+            # --no-perms        = não tenta chmod nos arquivos enviados
+            # --no-umask        = não aplica umask remoto (depende de chmod)
             # --parallel=4      = paralelismo seguro
             # SEM --delete / --delete-first / --remove-source-files
             mirror --reverse \
                    --no-symlinks \
+                   --no-perms \
+                   --no-umask \
                    --parallel=4 \
                    --verbose \
                    --exclude-glob '.git/'             --exclude-glob '.git/**' \
