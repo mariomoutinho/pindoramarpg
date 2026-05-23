@@ -99,6 +99,15 @@ jobs:
           fi
           echo "_deploy validado: nenhum Zone.Identifier presente."
 
+          # Auditoria visível no log: prova que subpastas críticas
+          # (lib/, data/, includes/, migrations/) estão no pacote.
+          echo "--- Subpastas em _deploy ---"
+          find _deploy -mindepth 1 -maxdepth 1 -type d | sort
+          echo "--- _deploy/lib/ ---"
+          ls -la _deploy/lib/ || echo "(ausente)"
+          echo "--- _deploy/data/ (top-level JSON) ---"
+          ls -la _deploy/data/*.json 2>/dev/null || echo "(ausente)"
+
       # ----------------------------------------------------------------
       # Publicação via lftp em modo FTP simples (porta 21). As contas
       # FTP adicionais da Hostinger NÃO suportam FTPS/TLS — `set
@@ -195,11 +204,25 @@ jobs:
             $CD_LINE
             lcd _deploy
 
+            # Cria subpastas críticas explicitamente ANTES do mirror.
+            # Já vimos casos em que a Hostinger falha silenciosamente
+            # ao criar subdiretório novo via FTP (lib/ não é criada e
+            # os PHPs dentro dela ficam fora), causando 500 em produção.
+            # 'mkdir -f' não falha se a pasta já existir.
+            mkdir -f assets
+            mkdir -f data
+            mkdir -f includes
+            mkdir -f lib
+            mkdir -f migrations
+
             # mirror --reverse  = upload (local → remoto)
             # --no-symlinks     = ignora symlinks (segurança)
             # --no-perms        = não tenta chmod nos arquivos enviados
             # --no-umask        = não aplica umask remoto (depende de chmod)
-            # --parallel=4      = paralelismo seguro
+            # --parallel=1      = sequencial; com paralelo a Hostinger
+            #                     pode perder mkdir de subpasta criada
+            #                     em paralelo com upload de arquivo,
+            #                     deixando lib/ vazia em produção
             # SEM --delete / --delete-first / --remove-source-files
             # Origem é _deploy/, já filtrada — exclude-glob aqui é só
             # cinto-e-suspensório contra Zone.Identifier residual.
@@ -207,10 +230,15 @@ jobs:
                    --no-symlinks \
                    --no-perms \
                    --no-umask \
-                   --parallel=4 \
+                   --parallel=1 \
                    --verbose \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
                    .
+
+            # Auditoria pós-mirror: lista subpastas críticas no remoto
+            # para o log do GitHub Actions confirmar que lib/ chegou.
+            cls -la lib
+            cls -la data
           EOF
 
           echo "Deploy concluído com sucesso."
