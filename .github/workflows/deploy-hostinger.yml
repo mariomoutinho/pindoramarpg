@@ -259,8 +259,8 @@ jobs:
             # A Hostinger às vezes confirma o upload mas a listagem de
             # diretórios recém-criados fica inconsistente; estes mkdirs
             # explícitos deixam lib/ e data/ prontos para puts diretos.
-            mkdir -p -f lib
-            mkdir -p -f data
+            mkdir -p lib
+            mkdir -p data
 
             # ----- MIRROR 1: tudo, exceto assets/img -----
             # Fonte LOCAL: _deploy   Destino REMOTO: ./   (ambos relativos)
@@ -304,11 +304,11 @@ jobs:
             # deve falhar em vez de terminar verde com produção quebrada.
             put _deploy/divindades.php -o divindades.php
             put _deploy/diagnostico-divindades.php -o diagnostico-divindades.php
-            put _deploy/lib/divindades.php -o lib/divindades.php
-            put _deploy/lib/origens.php -o lib/origens.php
-            put _deploy/data/divindades.json -o data/divindades.json
-            put _deploy/data/origens.json -o data/origens.json
-            put _deploy/data/poderes-gerais.json -o data/poderes-gerais.json
+            put -O lib _deploy/lib/divindades.php
+            put -O lib _deploy/lib/origens.php
+            put -O data _deploy/data/divindades.json
+            put -O data _deploy/data/origens.json
+            put -O data _deploy/data/poderes-gerais.json
           EOF
 
           echo "Deploy concluído com sucesso."
