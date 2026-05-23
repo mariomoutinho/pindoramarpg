@@ -3,6 +3,13 @@ try {
     require_once __DIR__ . '/lib/divindades.php';
     require_once __DIR__ . '/lib/origens.php';
 
+    if (!function_exists('carregarDivindades')) {
+        throw new RuntimeException('Função carregarDivindades() indisponível após carregar lib/divindades.php.');
+    }
+    if (!function_exists('indexarPoderesGerais')) {
+        throw new RuntimeException('Função indexarPoderesGerais() indisponível após carregar lib/origens.php.');
+    }
+
     $dados = carregarDivindades();
     $divindades = $dados['divindades'] ?? [];
     $introducao = $dados['introducao'] ?? [];
@@ -10,7 +17,7 @@ try {
 
     $idx = indexarPoderesGerais();
 } catch (\Throwable $e) {
-    error_log('[divindades.php] erro fatal: ' . $e->getMessage()
+    error_log('[divindades.php] erro interno (' . get_class($e) . '): ' . $e->getMessage()
         . ' em ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
     echo '<!doctype html><meta charset="utf-8"><title>Erro</title>';

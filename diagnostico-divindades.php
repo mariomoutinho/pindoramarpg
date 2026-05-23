@@ -17,16 +17,20 @@ header('Content-Type: text/plain; charset=utf-8');
 $base = __DIR__;
 $ok = true;
 
+function caminho_relativo_seguro(string $path): string {
+    return basename(dirname($path)) . '/' . basename($path);
+}
+
 function checar_arquivo(string $path, string $rotulo): bool {
     if (!file_exists($path)) {
-        echo "[FALHA] $rotulo NÃO existe: " . basename(dirname($path)) . '/' . basename($path) . "\n";
+        echo "[FALHA] $rotulo NÃO existe: " . caminho_relativo_seguro($path) . "\n";
         return false;
     }
     if (!is_readable($path)) {
-        echo "[FALHA] $rotulo existe mas NÃO é legível: " . basename(dirname($path)) . '/' . basename($path) . "\n";
+        echo "[FALHA] $rotulo existe mas NÃO é legível: " . caminho_relativo_seguro($path) . "\n";
         return false;
     }
-    echo "[ OK ] $rotulo: " . basename(dirname($path)) . '/' . basename($path)
+    echo "[ OK ] $rotulo: " . caminho_relativo_seguro($path)
         . ' (' . filesize($path) . " bytes)\n";
     return true;
 }
@@ -47,9 +51,27 @@ function checar_json(string $path, string $rotulo): bool {
     return true;
 }
 
+function registrar_falha(string $mensagem): void {
+    global $ok;
+    echo "[FALHA] $mensagem\n";
+    $ok = false;
+}
+
+function checar_chaves(array $dados, array $esperadas, string $rotulo): void {
+    $chaves = array_keys($dados);
+    echo "[INFO] $rotulo chaves principais: " . implode(', ', $chaves) . "\n";
+    foreach ($esperadas as $chave) {
+        if (!array_key_exists($chave, $dados)) {
+            registrar_falha("$rotulo sem chave obrigatória '$chave'");
+        } else {
+            echo "[ OK ] $rotulo contém '$chave'\n";
+        }
+    }
+}
+
 echo "=== Diagnóstico: divindades.php ===\n\n";
 echo "PHP: " . PHP_VERSION . "\n";
-echo "Base dir: " . $base . "\n\n";
+echo "Diretório base: " . basename($base) . " (caminho absoluto omitido)\n\n";
 
 echo "-- Arquivos PHP --\n";
 $ok = checar_arquivo($base . '/lib/divindades.php', 'lib/divindades.php') && $ok;
@@ -64,21 +86,56 @@ echo "\n-- Funções (após require) --\n";
 try {
     require_once $base . '/lib/divindades.php';
     require_once $base . '/lib/origens.php';
-    echo function_exists('carregarDivindades')
-        ? "[ OK ] carregarDivindades() definida\n"
-        : "[FALHA] carregarDivindades() NÃO definida\n";
-    echo function_exists('indexarPoderesGerais')
-        ? "[ OK ] indexarPoderesGerais() definida\n"
-        : "[FALHA] indexarPoderesGerais() NÃO definida\n";
-
     if (function_exists('carregarDivindades')) {
+        echo "[ OK ] carregarDivindades() definida\n";
+    } else {
+        registrar_falha('carregarDivindades() NÃO definida');
+    }
+    if (function_exists('indexarPoderesGerais')) {
+        echo "[ OK ] indexarPoderesGerais() definida\n";
+    } else {
+        registrar_falha('indexarPoderesGerais() NÃO definida');
+    }
+
+    echo "\n-- Execução das funções --\n";
+    if (function_exists('carregarDivindades')) {
+        echo "[INFO] Executando carregarDivindades()...\n";
         $d = carregarDivindades();
+        if (!is_array($d)) {
+            registrar_falha('carregarDivindades() não retornou array');
+            $d = [];
+        } else {
+            echo "[ OK ] carregarDivindades() executou sem exceção\n";
+        }
+        checar_chaves($d, ['divindades', 'introducao', 'regras'], 'carregarDivindades()');
         $n = count($d['divindades'] ?? []);
         echo "[INFO] carregarDivindades() retornou $n divindades\n";
     }
     if (function_exists('indexarPoderesGerais')) {
+        echo "[INFO] Executando indexarPoderesGerais()...\n";
         $idx = indexarPoderesGerais();
+        if (!is_array($idx)) {
+            registrar_falha('indexarPoderesGerais() não retornou array');
+            $idx = [];
+        } else {
+            echo "[ OK ] indexarPoderesGerais() executou sem exceção\n";
+        }
         echo "[INFO] indexarPoderesGerais() indexou " . count($idx) . " poderes\n";
+        $amostra = reset($idx);
+        if (is_array($amostra)) {
+            echo "[INFO] indexarPoderesGerais() chaves de amostra: " . implode(', ', array_keys($amostra)) . "\n";
+            foreach (['id', 'nome', 'descricao', 'categoria_nome'] as $chave) {
+                if (!array_key_exists($chave, $amostra)) {
+                    registrar_falha("Poder indexado sem chave esperada '$chave'");
+                } else {
+                    echo "[ OK ] Poder indexado contém '$chave'\n";
+                }
+            }
+        } elseif (empty($idx)) {
+            registrar_falha('indexarPoderesGerais() retornou índice vazio');
+        } else {
+            registrar_falha('indexarPoderesGerais() retornou itens em formato inesperado');
+        }
     }
 } catch (\Throwable $e) {
     echo "[FALHA] Exceção ao incluir/chamar: " . $e->getMessage()
