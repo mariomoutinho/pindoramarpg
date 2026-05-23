@@ -113,6 +113,8 @@ jobs:
             _deploy/origens.php
             _deploy/lib/divindades.php
             _deploy/lib/origens.php
+            _deploy/includes/divindades.php
+            _deploy/includes/origens.php
             _deploy/data/divindades.json
             _deploy/data/origens.json
             _deploy/data/poderes-gerais.json
@@ -255,11 +257,10 @@ jobs:
 
             $CD_LINE
 
-            # Garante subpastas pequenas/críticas antes do mirror.
+            # Garante subpasta pequena/crítica antes do mirror.
             # A Hostinger às vezes confirma o upload mas a listagem de
-            # diretórios recém-criados fica inconsistente; estes mkdirs
-            # explícitos deixam lib/ e data/ prontos para puts diretos.
-            mkdir -p lib
+            # diretórios recém-criados fica inconsistente; este mkdir
+            # explícito deixa data/ pronta para puts diretos.
             mkdir -p data
 
             # ----- MIRROR 1: tudo, exceto assets/img -----
@@ -300,12 +301,14 @@ jobs:
                    _deploy/assets/img assets/img
 
             # Reenvio obrigatório dos arquivos que diagnosticam e
-            # alimentam divindades.php. Se algum put falhar, o deploy
-            # deve falhar em vez de terminar verde com produção quebrada.
+            # alimentam divindades.php. lib/ é a fonte primária no
+            # repositório, mas a conta FTP atual não permite criar esse
+            # diretório top-level; includes/ já existe na produção e é o
+            # fallback carregado pela página quando lib/ não estiver lá.
             put _deploy/divindades.php -o divindades.php
             put _deploy/diagnostico-divindades.php -o diagnostico-divindades.php
-            put -O lib _deploy/lib/divindades.php
-            put -O lib _deploy/lib/origens.php
+            put -O includes _deploy/includes/divindades.php
+            put -O includes _deploy/includes/origens.php
             put -O data _deploy/data/divindades.json
             put -O data _deploy/data/origens.json
             put -O data _deploy/data/poderes-gerais.json

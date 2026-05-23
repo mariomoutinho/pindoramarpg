@@ -1,7 +1,14 @@
 <?php
 try {
-    require_once __DIR__ . '/lib/divindades.php';
-    require_once __DIR__ . '/lib/origens.php';
+    $divindadesLib = is_file(__DIR__ . '/lib/divindades.php')
+        ? __DIR__ . '/lib/divindades.php'
+        : __DIR__ . '/includes/divindades.php';
+    $origensLib = is_file(__DIR__ . '/lib/origens.php')
+        ? __DIR__ . '/lib/origens.php'
+        : __DIR__ . '/includes/origens.php';
+
+    require_once $divindadesLib;
+    require_once $origensLib;
 
     if (!function_exists('carregarDivindades')) {
         throw new RuntimeException('Função carregarDivindades() indisponível após carregar lib/divindades.php.');

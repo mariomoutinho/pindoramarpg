@@ -35,6 +35,15 @@ function checar_arquivo(string $path, string $rotulo): bool {
     return true;
 }
 
+function escolher_helper(string $primario, string $fallback, string $rotulo): string {
+    if (is_file($primario) && is_readable($primario)) {
+        echo "[INFO] $rotulo usando fonte primária: " . caminho_relativo_seguro($primario) . "\n";
+        return $primario;
+    }
+    echo "[INFO] $rotulo usando fallback: " . caminho_relativo_seguro($fallback) . "\n";
+    return $fallback;
+}
+
 function checar_json(string $path, string $rotulo): bool {
     if (!checar_arquivo($path, $rotulo)) return false;
     $raw = file_get_contents($path);
@@ -76,6 +85,8 @@ echo "Diretório base: " . basename($base) . " (caminho absoluto omitido)\n\n";
 echo "-- Arquivos PHP --\n";
 $ok = checar_arquivo($base . '/lib/divindades.php', 'lib/divindades.php') && $ok;
 $ok = checar_arquivo($base . '/lib/origens.php',    'lib/origens.php')    && $ok;
+$ok = checar_arquivo($base . '/includes/divindades.php', 'includes/divindades.php') && $ok;
+$ok = checar_arquivo($base . '/includes/origens.php',    'includes/origens.php')    && $ok;
 
 echo "\n-- Arquivos JSON --\n";
 $ok = checar_json($base . '/data/divindades.json',     'data/divindades.json')     && $ok;
@@ -84,8 +95,18 @@ $ok = checar_json($base . '/data/poderes-gerais.json', 'data/poderes-gerais.json
 
 echo "\n-- Funções (após require) --\n";
 try {
-    require_once $base . '/lib/divindades.php';
-    require_once $base . '/lib/origens.php';
+    $divindadesHelper = escolher_helper(
+        $base . '/lib/divindades.php',
+        $base . '/includes/divindades.php',
+        'Divindades'
+    );
+    $origensHelper = escolher_helper(
+        $base . '/lib/origens.php',
+        $base . '/includes/origens.php',
+        'Origens'
+    );
+    require_once $divindadesHelper;
+    require_once $origensHelper;
     if (function_exists('carregarDivindades')) {
         echo "[ OK ] carregarDivindades() definida\n";
     } else {
