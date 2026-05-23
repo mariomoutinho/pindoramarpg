@@ -9,6 +9,13 @@ data/aventuras/*/cenas.json
 .DS_Store
 Thumbs.db
 
+# Metadados do Windows (NTFS Alternate Data Streams) ao mexer em
+# arquivos pelo WSL/Explorer — nunca devem ir pro repositório nem
+# pra Hostinger.
+*:Zone.Identifier
+**/*:Zone.Identifier
+*Zone.Identifier
+
 # Ferramentas locais e configurações do editor/agente
 .claude/
 .codex/

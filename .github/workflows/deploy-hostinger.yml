@@ -35,6 +35,17 @@ jobs:
       - name: Instalar lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
+      # Remove metadados do Windows (NTFS Alternate Data Streams)
+      # eventualmente trazidos pelo checkout/cache. Esses arquivos
+      # quebram o lftp na Hostinger pois o nome contém ':'.
+      # Só apaga arquivos cujo nome contenha ':Zone.Identifier' ou
+      # termine em 'Zone.Identifier' — nenhum arquivo real do projeto
+      # tem esse sufixo.
+      - name: Limpar arquivos Zone.Identifier do workspace
+        run: |
+          set -euo pipefail
+          find . -type f \( -name '*:Zone.Identifier' -o -name '*Zone.Identifier' \) -print -delete || true
+
       # ----------------------------------------------------------------
       # Publicação via lftp em modo FTP simples (porta 21). As contas
       # FTP adicionais da Hostinger NÃO suportam FTPS/TLS — `set
@@ -166,6 +177,7 @@ jobs:
                    --exclude-glob '*.sql.bak'         --exclude-glob '*.bak' \
                    --exclude-glob '*.log' \
                    --exclude-glob '.DS_Store'         --exclude-glob 'Thumbs.db' \
+                   --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier' \
                    .
           EOF
 
