@@ -9,8 +9,23 @@
 
 function carregarDivindades(): array
 {
-    $j = json_decode(file_get_contents(__DIR__ . '/../data/divindades.json'), true);
-    return $j ?? ['divindades' => [], 'introducao' => [], 'regras' => []];
+    $defaults = ['divindades' => [], 'introducao' => [], 'regras' => []];
+    $path = __DIR__ . '/../data/divindades.json';
+    if (!is_file($path) || !is_readable($path)) {
+        error_log("[divindades] arquivo ausente ou ilegível: $path");
+        return $defaults;
+    }
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        error_log("[divindades] falha ao ler: $path");
+        return $defaults;
+    }
+    $j = json_decode($raw, true);
+    if (!is_array($j)) {
+        error_log("[divindades] JSON inválido em: $path");
+        return $defaults;
+    }
+    return $j + $defaults;
 }
 
 function buscarDivindade(string $idDivindade, ?array $dados = null): ?array

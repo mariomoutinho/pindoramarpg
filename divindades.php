@@ -1,13 +1,23 @@
 <?php
-require_once __DIR__ . '/lib/divindades.php';
-require_once __DIR__ . '/lib/origens.php';
+try {
+    require_once __DIR__ . '/lib/divindades.php';
+    require_once __DIR__ . '/lib/origens.php';
 
-$dados = carregarDivindades();
-$divindades = $dados['divindades'] ?? [];
-$introducao = $dados['introducao'] ?? [];
-$regras = $dados['regras'] ?? [];
+    $dados = carregarDivindades();
+    $divindades = $dados['divindades'] ?? [];
+    $introducao = $dados['introducao'] ?? [];
+    $regras = $dados['regras'] ?? [];
 
-$idx = indexarPoderesGerais();
+    $idx = indexarPoderesGerais();
+} catch (\Throwable $e) {
+    error_log('[divindades.php] erro fatal: ' . $e->getMessage()
+        . ' em ' . $e->getFile() . ':' . $e->getLine());
+    http_response_code(500);
+    echo '<!doctype html><meta charset="utf-8"><title>Erro</title>';
+    echo '<h1>Erro ao carregar Divindades</h1>';
+    echo '<p>Ocorreu um erro interno. Consulte o Error Log do servidor para detalhes.</p>';
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

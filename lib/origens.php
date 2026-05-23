@@ -13,14 +13,41 @@
 
 function carregarOrigens(): array
 {
-    $j = json_decode(file_get_contents(__DIR__ . '/../data/origens.json'), true);
-    return $j ?? ['origens' => [], 'introducao' => [], 'regras' => []];
+    return _carregarJsonSeguro(
+        __DIR__ . '/../data/origens.json',
+        ['origens' => [], 'introducao' => [], 'regras' => []],
+        'origens'
+    );
 }
 
 function carregarPoderesGerais(): array
 {
-    $j = json_decode(file_get_contents(__DIR__ . '/../data/poderes-gerais.json'), true);
-    return $j ?? ['categorias' => []];
+    return _carregarJsonSeguro(
+        __DIR__ . '/../data/poderes-gerais.json',
+        ['categorias' => []],
+        'poderes-gerais'
+    );
+}
+
+if (!function_exists('_carregarJsonSeguro')) {
+    function _carregarJsonSeguro(string $path, array $defaults, string $rotulo): array
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            error_log("[$rotulo] arquivo ausente ou ilegível: $path");
+            return $defaults;
+        }
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            error_log("[$rotulo] falha ao ler: $path");
+            return $defaults;
+        }
+        $j = json_decode($raw, true);
+        if (!is_array($j)) {
+            error_log("[$rotulo] JSON inválido em: $path");
+            return $defaults;
+        }
+        return $j + $defaults;
+    }
 }
 
 /**
