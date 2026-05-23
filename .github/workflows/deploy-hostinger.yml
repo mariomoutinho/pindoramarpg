@@ -255,6 +255,13 @@ jobs:
 
             $CD_LINE
 
+            # Garante subpastas pequenas/críticas antes do mirror.
+            # A Hostinger às vezes confirma o upload mas a listagem de
+            # diretórios recém-criados fica inconsistente; estes mkdirs
+            # explícitos deixam lib/ e data/ prontos para puts diretos.
+            mkdir -p -f lib
+            mkdir -p -f data
+
             # ----- MIRROR 1: tudo, exceto assets/img -----
             # Fonte LOCAL: _deploy   Destino REMOTO: ./   (ambos relativos)
             # --depth-first evita o race "mkdir lib → 550 /lib".
@@ -291,6 +298,17 @@ jobs:
                    --verbose \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
                    _deploy/assets/img assets/img
+
+            # Reenvio obrigatório dos arquivos que diagnosticam e
+            # alimentam divindades.php. Se algum put falhar, o deploy
+            # deve falhar em vez de terminar verde com produção quebrada.
+            put _deploy/divindades.php -o divindades.php
+            put _deploy/diagnostico-divindades.php -o diagnostico-divindades.php
+            put _deploy/lib/divindades.php -o lib/divindades.php
+            put _deploy/lib/origens.php -o lib/origens.php
+            put _deploy/data/divindades.json -o data/divindades.json
+            put _deploy/data/origens.json -o data/origens.json
+            put _deploy/data/poderes-gerais.json -o data/poderes-gerais.json
           EOF
 
           echo "Deploy concluído com sucesso."
@@ -330,9 +348,9 @@ jobs:
             echo "--- pwd ---"
             pwd
             echo "--- ls lib/ ---"
-            cls -1 lib
+            cls -1 ./lib
             echo "--- ls data/ ---"
-            cls -1 data
+            cls -1 ./data
           EOF
           exit 0
 
