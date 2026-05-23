@@ -14,7 +14,7 @@ Thumbs.db
 # pra Hostinger.
 *:Zone.Identifier
 **/*:Zone.Identifier
-*Zone.Identifier
+*Zone.Identifier*
 
 # Ferramentas locais e configurações do editor/agente
 .claude/
