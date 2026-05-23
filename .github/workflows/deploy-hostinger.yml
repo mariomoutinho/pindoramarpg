@@ -15,11 +15,13 @@ on:
         required: false
         default: ""
 
-# Evita publicações sobrepostas: se um novo push chegar enquanto o
-# anterior ainda está subindo, o último é cancelado e o novo prevalece.
+# Evita publicações sobrepostas. ENFILEIRA em vez de cancelar: a
+# Hostinger é lenta no FTP (55MB+ de assets) e cancelar no meio gera
+# "Fatal: The operation was canceled" e deixa o servidor inconsistente.
+# Com cancel-in-progress=false, runs novos esperam o anterior terminar.
 concurrency:
   group: deploy-hostinger
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -195,11 +197,14 @@ jobs:
             set ftp:ssl-allow no
             set ftp:passive-mode true
             set ftp:disable-features chmod
-            set net:max-retries 3
-            set net:timeout 30
+            set net:max-retries 5
+            set net:reconnect-interval-base 5
+            set net:timeout 120
             set xfer:log false
+            set xfer:clobber yes
             set cmdline:save-history off
             set cmd:fail-exit yes
+            set mirror:set-permissions no
 
             $CD_LINE
             lcd _deploy
@@ -210,30 +215,46 @@ jobs:
             # os PHPs dentro dela ficam fora), causando 500 em produção.
             # 'mkdir -f' não falha se a pasta já existir.
             mkdir -f assets
+            mkdir -f assets/img
             mkdir -f data
             mkdir -f includes
             mkdir -f lib
             mkdir -f migrations
 
-            # mirror --reverse  = upload (local → remoto)
-            # --no-symlinks     = ignora symlinks (segurança)
-            # --no-perms        = não tenta chmod nos arquivos enviados
-            # --no-umask        = não aplica umask remoto (depende de chmod)
-            # --parallel=1      = sequencial; com paralelo a Hostinger
-            #                     pode perder mkdir de subpasta criada
-            #                     em paralelo com upload de arquivo,
-            #                     deixando lib/ vazia em produção
-            # SEM --delete / --delete-first / --remove-source-files
-            # Origem é _deploy/, já filtrada — exclude-glob aqui é só
-            # cinto-e-suspensório contra Zone.Identifier residual.
+            # ----- MIRROR 1: código (PHP, JS, CSS, JSON, lib, etc) -----
+            # Sem assets/img/ (tratado em mirror separado com --size-only,
+            # ver abaixo). Sequencial (--parallel=1) porque a Hostinger
+            # pode perder mkdir de subpasta nova em corrida com upload,
+            # deixando lib/ vazia em produção. --continue resume uploads
+            # interrompidos. SEM --delete / --delete-first.
             mirror --reverse \
+                   --continue \
+                   --no-symlinks \
+                   --no-perms \
+                   --no-umask \
+                   --parallel=1 \
+                   --verbose \
+                   --exclude-glob 'assets/img/'       --exclude-glob 'assets/img/**' \
+                   --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
+                   .
+
+            # ----- MIRROR 2: assets/img com --size-only -----
+            # Imagens só sobem se o tamanho diferir do remoto. Como
+            # WebP/PNG/JPG não mudam de tamanho a menos que sejam
+            # reexportadas, isso pula os 55MB inteiros num push que só
+            # mexe em código — eliminando o gargalo que vinha causando
+            # "operation was canceled". Sem --delete: imagens removidas
+            # do repo continuam no servidor (intencional).
+            mirror --reverse \
+                   --continue \
+                   --size-only \
                    --no-symlinks \
                    --no-perms \
                    --no-umask \
                    --parallel=1 \
                    --verbose \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
-                   .
+                   assets/img assets/img
 
             # Auditoria pós-mirror: lista subpastas críticas no remoto
             # para o log do GitHub Actions confirmar que lib/ chegou.
