@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       target_dir_override:
-        description: "Sobrescreve HOSTINGER_TARGET_DIR só nesta execução. Use '__ROOT__' para a raiz da conta FTP."
+        description: "Sobrescreve HOSTINGER_FTP_REMOTE_DIR só nesta execução. Use '__ROOT__' para a raiz da conta FTP."
         required: false
         default: ""
 
@@ -110,17 +110,16 @@ jobs:
       # SEM `--delete`, SEM `--delete-first`, SEM `--remove-source-files`
       # → arquivos remotos jamais são apagados.
       #
-      # Secrets aceitos (nomes novos têm preferência; nomes antigos
-      # continuam funcionando para não quebrar deploys existentes):
-      #   HOSTINGER_HOST       (fallback: HOSTINGER_FTP_HOST)
-      #   HOSTINGER_USERNAME   (fallback: HOSTINGER_FTP_USER)
-      #   HOSTINGER_PASSWORD   (fallback: HOSTINGER_FTP_PASSWORD)
-      #   HOSTINGER_PORT       (fallback: HOSTINGER_FTP_PORT, default 21)
-      #   HOSTINGER_TARGET_DIR (fallback: HOSTINGER_FTP_REMOTE_DIR)
+      # Secrets utilizados (nomes exatos cadastrados no repositório):
+      #   HOSTINGER_FTP_HOST
+      #   HOSTINGER_FTP_USER
+      #   HOSTINGER_FTP_PASSWORD
+      #   HOSTINGER_FTP_PORT        (opcional, default 21)
+      #   HOSTINGER_FTP_REMOTE_DIR  (OBRIGATÓRIO)
       #
-      # HOSTINGER_TARGET_DIR é OBRIGATÓRIO para evitar publicar no lugar
-      # errado. Veja docs/deploy-hostinger-subdominio.md para descobrir
-      # o valor certo no hPanel antes do primeiro deploy.
+      # HOSTINGER_FTP_REMOTE_DIR evita publicar no lugar errado. Veja
+      # docs/deploy-hostinger-subdominio.md para descobrir o valor
+      # certo no hPanel antes do primeiro deploy.
       #
       # IMPORTANTE: se a conta FTP já estiver escopada na raiz do
       # subdomínio, use o sentinel literal '__ROOT__' (NÃO use '.').
@@ -130,33 +129,24 @@ jobs:
       # ----------------------------------------------------------------
       - name: Publicar via lftp (FTP plain, incremental, sem deletar nada)
         env:
-          FTP_HOST_NEW:       ${{ secrets.HOSTINGER_HOST }}
-          FTP_HOST_OLD:       ${{ secrets.HOSTINGER_FTP_HOST }}
-          FTP_USER_NEW:       ${{ secrets.HOSTINGER_USERNAME }}
-          FTP_USER_OLD:       ${{ secrets.HOSTINGER_FTP_USER }}
-          FTP_PASSWORD_NEW:   ${{ secrets.HOSTINGER_PASSWORD }}
-          FTP_PASSWORD_OLD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          FTP_PORT_NEW:       ${{ secrets.HOSTINGER_PORT }}
-          FTP_PORT_OLD:       ${{ secrets.HOSTINGER_FTP_PORT }}
-          FTP_REMOTE_DIR_NEW: ${{ secrets.HOSTINGER_TARGET_DIR }}
-          FTP_REMOTE_DIR_OLD: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+          FTP_HOST:            ${{ secrets.HOSTINGER_FTP_HOST }}
+          FTP_USER:            ${{ secrets.HOSTINGER_FTP_USER }}
+          FTP_PASSWORD:        ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          FTP_PORT:            ${{ secrets.HOSTINGER_FTP_PORT }}
+          FTP_REMOTE_DIR:      ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
           TARGET_DIR_OVERRIDE: ${{ github.event.inputs.target_dir_override }}
         run: |
           set -euo pipefail
 
-          FTP_HOST="${FTP_HOST_NEW:-${FTP_HOST_OLD:-}}"
-          FTP_USER="${FTP_USER_NEW:-${FTP_USER_OLD:-}}"
-          FTP_PASSWORD="${FTP_PASSWORD_NEW:-${FTP_PASSWORD_OLD:-}}"
-          FTP_PORT="${FTP_PORT_NEW:-${FTP_PORT_OLD:-}}"
-          REMOTE_DIR="${TARGET_DIR_OVERRIDE:-${FTP_REMOTE_DIR_NEW:-${FTP_REMOTE_DIR_OLD:-}}}"
+          REMOTE_DIR="${TARGET_DIR_OVERRIDE:-${FTP_REMOTE_DIR:-}}"
 
-          : "${FTP_HOST:?HOSTINGER_HOST (ou HOSTINGER_FTP_HOST) não definido}"
-          : "${FTP_USER:?HOSTINGER_USERNAME (ou HOSTINGER_FTP_USER) não definido}"
-          : "${FTP_PASSWORD:?HOSTINGER_PASSWORD (ou HOSTINGER_FTP_PASSWORD) não definido}"
+          : "${FTP_HOST:?HOSTINGER_FTP_HOST não definido}"
+          : "${FTP_USER:?HOSTINGER_FTP_USER não definido}"
+          : "${FTP_PASSWORD:?HOSTINGER_FTP_PASSWORD não definido}"
           PORT="${FTP_PORT:-21}"
 
           if [ -z "$REMOTE_DIR" ]; then
-            echo "::error::HOSTINGER_TARGET_DIR (ou HOSTINGER_FTP_REMOTE_DIR) precisa estar definido. Use '__ROOT__' se a conta FTP já estiver escopada na raiz do subdomínio. Veja docs/deploy-hostinger-subdominio.md."
+            echo "::error::HOSTINGER_FTP_REMOTE_DIR precisa estar definido. Use '__ROOT__' se a conta FTP já estiver escopada na raiz do subdomínio. Veja docs/deploy-hostinger-subdominio.md."
             exit 1
           fi
 
@@ -232,7 +222,7 @@ jobs:
             echo "## Resumo do deploy"
             echo ""
             echo "- Branch: \`${GITHUB_REF_NAME}\` · Commit: \`${GITHUB_SHA::7}\`"
-            echo "- Protocolo: \`ftp\` (porta de HOSTINGER_PORT, default 21)"
+            echo "- Protocolo: \`ftp\` (porta de HOSTINGER_FTP_PORT, default 21)"
             echo "- Ferramenta: \`lftp mirror -R\` (sobrescreve versionados, sem --delete)"
-            echo "- Destino: definido por \`HOSTINGER_TARGET_DIR\` (use '.' para raiz da conta FTP)"
+            echo "- Destino: definido por \`HOSTINGER_FTP_REMOTE_DIR\` (use '__ROOT__' para raiz da conta FTP)"
           } >> "$GITHUB_STEP_SUMMARY"
