@@ -44,6 +44,20 @@ function escolher_helper(string $primario, string $fallback, string $rotulo): st
     return $fallback;
 }
 
+function tentar_restaurar_helper(string $primario, string $fallback, string $rotulo): void {
+    if (is_file($primario) || !is_file($fallback)) {
+        return;
+    }
+
+    $dir = dirname($primario);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755);
+    }
+    if (is_dir($dir) && is_writable($dir) && @copy($fallback, $primario)) {
+        echo "[ OK ] $rotulo restaurado em " . caminho_relativo_seguro($primario) . "\n";
+    }
+}
+
 function checar_json(string $path, string $rotulo): bool {
     if (!checar_arquivo($path, $rotulo)) return false;
     $raw = file_get_contents($path);
@@ -81,6 +95,11 @@ function checar_chaves(array $dados, array $esperadas, string $rotulo): void {
 echo "=== Diagnóstico: divindades.php ===\n\n";
 echo "PHP: " . PHP_VERSION . "\n";
 echo "Diretório base: " . basename($base) . " (caminho absoluto omitido)\n\n";
+
+echo "-- Restauração opcional de helpers primários --\n";
+tentar_restaurar_helper($base . '/lib/divindades.php', $base . '/includes/divindades.php', 'lib/divindades.php');
+tentar_restaurar_helper($base . '/lib/origens.php', $base . '/includes/origens.php', 'lib/origens.php');
+echo "\n";
 
 echo "-- Arquivos PHP --\n";
 $ok = checar_arquivo($base . '/lib/divindades.php', 'lib/divindades.php') && $ok;

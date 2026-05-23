@@ -1,5 +1,23 @@
 <?php
+function garantirHelperDivindadesPrimario(string $primario, string $fallback): void
+{
+    if (is_file($primario) || !is_file($fallback)) {
+        return;
+    }
+
+    $dir = dirname($primario);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755);
+    }
+    if (is_dir($dir) && is_writable($dir)) {
+        @copy($fallback, $primario);
+    }
+}
+
 try {
+    garantirHelperDivindadesPrimario(__DIR__ . '/lib/divindades.php', __DIR__ . '/includes/divindades.php');
+    garantirHelperDivindadesPrimario(__DIR__ . '/lib/origens.php', __DIR__ . '/includes/origens.php');
+
     $divindadesLib = is_file(__DIR__ . '/lib/divindades.php')
         ? __DIR__ . '/lib/divindades.php'
         : __DIR__ . '/includes/divindades.php';
