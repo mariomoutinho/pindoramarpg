@@ -221,10 +221,28 @@ jobs:
           # **/lib: No such file or directory" quebrando o deploy
           # mesmo com upload bem-sucedido). Sem chmod do nosso lado as
           # permissões padrão da conta FTP/Hostinger são preservadas.
+          # IMPORTANTE: TODOS os caminhos remotos abaixo são RELATIVOS.
+          # NADA pode começar com '/' — a conta FTP está chrootada na
+          # raiz do subdomínio e qualquer caminho com barra inicial vira
+          # '550 No such file or directory' (Hostinger não tem '/lib' —
+          # tem 'lib' relativo à pwd do chroot).
+          #
+          # set ftp:use-mlsd no  → força LIST em vez de MLSD. A
+          # Hostinger às vezes devolve MLSD inconsistente, e o cache
+          # de listagem do lftp desincroniza com mkdir/cwd, causando
+          # "Making directory lib" seguido de "550 /lib: No such file"
+          # na mesma sessão.
+          #
+          # mirror --depth-first → processa cada subpasta inteira
+          # (cria e popula) antes de pular para a próxima irmã. Evita
+          # o race em que lftp tenta entrar numa subpasta criada num
+          # passo anterior que a Hostinger ainda não confirmou.
           lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
             set ftp:ssl-allow no
             set ftp:passive-mode true
             set ftp:disable-features chmod
+            set ftp:use-mlsd no
+            set ftp:list-options -a
             set net:max-retries 5
             set net:reconnect-interval-base 5
             set net:timeout 120
@@ -233,30 +251,17 @@ jobs:
             set cmdline:save-history off
             set cmd:fail-exit yes
             set mirror:set-permissions no
+            set mirror:parallel-directories no
 
             $CD_LINE
-            lcd _deploy
 
-            # Cria subpastas críticas explicitamente ANTES do mirror,
-            # com caminhos RELATIVOS (NUNCA '/lib', sempre 'lib'). A
-            # Hostinger às vezes falha em criar subdiretório novo no
-            # meio do mirror (lib/ fica vazia → 500 em produção).
-            # 'mkdir -p -f' cria pais e não falha se já existir.
-            mkdir -p -f assets
-            mkdir -p -f assets/img
-            mkdir -p -f data
-            mkdir -p -f includes
-            mkdir -p -f lib
-            mkdir -p -f migrations
-
-            # ----- MIRROR 1: código (PHP, JS, CSS, JSON, lib, etc) -----
-            # Sem assets/img/ (tratado em mirror separado com --size-only,
-            # ver abaixo). Sequencial (--parallel=1) porque a Hostinger
-            # pode perder mkdir de subpasta nova em corrida com upload,
-            # deixando lib/ vazia em produção. --continue resume uploads
-            # interrompidos. SEM --delete / --delete-first.
+            # ----- MIRROR 1: tudo, exceto assets/img -----
+            # Fonte LOCAL: _deploy   Destino REMOTO: ./   (ambos relativos)
+            # --depth-first evita o race "mkdir lib → 550 /lib".
+            # SEM --delete / --delete-first / --remove-source-files.
             mirror --reverse \
                    --continue \
+                   --depth-first \
                    --no-symlinks \
                    --no-perms \
                    --no-umask \
@@ -264,17 +269,17 @@ jobs:
                    --verbose \
                    --exclude-glob 'assets/img/'       --exclude-glob 'assets/img/**' \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
-                   .
+                   _deploy ./
 
             # ----- MIRROR 2: assets/img com --size-only -----
-            # Imagens só sobem se o tamanho diferir do remoto. Como
-            # WebP/PNG/JPG não mudam de tamanho a menos que sejam
-            # reexportadas, isso pula os 55MB inteiros num push que só
-            # mexe em código — eliminando o gargalo que vinha causando
-            # "operation was canceled". Sem --delete: imagens removidas
-            # do repo continuam no servidor (intencional).
+            # Imagens só sobem se o tamanho diferir do remoto. WebP/PNG/JPG
+            # não mudam de tamanho a menos que sejam reexportadas, então
+            # push de código pula os ~55MB inteiros. Sem --delete:
+            # imagens removidas do repo continuam no servidor (intencional).
+            # Caminhos RELATIVOS: source _deploy/assets/img → target assets/img
             mirror --reverse \
                    --continue \
+                   --depth-first \
                    --size-only \
                    --no-symlinks \
                    --no-perms \
@@ -282,7 +287,7 @@ jobs:
                    --parallel=1 \
                    --verbose \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
-                   assets/img assets/img
+                   _deploy/assets/img assets/img
           EOF
 
           echo "Deploy concluído com sucesso."
