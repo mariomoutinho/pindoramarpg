@@ -35,16 +35,69 @@ jobs:
       - name: Instalar lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
-      # Remove metadados do Windows (NTFS Alternate Data Streams)
-      # eventualmente trazidos pelo checkout/cache. Esses arquivos
-      # quebram o lftp na Hostinger pois o nome contém ':'.
-      # Só apaga arquivos cujo nome contenha ':Zone.Identifier' ou
-      # termine em 'Zone.Identifier' — nenhum arquivo real do projeto
-      # tem esse sufixo.
-      - name: Limpar arquivos Zone.Identifier do workspace
+      # Monta uma pasta de publicação limpa (_deploy) com rsync.
+      # Só o conteúdo de _deploy vai pro FTP — assim arquivos locais
+      # do dev (Zone.Identifier do WSL/Windows, .git, .env, config.php
+      # etc.) ficam fora por construção, não só por exclude do lftp.
+      - name: Montar pacote limpo em _deploy
         run: |
           set -euo pipefail
-          find . -type f \( -name '*:Zone.Identifier' -o -name '*Zone.Identifier*' \) -print -delete || true
+          rm -rf _deploy
+          mkdir -p _deploy
+          rsync -a \
+            --exclude='_deploy/' \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.vscode/' \
+            --exclude='.claude/' \
+            --exclude='.codex/' \
+            --exclude='.agents/' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='README.md' \
+            --exclude='DEPLOY-HOSTINGER.md' \
+            --exclude='DEPLOY_HOSTINGER.md' \
+            --exclude='PORTE-GODOT.md' \
+            --exclude='REGRAS-DE-*.md' \
+            --exclude='docs/' \
+            --exclude='tests/' \
+            --exclude='node_modules/' \
+            --exclude='vendor/' \
+            --exclude='uploads/' \
+            --exclude='data/campo-batalha-state*.json' \
+            --exclude='data/aventuras/*/cenas.json' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='config.php' \
+            --exclude='config.local.php' \
+            --exclude='secrets.*' \
+            --exclude='database.sql' \
+            --exclude='_pindorama_rpg.sql' \
+            --exclude='*.sql.bak' \
+            --exclude='*.bak' \
+            --exclude='*.log' \
+            --exclude='.DS_Store' \
+            --exclude='Thumbs.db' \
+            --exclude='*:Zone.Identifier' \
+            --exclude='*Zone.Identifier*' \
+            ./ _deploy/
+
+          # Defesa em profundidade: caso algum Zone.Identifier escape
+          # do rsync (encoding estranho etc.), apaga in-place no _deploy.
+          find _deploy -type f \( -iname '*Zone.Identifier*' -o -iname '*:Zone.Identifier' \) -print -delete || true
+
+      # Validação obrigatória: se sobrou QUALQUER arquivo Zone.Identifier
+      # dentro de _deploy, falha aqui — antes de abrir conexão FTP.
+      - name: Validar pacote _deploy (sem Zone.Identifier)
+        run: |
+          set -euo pipefail
+          residuos="$(find _deploy -iname '*Zone.Identifier*' -print || true)"
+          if [ -n "$residuos" ]; then
+            echo "::error::Arquivos Zone.Identifier presentes em _deploy — abortando antes do FTP:"
+            echo "$residuos"
+            exit 1
+          fi
+          echo "_deploy validado: nenhum Zone.Identifier presente."
 
       # ----------------------------------------------------------------
       # Publicação via lftp em modo FTP simples (porta 21). As contas
@@ -138,7 +191,7 @@ jobs:
             set cmd:fail-exit yes
 
             $CD_LINE
-            lcd .
+            lcd _deploy
 
             # mirror --reverse  = upload (local → remoto)
             # --no-symlinks     = ignora symlinks (segurança)
@@ -146,37 +199,14 @@ jobs:
             # --no-umask        = não aplica umask remoto (depende de chmod)
             # --parallel=4      = paralelismo seguro
             # SEM --delete / --delete-first / --remove-source-files
+            # Origem é _deploy/, já filtrada — exclude-glob aqui é só
+            # cinto-e-suspensório contra Zone.Identifier residual.
             mirror --reverse \
                    --no-symlinks \
                    --no-perms \
                    --no-umask \
                    --parallel=4 \
                    --verbose \
-                   --exclude-glob '.git/'             --exclude-glob '.git/**' \
-                   --exclude-glob '.github/'          --exclude-glob '.github/**' \
-                   --exclude-glob '.claude/'          --exclude-glob '.claude/**' \
-                   --exclude-glob '.codex/'           --exclude-glob '.codex/**' \
-                   --exclude-glob '.agents/'          --exclude-glob '.agents/**' \
-                   --exclude-glob '.vscode/'          --exclude-glob '.vscode/**' \
-                   --exclude-glob '.gitignore'        --exclude-glob '.gitattributes' \
-                   --exclude-glob 'README.md' \
-                   --exclude-glob 'DEPLOY-HOSTINGER.md' \
-                   --exclude-glob 'DEPLOY_HOSTINGER.md' \
-                   --exclude-glob 'docs/'             --exclude-glob 'docs/**' \
-                   --exclude-glob 'PORTE-GODOT.md'    --exclude-glob 'REGRAS-DE-*.md' \
-                   --exclude-glob 'tests/'            --exclude-glob 'tests/**' \
-                   --exclude-glob 'node_modules/'     --exclude-glob 'node_modules/**' \
-                   --exclude-glob 'vendor/'           --exclude-glob 'vendor/**' \
-                   --exclude-glob 'uploads/'          --exclude-glob 'uploads/**' \
-                   --exclude-glob 'data/campo-batalha-state*.json' \
-                   --exclude-glob 'data/aventuras/*/cenas.json' \
-                   --exclude-glob '.env'              --exclude-glob '.env.*' \
-                   --exclude-glob 'config.php' \
-                   --exclude-glob 'config.local.php'  --exclude-glob 'secrets.*' \
-                   --exclude-glob 'database.sql'      --exclude-glob '_pindorama_rpg.sql' \
-                   --exclude-glob '*.sql.bak'         --exclude-glob '*.bak' \
-                   --exclude-glob '*.log' \
-                   --exclude-glob '.DS_Store'         --exclude-glob 'Thumbs.db' \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
                    .
           EOF
