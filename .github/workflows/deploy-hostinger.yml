@@ -90,7 +90,7 @@ jobs:
 
       # Validação obrigatória: se sobrou QUALQUER arquivo Zone.Identifier
       # dentro de _deploy, falha aqui — antes de abrir conexão FTP.
-      - name: Validar pacote _deploy (sem Zone.Identifier)
+      - name: Validar pacote _deploy (sem Zone.Identifier, com libs)
         run: |
           set -euo pipefail
           residuos="$(find _deploy -iname '*Zone.Identifier*' -print || true)"
@@ -101,12 +101,40 @@ jobs:
           fi
           echo "_deploy validado: nenhum Zone.Identifier presente."
 
+          # Pré-condições obrigatórias: arquivos críticos precisam
+          # estar no pacote antes de abrir o FTP. Se faltar qualquer
+          # um, abortar com mensagem clara em vez de subir incompleto.
+          obrigatorios=(
+            _deploy/index.php
+            _deploy/login.php
+            _deploy/register.php
+            _deploy/ficha.php
+            _deploy/divindades.php
+            _deploy/origens.php
+            _deploy/lib/divindades.php
+            _deploy/lib/origens.php
+            _deploy/data/divindades.json
+            _deploy/data/origens.json
+            _deploy/data/poderes-gerais.json
+          )
+          faltando=0
+          for f in "${obrigatorios[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Arquivo obrigatório ausente do pacote: $f"
+              faltando=1
+            fi
+          done
+          if [ "$faltando" -ne 0 ]; then
+            echo "::error::Pacote _deploy incompleto — abortando antes do FTP."
+            exit 1
+          fi
+
           # Auditoria visível no log: prova que subpastas críticas
-          # (lib/, data/, includes/, migrations/) estão no pacote.
+          # estão no pacote.
           echo "--- Subpastas em _deploy ---"
           find _deploy -mindepth 1 -maxdepth 1 -type d | sort
           echo "--- _deploy/lib/ ---"
-          ls -la _deploy/lib/ || echo "(ausente)"
+          ls -la _deploy/lib/
           echo "--- _deploy/data/ (top-level JSON) ---"
           ls -la _deploy/data/*.json 2>/dev/null || echo "(ausente)"
 
@@ -209,17 +237,17 @@ jobs:
             $CD_LINE
             lcd _deploy
 
-            # Cria subpastas críticas explicitamente ANTES do mirror.
-            # Já vimos casos em que a Hostinger falha silenciosamente
-            # ao criar subdiretório novo via FTP (lib/ não é criada e
-            # os PHPs dentro dela ficam fora), causando 500 em produção.
-            # 'mkdir -f' não falha se a pasta já existir.
-            mkdir -f assets
-            mkdir -f assets/img
-            mkdir -f data
-            mkdir -f includes
-            mkdir -f lib
-            mkdir -f migrations
+            # Cria subpastas críticas explicitamente ANTES do mirror,
+            # com caminhos RELATIVOS (NUNCA '/lib', sempre 'lib'). A
+            # Hostinger às vezes falha em criar subdiretório novo no
+            # meio do mirror (lib/ fica vazia → 500 em produção).
+            # 'mkdir -p -f' cria pais e não falha se já existir.
+            mkdir -p -f assets
+            mkdir -p -f assets/img
+            mkdir -p -f data
+            mkdir -p -f includes
+            mkdir -p -f lib
+            mkdir -p -f migrations
 
             # ----- MIRROR 1: código (PHP, JS, CSS, JSON, lib, etc) -----
             # Sem assets/img/ (tratado em mirror separado com --size-only,
@@ -255,14 +283,50 @@ jobs:
                    --verbose \
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
                    assets/img assets/img
-
-            # Auditoria pós-mirror: lista subpastas críticas no remoto
-            # para o log do GitHub Actions confirmar que lib/ chegou.
-            cls -la lib
-            cls -la data
           EOF
 
           echo "Deploy concluído com sucesso."
+
+      # Auditoria pós-deploy: lista lib/ e data/ no remoto. Em sessão
+      # separada com 'set cmd:fail-exit no' — assim, se a Hostinger
+      # demorar a propagar a listagem, isso vira só um aviso no log,
+      # nunca derruba o deploy (era esse exatamente o sintoma do
+      # antigo erro "550 /lib: No such file or directory").
+      - name: Auditoria remota pós-deploy (não-bloqueante)
+        if: always()
+        env:
+          FTP_HOST:       ${{ secrets.HOSTINGER_FTP_HOST }}
+          FTP_USER:       ${{ secrets.HOSTINGER_FTP_USER }}
+          FTP_PASSWORD:   ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          FTP_PORT:       ${{ secrets.HOSTINGER_FTP_PORT }}
+          FTP_REMOTE_DIR: ${{ secrets.HOSTINGER_FTP_REMOTE_DIR }}
+        run: |
+          set +e
+          PORT="${FTP_PORT:-21}"
+          REMOTE_DIR="${FTP_REMOTE_DIR:-}"
+          if [ -z "${FTP_HOST:-}" ] || [ -z "${FTP_USER:-}" ] || [ -z "${FTP_PASSWORD:-}" ] || [ -z "$REMOTE_DIR" ]; then
+            echo "Auditoria pulada (secrets ausentes neste contexto)."
+            exit 0
+          fi
+          if [ "$REMOTE_DIR" = "__ROOT__" ]; then
+            CD_LINE=""
+          else
+            CD_LINE="cd \"$REMOTE_DIR\";"
+          fi
+          lftp -u "$FTP_USER","$FTP_PASSWORD" -p "$PORT" "ftp://$FTP_HOST" <<EOF
+            set ftp:ssl-allow no
+            set ftp:passive-mode true
+            set net:timeout 30
+            set cmd:fail-exit no
+            $CD_LINE
+            echo "--- pwd ---"
+            pwd
+            echo "--- ls lib/ ---"
+            cls -1 lib
+            echo "--- ls data/ ---"
+            cls -1 data
+          EOF
+          exit 0
 
       - name: Resumo
         if: always()
