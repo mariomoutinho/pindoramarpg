@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       target_dir_override:
-        description: "Sobrescreve HOSTINGER_TARGET_DIR só nesta execução. Use '.' para a raiz da conta FTP."
+        description: "Sobrescreve HOSTINGER_TARGET_DIR só nesta execução. Use '__ROOT__' para a raiz da conta FTP."
         required: false
         default: ""
 
@@ -121,6 +121,12 @@ jobs:
       # HOSTINGER_TARGET_DIR é OBRIGATÓRIO para evitar publicar no lugar
       # errado. Veja docs/deploy-hostinger-subdominio.md para descobrir
       # o valor certo no hPanel antes do primeiro deploy.
+      #
+      # IMPORTANTE: se a conta FTP já estiver escopada na raiz do
+      # subdomínio, use o sentinel literal '__ROOT__' (NÃO use '.').
+      # Secrets contendo '.' fazem o GitHub mascarar todo ponto dos
+      # logs como '***', inclusive em nomes de arquivos, quebrando o
+      # diagnóstico. O workflow rejeita '.' explicitamente.
       # ----------------------------------------------------------------
       - name: Publicar via lftp (FTP plain, incremental, sem deletar nada)
         env:
@@ -150,24 +156,30 @@ jobs:
           PORT="${FTP_PORT:-21}"
 
           if [ -z "$REMOTE_DIR" ]; then
-            echo "::error::HOSTINGER_TARGET_DIR (ou HOSTINGER_FTP_REMOTE_DIR) precisa estar definido. Use '.' se a conta FTP já estiver escopada na raiz do subdomínio. Veja docs/deploy-hostinger-subdominio.md."
+            echo "::error::HOSTINGER_TARGET_DIR (ou HOSTINGER_FTP_REMOTE_DIR) precisa estar definido. Use '__ROOT__' se a conta FTP já estiver escopada na raiz do subdomínio. Veja docs/deploy-hostinger-subdominio.md."
             exit 1
           fi
+
+          # NUNCA imprimir $REMOTE_DIR cru: se o secret contiver '.',
+          # o mascaramento do GitHub vira tudo em '***' (inclusive em
+          # nomes de arquivos de outras linhas), tornando o log ilegível.
+          # Mostramos só o comprimento e um rótulo lógico.
+          REMOTE_DIR_LEN="${#REMOTE_DIR}"
 
           # Guarda: recusa destinos perigosos que sobrescreveriam o site
           # principal ou outros projetos da hospedagem.
           case "$REMOTE_DIR" in
-            "/"|"public_html"|"public_html/"|"public_html/."|"/public_html"|"/public_html/")
-              echo "::error::Destino remoto '$REMOTE_DIR' é inseguro — atingiria o site principal. Aponte para a pasta exclusiva do subdomínio (ou use '.' se a conta FTP já estiver escopada nela)."
+            "/"|"public_html"|"public_html/"|"public_html/."|"/public_html"|"/public_html/"|".")
+              echo "::error::Destino remoto inseguro — atingiria o site principal, ou usa '.' (que o GitHub mascara como '***' nos logs). Aponte para a pasta exclusiva do subdomínio, ou use o sentinel '__ROOT__' se a conta FTP já estiver escopada nela."
               exit 1
               ;;
           esac
 
-          if [ "$REMOTE_DIR" = "." ] || [ "$REMOTE_DIR" = "./" ]; then
-            echo "Destino: ftp://$FTP_HOST:$PORT/ (raiz da conta FTP — assume conta escopada no subdomínio)"
+          if [ "$REMOTE_DIR" = "__ROOT__" ]; then
+            echo "Destino: raiz da conta FTP (sentinel __ROOT__ — assume conta escopada no subdomínio)"
             CD_LINE=""
           else
-            echo "Destino: ftp://$FTP_HOST:$PORT/$REMOTE_DIR"
+            echo "Destino: subpasta da conta FTP (comprimento=$REMOTE_DIR_LEN — valor omitido por ser secret)"
             CD_LINE="mkdir -p -f \"$REMOTE_DIR\"; cd \"$REMOTE_DIR\";"
           fi
 
