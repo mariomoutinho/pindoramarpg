@@ -257,12 +257,6 @@ jobs:
 
             $CD_LINE
 
-            # Garante subpasta pequena/crítica antes do mirror.
-            # A Hostinger às vezes confirma o upload mas a listagem de
-            # diretórios recém-criados fica inconsistente; este mkdir
-            # explícito deixa data/ pronta para puts diretos.
-            mkdir -p data
-
             # ----- MIRROR 1: tudo, exceto assets/img -----
             # Fonte LOCAL: _deploy   Destino REMOTO: ./   (ambos relativos)
             # --depth-first evita o race "mkdir lib → 550 /lib".
