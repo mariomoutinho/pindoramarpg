@@ -271,16 +271,19 @@ jobs:
                    --exclude-glob '*:Zone.Identifier' --exclude-glob '*Zone.Identifier*' \
                    _deploy ./
 
-            # ----- MIRROR 2: assets/img com --size-only -----
-            # Imagens só sobem se o tamanho diferir do remoto. WebP/PNG/JPG
-            # não mudam de tamanho a menos que sejam reexportadas, então
-            # push de código pula os ~55MB inteiros. Sem --delete:
-            # imagens removidas do repo continuam no servidor (intencional).
+            # ----- MIRROR 2: assets/img comparando só tamanho -----
+            # --ignore-time: pula transferência se o tamanho remoto bate
+            # (não compara mtime). Equivale ao antigo --size-only mas
+            # funciona em versões mais antigas do lftp também.
+            # WebP/PNG/JPG não mudam de tamanho a menos que sejam
+            # reexportadas, então push de código pula os ~55MB inteiros.
+            # Sem --delete: imagens removidas do repo continuam no
+            # servidor (intencional).
             # Caminhos RELATIVOS: source _deploy/assets/img → target assets/img
             mirror --reverse \
                    --continue \
                    --depth-first \
-                   --size-only \
+                   --ignore-time \
                    --no-symlinks \
                    --no-perms \
                    --no-umask \
