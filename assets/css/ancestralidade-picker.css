@@ -130,9 +130,17 @@
         0 20px 60px rgba(15, 5, 25, 0.6),
         inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     color: var(--purple-light);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: scale(0.96);
     transition: transform 180ms ease;
+}
+.anc-picker-panel::-webkit-scrollbar { width: 8px; }
+.anc-picker-panel::-webkit-scrollbar-thumb {
+    background: rgba(233, 216, 241, 0.22);
+    border-radius: 4px;
 }
 
 .anc-picker-backdrop.is-open .anc-picker-panel {
@@ -147,7 +155,11 @@
     justify-content: space-between;
     padding: 18px 22px 12px;
     border-bottom: 1px solid rgba(233, 216, 241, 0.18);
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: var(--purple-dark);
+    backdrop-filter: blur(2px);
 }
 
 .anc-picker-title {
@@ -445,6 +457,10 @@
     gap: 10px;
     padding: 12px 22px 18px;
     border-top: 1px solid rgba(233, 216, 241, 0.18);
+    position: sticky;
+    bottom: 0;
+    z-index: 6;
+    background: var(--purple-dark);
 }
 
 .anc-picker-btn {

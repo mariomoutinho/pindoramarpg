@@ -628,6 +628,11 @@
         state.backdrop.classList.add('is-open');
         state.triggerBtn.setAttribute('aria-expanded', 'true');
 
+        // Reseta a rolagem do painel para o topo a cada abertura, garantindo
+        // que cabeçalho e primeiras opções fiquem visíveis no início.
+        const panelEl = state.backdrop.querySelector('.anc-picker-panel');
+        if (panelEl) panelEl.scrollTop = 0;
+
         bloquearScrollBody();
 
         const atual = state.select.value;
