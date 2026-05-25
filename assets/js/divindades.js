@@ -78,11 +78,15 @@
         const lista = document.getElementById('divindadePoderesLista');
         if (lista) {
             const poderes = divindadeAtual.poderes || [];
+            // Lista de Poderes Divinos como botões — só o nome aparece
+            // na tela principal. Descrição/regras completas só no modal
+            // que abre ao clicar (PoderesPindorama.abrirModalPoder).
             lista.innerHTML = poderes.map(p => `
-                <div class="divindade-card-poder" data-poder-id="${escaparHtml(p.id)}">
-                    <div class="divindade-card-poder-nome">${escaparHtml(p.nome)}</div>
-                    <div class="divindade-card-poder-resumo">${escaparHtml(p.descricao)}</div>
-                </div>
+                <button type="button" class="divindade-card-poder"
+                        data-poder-id="${escaparHtml(p.id)}"
+                        title="Ver detalhes do poder">
+                    <span class="divindade-card-poder-nome">${escaparHtml(p.nome)}</span>
+                </button>
             `).join('');
 
             lista.querySelectorAll('.divindade-card-poder').forEach(card => {
@@ -170,15 +174,8 @@
             if (sel.value) carregarDivindade(sel.value);
         }
 
-        const recolherBtn = document.getElementById('divindadeRecolherBtn');
-        const painel = document.getElementById('divindadePanel');
-        if (recolherBtn && painel) {
-            recolherBtn.addEventListener('click', () => {
-                const recolhido = painel.classList.toggle('divindade-panel-recolhido');
-                recolherBtn.setAttribute('aria-expanded', String(!recolhido));
-                recolherBtn.setAttribute('aria-label', recolhido ? 'Expandir seção' : 'Recolher seção');
-            });
-        }
+        // (O accordion "Devoção" foi removido — o painel agora exibe
+        // todo o conteúdo direto na tela principal do picker.)
 
         // Botão "editar" do resumo no topo da ficha — dispara o trigger
         // do entity-picker da divindade, que abre o modal já com o painel

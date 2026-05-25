@@ -572,16 +572,13 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                     </section>
                     </div><!-- /#origemPanelHost -->
 
-                    <!-- Host oculto da seção rica de Devoção, mesmo padrão. -->
+                    <!-- Host oculto da seção rica de Devoção, mesmo padrão.
+                         A "aba Devoção" (panel-title + botão recolher) foi
+                         removida: a divindade selecionada exibe direto
+                         seus dados na tela principal do picker, sem
+                         camada extra de accordion. -->
                     <div id="divindadePanelHost" hidden>
-                    <section class="panel divindade-panel divindade-panel-recolhido" id="divindadePanel">
-                        <div class="panel-title">
-                            Devoção
-                            <button type="button" class="poderes-ver-todos-btn painel-toggle-seta" id="divindadeRecolherBtn" aria-expanded="false" aria-label="Expandir seção" aria-controls="divindadeEmpty divindadeConteudo">
-                                <span class="painel-toggle-seta-icone" aria-hidden="true">&#9662;</span>
-                            </button>
-                        </div>
-
+                    <section class="panel divindade-panel" id="divindadePanel">
                         <div class="poderes-adquiridos-topo">
                             <span class="poderes-bloco-label">Adquiridos:</span>
                             <div class="poderes-adquiridos-lista" id="divindadeAdquiridos"></div>
