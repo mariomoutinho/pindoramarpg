@@ -360,9 +360,12 @@
     width: 100%;
     max-width: 480px;
     max-height: 85vh;
+    max-height: 85dvh;   /* respeita barras dinâmicas do navegador mobile */
+    min-height: 0;       /* libera o filho com overflow-y para encolher */
     display: flex;
     flex-direction: column;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    overflow: hidden;    /* corpo é o único scroller; bordas/header/footer fixos */
 }
 .poder-modal-grande {
     max-width: 720px;
@@ -393,6 +396,10 @@
 .poder-modal-body {
     padding: 14px 16px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 .poder-modal-descricao {
     margin: 0 0 12px;

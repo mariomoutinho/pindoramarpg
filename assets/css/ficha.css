@@ -3402,12 +3402,21 @@ max-width: 160px;
 }
 
 /* Chip de devoção: tom verde-musgo sutil para diferenciar de Traços
-   (lilás) e Benefícios de Origem (dourado). Read-only, sem hover. */
+   (lilás) e Benefícios de Origem (dourado). Clicável: abre o modal de
+   detalhes do poder divino correspondente. */
 .divindade-resumo-tag {
     background: rgba(80, 140, 90, 0.16);
     border-color: rgba(80, 140, 90, 0.45);
     color: #1f5d2c;
+    /* Reset visual do <button> para casar com o estilo dos outros chips. */
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
 }
-.divindade-resumo-tag:hover {
-    background: rgba(80, 140, 90, 0.16);
+.divindade-resumo-tag:hover,
+.divindade-resumo-tag:focus-visible {
+    background: rgba(80, 140, 90, 0.28);
+    border-color: rgba(80, 140, 90, 0.65);
+    transform: translateY(-1px);
+    outline: none;
 }

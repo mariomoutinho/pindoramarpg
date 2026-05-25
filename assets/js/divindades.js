@@ -137,9 +137,26 @@
         const itens = Array.from(adquiridos).map(el => {
             const id = el.dataset.poderId || '';
             const nome = nomesPorId[id] || el.textContent.trim() || id;
-            return `<span class="ancestralidade-tag origem-resumo-tag divindade-resumo-tag">${escaparHtml(nome)}</span>`;
+            return `<button type="button"
+                            class="ancestralidade-tag origem-resumo-tag divindade-resumo-tag"
+                            data-poder-id="${escaparHtml(id)}"
+                            title="Ver detalhes do poder">${escaparHtml(nome)}</button>`;
         });
         tags.innerHTML = itens.join('');
+
+        // Clique no chip de resumo abre o modal de detalhes do poder
+        // (mesmo modal usado pelo painel de Poderes). Delegamos ao
+        // PoderesPindorama, que cuida de buscar descrição/regras/etc.
+        tags.querySelectorAll('.divindade-resumo-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pid = btn.dataset.poderId;
+                if (!pid) return;
+                if (window.PoderesPindorama &&
+                    typeof window.PoderesPindorama.abrirModalPoder === 'function') {
+                    window.PoderesPindorama.abrirModalPoder('geral', 'divinos', pid, true);
+                }
+            });
+        });
     }
 
     function init() {
