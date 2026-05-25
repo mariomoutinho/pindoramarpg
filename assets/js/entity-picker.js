@@ -863,7 +863,12 @@
                     id: d.id,
                     nome: d.nome,
                     descricao: d.descricao,
+                    // Convenção: assets/img/divindades/<id>.webp como
+                    // formato principal e .png como fallback. Se nenhum
+                    // existir, o picker mostra o placeholder "?". Ver
+                    // assets/img/divindades/README.md.
                     imagem: 'assets/img/divindades/' + d.id + '.webp',
+                    imagemFallbacks: ['assets/img/divindades/' + d.id + '.png'],
                     gruposTags: grupos,
                 };
             });
