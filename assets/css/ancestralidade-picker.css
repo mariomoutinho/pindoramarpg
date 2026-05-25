@@ -509,41 +509,52 @@
         padding: 12px 0;
     }
 
+    /* Mobile-first: o painel é o ÚNICO scroller. Header e footer ficam
+       sticky no topo/base do painel; body, preview e extras (Devoção/
+       Origem) fluem juntos no mesmo scroll, sem containers aninhados.
+       Scroll aninhado (extras/preview com overflow próprio) era o que
+       prendia o final do conteúdo de Devoção atrás do footer sticky. */
     .anc-picker-panel {
         max-height: calc(100vh - 24px);
         max-height: calc(100dvh - 24px);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .anc-picker-body {
         grid-template-columns: 1fr;
+        min-height: 0;            /* libera o flex parent para encolher */
     }
 
     .anc-picker-list {
         border-right: none;
         border-bottom: 1px solid rgba(233, 216, 241, 0.16);
-        max-height: 32vh;
+        max-height: 32vh;          /* lista ainda rola dentro de si */
     }
 
-    /* No mobile o slot embarcado (Devoção/Origem) ganha rolagem própria
-       como salvaguarda, caso o conteúdo da seção seja muito longo e o
-       scroll do painel principal não chegue ao fim devido a barras
-       dinâmicas do navegador. Cabeçalho/rodapé continuam sticky. */
+    /* Slot embarcado (Devoção/Origem) — SEM scroll próprio. O conteúdo
+       flui no scroll único do painel; padding-bottom dá folga para o
+       footer sticky não cobrir o último poder divino. */
     .anc-picker-extras {
-        max-height: 70dvh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        max-height: none;
+        overflow: visible;
+        padding-bottom: 24px;
     }
 
     /* No mobile o preview vira pilha vertical com flex (não grid).
        Isto evita qualquer auto-placement do grid colocar imagem e
-       texto na mesma célula. */
+       texto na mesma célula. Sem overflow próprio: rola junto com
+       o painel. */
     .anc-picker-preview {
         display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 14px;
         padding: 18px;
+        overflow: visible;
+        max-height: none;
     }
 
     .anc-picker-preview-empty {
