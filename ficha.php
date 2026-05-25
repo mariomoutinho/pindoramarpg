@@ -597,6 +597,12 @@ $divindadesFicha = $dadosDivindades['divindades'] ?? [];
                                 <span class="divindade-energia" id="divindadeEnergiaTag"></span>
                             </header>
 
+                            <div class="divindade-acoes">
+                                <button type="button" class="divindade-remover-btn" id="divindadeRemoverBtn">
+                                    Remover devoção
+                                </button>
+                            </div>
+
                             <p class="divindade-descricao" id="divindadeDescricao"></p>
 
                             <div class="divindade-grid">

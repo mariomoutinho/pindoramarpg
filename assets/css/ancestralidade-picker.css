@@ -526,6 +526,11 @@
     .anc-picker-body {
         grid-template-columns: 1fr;
         min-height: 0;            /* libera o flex parent para encolher */
+        /* No mobile o body NÃO deve esticar para preencher o panel:
+           se esticar, ele empurra .anc-picker-extras (Devoção) para
+           fora da área visível do scroll. flex:0 0 auto = altura
+           natural, e o panel rola normal pelo conteúdo abaixo. */
+        flex: 0 0 auto;
     }
 
     .anc-picker-list {

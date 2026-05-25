@@ -189,6 +189,25 @@
             });
         }
 
+        // Botão "Remover devoção": limpa a divindade selecionada E todos
+        // os poderes divinos concedidos por ela. Estado consistente em
+        // vez de divindade vazia com poderes órfãos.
+        const removerBtn = document.getElementById('divindadeRemoverBtn');
+        if (removerBtn) {
+            removerBtn.addEventListener('click', () => {
+                if (window.PoderesPindorama &&
+                    typeof window.PoderesPindorama.removerTodosDivinos === 'function') {
+                    window.PoderesPindorama.removerTodosDivinos();
+                }
+                const sel = document.getElementById('divindadeSelect');
+                if (sel && sel.value !== '') {
+                    sel.value = '';
+                    sel.dispatchEvent(new Event('input',  { bubbles: true }));
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+
         // Observa mudanças no painel de poderes adquiridos da divindade
         // para manter o resumo do topo em sincronia (perfeito quando
         // PoderesPindorama adiciona/remove tags lá).

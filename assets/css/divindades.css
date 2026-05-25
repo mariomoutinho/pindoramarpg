@@ -125,6 +125,33 @@
     line-height: 1.25;
 }
 
+/* Botão "Remover devoção": destaque sutil de ação destrutiva, alinhado
+   à direita da seção. Aparece só quando há divindade selecionada
+   (#divindadeConteudo não está hidden). */
+.divindade-acoes {
+    display: flex;
+    justify-content: flex-end;
+    margin: 4px 0 10px;
+}
+.divindade-remover-btn {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.divindade-remover-btn:hover,
+.divindade-remover-btn:focus-visible {
+    background: var(--danger);
+    color: #fff;
+    outline: none;
+}
+
 /* Página de referência (divindades.php) */
 .divindade-detalhe h2 {
     color: var(--purple-dark);

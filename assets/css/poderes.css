@@ -348,7 +348,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    /* IMPORTANTE: precisa ficar ACIMA do picker (.anc-picker-backdrop
+       é z-index 9990). Sem isso o modal de detalhes do poder renderiza
+       atrás do picker quando aberto a partir de "Selecionar Divindade"
+       e parece que nada acontece ao clicar. */
+    z-index: 10000;
     padding: 20px;
 }
 .poder-modal-backdrop[hidden] {
