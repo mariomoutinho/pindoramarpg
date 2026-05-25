@@ -266,13 +266,17 @@
     border-color: var(--pink-light);
 }
 
-.anc-picker-option.is-selected .anc-picker-radio::after {
+.anc-picker-option.is-selected .anc-picker-radio::after,
+.anc-picker-option.is-preview .anc-picker-radio::after {
     content: "";
     position: absolute;
     inset: 2px;
     border-radius: 50%;
     background: var(--pink-light);
     box-shadow: 0 0 6px rgba(248, 216, 255, 0.7);
+}
+.anc-picker-option.is-preview:not(.is-selected) .anc-picker-radio::after {
+    opacity: 0.78;
 }
 
 /* Painel de preview (direita) — texto à esquerda + imagem retrato à direita */
@@ -500,6 +504,16 @@
 /* ---------- Responsivo ---------- */
 
 @media (max-width: 720px) {
+    .anc-picker-backdrop {
+        align-items: flex-start;
+        padding: 12px 0;
+    }
+
+    .anc-picker-panel {
+        max-height: calc(100vh - 24px);
+        max-height: calc(100dvh - 24px);
+    }
+
     .anc-picker-body {
         grid-template-columns: 1fr;
     }
@@ -508,6 +522,17 @@
         border-right: none;
         border-bottom: 1px solid rgba(233, 216, 241, 0.16);
         max-height: 32vh;
+    }
+
+    /* No mobile o slot embarcado (Devoção/Origem) ganha rolagem própria
+       como salvaguarda, caso o conteúdo da seção seja muito longo e o
+       scroll do painel principal não chegue ao fim devido a barras
+       dinâmicas do navegador. Cabeçalho/rodapé continuam sticky. */
+    .anc-picker-extras {
+        max-height: 70dvh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
     }
 
     /* No mobile o preview vira pilha vertical com flex (não grid).
@@ -558,7 +583,8 @@
     }
 
     .anc-picker-panel {
-        max-height: 92vh;
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
     }
 }
 
