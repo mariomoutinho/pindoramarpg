@@ -246,6 +246,60 @@
       ]
     },
     {
+      "id": "jaguarete",
+      "nome": "Jaguaretê",
+      "descricao": [
+        "Jaguaretês",
+        "Quando a mata rosna em silêncio, os Jaguaretês já decidiram quem viverá até o amanhecer.",
+        "— Iracê Jaguaretê, Caçadora das Sete Luas",
+        "Os Jaguaretês são uma ancestralidade de encantados nascidos da união entre o espírito primordial das onças do Grande Verdejante e os antigos rituais de guerra dos primeiros povos pindorins. Segundo as lendas mais antigas, quando os povos caucázis avançaram queimando matas e profanando territórios sagrados, Guaraci e Jurema pediram aos espíritos predadores da floresta que erguessem defensores capazes de enfrentar os invasores não apenas com força, mas com astúcia e ferocidade ancestral.",
+        "As grandes onças responderam.",
+        "Nas noites de eclipse, xamãs antigos realizaram pactos espirituais com os senhores felinos da mata profunda. Alguns guerreiros passaram a carregar dentro de si fragmentos do espírito das onças encantadas. Seus corpos mudaram. Ossos tornaram-se mais densos. Presas cresceram. A visão passou a enxergar na penumbra da mata fechada. E seus instintos tornaram-se perigosamente aguçados.",
+        "Assim nasceram os primeiros Jaguaretês.",
+        "Os Jaguaretês não formam impérios nem grandes cidades. Vivem em clãs seminômades espalhados pelas regiões mais perigosas do Grande Verdejante, serras densas, ruínas antigas e territórios onde até mesmo outros encantados evitam entrar. Muitos atuam como guardiões silenciosos de rotas espirituais, cemitérios ancestrais, aldeias escondidas ou templos devorados pela floresta.",
+        "Fisicamente, os Jaguaretês combinam traços humanoides e felinos. Seus corpos são musculosos e cobertos parcialmente por pelagens manchadas que variam entre padrões de onça-pintada, suçuarana ou jaguatirica. Possuem olhos intensos, presas afiadas, unhas retráteis e movimentos extremamente graciosos. Alguns apresentam caudas longas, orelhas felinas ou marcas espirituais semelhantes a pinturas tribais naturais sobre a pele.",
+        "Apesar da reputação brutal, os Jaguaretês raramente são assassinos irracionais. São caçadores ritualísticos. Respeitam equilíbrio, território, ancestralidade e a caça justa. Muitos acreditam que toda criatura abatida deve possuir um propósito, e desprezam violência gratuita. Ainda assim, quando entram em estado de caça, tornam-se aterrorizantes até mesmo para guerreiros experientes.",
+        "Entre os povos pindorins, Jaguaretês costumam ser vistos com respeito cauteloso. Já entre os povos caucázis, são frequentemente tratados como monstros ou demônios da floresta — o que, para muitos Jaguaretês, parece uma definição perfeitamente aceitável."
+      ],
+      "tracos": [
+        {
+          "id": "sangue-predador",
+          "nome": "Sangue Predador",
+          "descricao": "Você recebe visão na penumbra e +2 em Percepção e Sobrevivência. Além disso, não sofre penalidades por se mover furtivamente em terreno natural.",
+          "bonus_pericias": [
+            { "pericia": "Percepção", "valor": 2 },
+            { "pericia": "Sobrevivência", "valor": 2 }
+          ]
+        },
+        {
+          "id": "garras-da-cacada",
+          "nome": "Garras da Caçada",
+          "descricao": "Você possui uma arma natural de garras (dano 1d6, crítico x2, corte). Uma vez por rodada, quando usa a ação agredir para atacar com outra arma corpo a corpo, pode gastar 1 PM para realizar um ataque adicional com as garras.",
+          "concede_ataque": {
+            "nome": "Garras",
+            "dano": "1d6",
+            "critico": "x2",
+            "alcance": "Curto",
+            "tipo": "Corte",
+            "teste": "Luta"
+          }
+        },
+        {
+          "id": "passos-da-onca",
+          "nome": "Passos da Onça",
+          "descricao": "Seu deslocamento terrestre aumenta para 12m. Além disso, você recebe +2 em Furtividade. Caso esteja em florestas, matas ou ruínas tomadas pela vegetação, esse bônus aumenta para +5.",
+          "bonus_pericias": [
+            { "pericia": "Furtividade", "valor": 2 }
+          ]
+        },
+        {
+          "id": "instinto-territorial",
+          "nome": "Instinto Territorial",
+          "descricao": "Quando uma criatura entra em alcance curto contra você pela primeira vez na cena, você pode gastar 1 PM para receber +2 na Defesa e em testes de ataque contra ela até o fim do seu próximo turno."
+        }
+      ]
+    },
+    {
       "id": "kai-porah",
       "nome": "Kai’porah",
       "descricao": [
